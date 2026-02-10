@@ -1,6 +1,7 @@
 from __future__ import annotations
 from agentos.core.types import AgentConfig, AgentEvent, Message, Role
 from agentos.core.tool import Tool
+from agentos.core.memory import Memory
 from agentos.providers.router import call_model as call_llm
 
 
@@ -13,6 +14,7 @@ class Agent:
         system_prompt: str = "You are a helpful assistant. Use tools when needed.",
         max_iterations: int = 10,
         temperature: float = 0.7,
+        memory: Memory | None = None,
     ):
         self.config = AgentConfig(
             name=name,
@@ -25,12 +27,14 @@ class Agent:
         self._tool_map = {t.name: t for t in self.tools}
         self.events: list[AgentEvent] = []
         self.messages: list[dict] = []
+        self.memory = memory or Memory()
 
     def run(self, user_input: str) -> Message:
-        self.messages = [
-            {"role": "system", "content": self.config.system_prompt},
-            {"role": "user", "content": user_input},
-        ]
+        # Build messages with memory context
+        self.messages = self.memory.build_messages(
+            self.config.system_prompt,
+            user_input,
+        )
         self.events = []
 
         print(f"\n🤖 [{self.config.name}] Processing: {user_input}")
@@ -38,9 +42,9 @@ class Agent:
 
         for i in range(self.config.max_iterations):
             msg, event = call_llm(
+                model=self.config.model,
                 messages=self.messages,
                 tools=self.tools,
-                model=self.config.model,
                 temperature=self.config.temperature,
                 agent_name=self.config.name,
             )
@@ -50,6 +54,11 @@ class Agent:
                 print(f"\n✅ Final Answer (${event.cost_usd:.4f}, {event.latency_ms:.0f}ms):")
                 print(msg.content)
                 self._print_summary()
+
+                # Store in memory
+                self.memory.add_exchange(user_input, msg.content or "")
+                self.memory.extract_facts_from_response(user_input, msg.content or "")
+
                 return msg
 
             print(f"\n🔧 Step {i+1}: Using {len(msg.tool_calls)} tool(s)")
