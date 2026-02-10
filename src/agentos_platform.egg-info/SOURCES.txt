@@ -26,9 +26,9 @@ src/agentos/sandbox/__init__.py
 src/agentos/sandbox/runner.py
 src/agentos/sandbox/scenario.py
 src/agentos/tools/__init__.py
-src/agentos_sdk.egg-info/PKG-INFO
-src/agentos_sdk.egg-info/SOURCES.txt
-src/agentos_sdk.egg-info/dependency_links.txt
-src/agentos_sdk.egg-info/entry_points.txt
-src/agentos_sdk.egg-info/requires.txt
-src/agentos_sdk.egg-info/top_level.txt
+src/agentos_platform.egg-info/PKG-INFO
+src/agentos_platform.egg-info/SOURCES.txt
+src/agentos_platform.egg-info/dependency_links.txt
+src/agentos_platform.egg-info/entry_points.txt
+src/agentos_platform.egg-info/requires.txt
+src/agentos_platform.egg-info/top_level.txt
