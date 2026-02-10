@@ -1,7 +1,7 @@
 from __future__ import annotations
 from agentos.core.types import AgentConfig, AgentEvent, Message, Role
 from agentos.core.tool import Tool
-from agentos.providers.openai_provider import call_llm
+from agentos.providers.router import call_model as call_llm
 
 
 class Agent:
