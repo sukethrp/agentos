@@ -25,6 +25,7 @@ from agentos.events import event_bus, WebhookTrigger
 from agentos.auth import User, create_user, get_current_user, get_user_by_email
 from agentos.auth.usage import usage_tracker
 from agentos.core.ab_testing import ABTest
+from agentos.marketplace import get_marketplace_store
 
 load_dotenv()
 
@@ -770,6 +771,127 @@ async def emit_event(body: dict = {}):
     }
 
 
+# ── Marketplace API ──
+
+
+class PublishRequest(BaseModel):
+    name: str
+    description: str = ""
+    author: str = "anonymous"
+    version: str = "1.0.0"
+    category: str = "general"
+    icon: str = "🤖"
+    tags: list[str] = []
+    price: float = 0.0
+    config: dict = {}
+
+
+class ReviewRequest(BaseModel):
+    user: str = "anonymous"
+    rating: float = 5.0
+    comment: str = ""
+
+
+@app.get("/api/marketplace/list")
+def marketplace_list(category: str = "", sort: str = "downloads"):
+    """List marketplace agents, optionally filtered by category."""
+    mp = get_marketplace_store()
+    agents = mp.search(category=category, sort_by=sort)
+    return {
+        "agents": [a.to_card() for a in agents],
+        "categories": mp.get_categories(),
+        "stats": mp.stats(),
+    }
+
+
+@app.get("/api/marketplace/search")
+def marketplace_search(q: str = "", category: str = "", sort: str = "downloads"):
+    """Search the marketplace."""
+    mp = get_marketplace_store()
+    agents = mp.search(query=q, category=category, sort_by=sort)
+    return {"agents": [a.to_card() for a in agents], "query": q}
+
+
+@app.get("/api/marketplace/trending")
+def marketplace_trending():
+    mp = get_marketplace_store()
+    return {"agents": [a.to_card() for a in mp.get_trending()]}
+
+
+@app.get("/api/marketplace/top-rated")
+def marketplace_top_rated():
+    mp = get_marketplace_store()
+    return {"agents": [a.to_card() for a in mp.get_top_rated()]}
+
+
+@app.get("/api/marketplace/{agent_id}")
+def marketplace_detail(agent_id: str):
+    """Get full details for a marketplace agent, including reviews."""
+    mp = get_marketplace_store()
+    agent = mp.get(agent_id)
+    if not agent:
+        return JSONResponse({"status": "error", "message": "Agent not found"}, 404)
+    data = agent.model_dump()
+    data["status"] = "ok"
+    return data
+
+
+@app.post("/api/marketplace/publish")
+def marketplace_publish(req: PublishRequest):
+    """Publish a new agent to the marketplace."""
+    mp = get_marketplace_store()
+    agent = mp.publish(
+        name=req.name,
+        description=req.description,
+        author=req.author,
+        version=req.version,
+        category=req.category,
+        icon=req.icon,
+        tags=req.tags,
+        price=req.price,
+        config=req.config,
+    )
+    return {"status": "published", "agent": agent.to_card()}
+
+
+@app.post("/api/marketplace/install/{agent_id}")
+def marketplace_install(agent_id: str):
+    """Install an agent — increments download counter and returns config."""
+    mp = get_marketplace_store()
+    agent = mp.install(agent_id)
+    if not agent:
+        return JSONResponse({"status": "error", "message": "Agent not found"}, 404)
+    return {
+        "status": "installed",
+        "agent": agent.to_card(),
+        "config": agent.config.model_dump(),
+    }
+
+
+@app.post("/api/marketplace/review/{agent_id}")
+def marketplace_review(agent_id: str, req: ReviewRequest):
+    """Leave a review for a marketplace agent."""
+    mp = get_marketplace_store()
+    review = mp.review(agent_id, user=req.user, rating=req.rating, comment=req.comment)
+    if not review:
+        return JSONResponse({"status": "error", "message": "Agent not found"}, 404)
+    agent = mp.get(agent_id)
+    return {
+        "status": "reviewed",
+        "review": review.model_dump(),
+        "new_rating": agent.rating if agent else 0,
+        "review_count": agent.review_count if agent else 0,
+    }
+
+
+@app.delete("/api/marketplace/{agent_id}")
+def marketplace_delete(agent_id: str):
+    mp = get_marketplace_store()
+    if mp.delete(agent_id):
+        return {"status": "deleted"}
+    return JSONResponse({"status": "error", "message": "Agent not found"}, 404)
+
+
 # ── Analytics API ──
 
 def _bucket_key(ts: float, granularity: str) -> str:
@@ -1223,34 +1345,96 @@ textarea{min-height:80px;resize:vertical}
 
 <!-- MARKETPLACE -->
 <div class="panel" id="panel-marketplace">
+<!-- Stats + search -->
+<div class="monitor-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+<div class="monitor-card"><div class="label">Agents</div><div class="value blue" id="mp-stat-agents">0</div></div>
+<div class="monitor-card"><div class="label">Downloads</div><div class="value green" id="mp-stat-downloads">0</div></div>
+<div class="monitor-card"><div class="label">Reviews</div><div class="value yellow" id="mp-stat-reviews">0</div></div>
+<div class="monitor-card"><div class="label">Free</div><div class="value purple" id="mp-stat-free">0</div></div>
+</div>
 <div class="card">
-<h2>🏪 Agent Marketplace</h2>
-<p style="color:#888;margin-bottom:24px">Share and discover agent templates from the community. Coming soon — be the first to publish!</p>
-<div class="templates-grid">
-<div class="template-card" style="border-style:dashed;text-align:center;padding:40px">
-<div style="font-size:40px;margin-bottom:8px">➕</div>
-<h4>Publish Your Agent</h4>
-<p>Share your agent template with the community and earn revenue.</p>
-<button class="btn btn-secondary" style="margin-top:12px">Coming Soon</button>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+<input type="text" id="mp-search" placeholder="Search agents..." style="flex:1" onkeydown="if(event.key==='Enter')mpSearch()">
+<select id="mp-cat" onchange="mpSearch()" style="width:140px">
+<option value="">All categories</option>
+</select>
+<select id="mp-sort" onchange="mpSearch()" style="width:130px">
+<option value="downloads">Most popular</option>
+<option value="rating">Top rated</option>
+<option value="newest">Newest</option>
+</select>
+<button class="btn btn-primary" style="white-space:nowrap" onclick="mpSearch()">Search</button>
 </div>
-<div class="template-card">
-<div class="icon">🎧</div>
-<h4>Customer Support Pro</h4>
-<p>Advanced support with ticket management and escalation.</p>
-<div class="cat">by AgentOS Team · Free</div>
+<div class="templates-grid" id="mp-grid"><p style="color:#555;padding:20px;text-align:center">Loading marketplace...</p></div>
 </div>
-<div class="template-card">
-<div class="icon">📊</div>
-<h4>Data Analyst</h4>
-<p>Analyze datasets, create reports, and visualize trends.</p>
-<div class="cat">by community · $29</div>
+<!-- Publish form -->
+<div class="card">
+<h2>➕ Publish Your Agent</h2>
+<p style="color:#888;margin-bottom:12px">Share your agent configuration with the community.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div>
+<label>Agent Name</label>
+<input type="text" id="mp-pub-name" placeholder="My Awesome Agent">
+<label>Description</label>
+<textarea id="mp-pub-desc" placeholder="What does your agent do?"></textarea>
+<label>Author</label>
+<input type="text" id="mp-pub-author" placeholder="Your name">
 </div>
-<div class="template-card">
-<div class="icon">✍️</div>
-<h4>Content Writer</h4>
-<p>Write blog posts, emails, and social media content.</p>
-<div class="cat">by community · $19</div>
+<div>
+<label>Category</label>
+<select id="mp-pub-cat">
+<option value="general">General</option>
+<option value="support">Support</option>
+<option value="research">Research</option>
+<option value="sales">Sales</option>
+<option value="engineering">Engineering</option>
+<option value="writing">Writing</option>
+<option value="data">Data</option>
+<option value="productivity">Productivity</option>
+</select>
+<label>Icon (emoji)</label>
+<input type="text" id="mp-pub-icon" value="🤖" style="width:60px">
+<label>Tags (comma-separated)</label>
+<input type="text" id="mp-pub-tags" placeholder="ai, chatbot, support">
+<label>Price ($0 = free)</label>
+<input type="number" id="mp-pub-price" value="0" min="0" step="1">
+<label>Version</label>
+<input type="text" id="mp-pub-ver" value="1.0.0">
 </div>
+</div>
+<label style="margin-top:8px">System Prompt</label>
+<textarea id="mp-pub-prompt" placeholder="You are a helpful assistant...">You are a helpful assistant.</textarea>
+<label>Model</label>
+<select id="mp-pub-model">
+<option value="gpt-4o-mini">GPT-4o Mini</option>
+<option value="gpt-4o">GPT-4o</option>
+</select>
+<label>Tools</label>
+<div class="tools-grid" id="mp-pub-tools">
+<div class="tool-tag" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
+<div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
+<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
+<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">👁️ Vision</div>
+<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">📄 Doc Reader</div>
+</div>
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="mpPublish()">🚀 Publish to Marketplace</button>
+<div id="mp-pub-status" style="margin-top:8px;font-size:13px;color:#888"></div>
+</div>
+<!-- Detail / review overlay (hidden) -->
+<div class="card" id="mp-detail" style="display:none">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<h2 id="mp-detail-title">Agent Details</h2>
+<span style="font-size:12px;color:#555;cursor:pointer" onclick="document.getElementById('mp-detail').style.display='none'">close</span>
+</div>
+<div id="mp-detail-body"></div>
+<div style="margin-top:16px;border-top:1px solid #1a1a2e;padding-top:12px">
+<h3 style="font-size:14px;margin-bottom:8px;color:#fff">Leave a Review</h3>
+<div style="display:flex;gap:8px;align-items:end">
+<div style="flex:1"><label>Comment</label><input type="text" id="mp-rev-comment" placeholder="Great agent!"></div>
+<div style="width:80px"><label>Rating</label><select id="mp-rev-rating"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></div>
+<button class="btn btn-primary" style="padding:10px 16px" onclick="mpReview()">Submit</button>
+</div>
+<div id="mp-reviews"></div>
 </div>
 </div>
 </div>
@@ -1508,6 +1692,7 @@ if(id==='branching')brRefresh();
 if(id==='events')refreshEvents();
 if(id==='auth')refreshAuthUsage();
 if(id==='abtest'){}  // A/B panel is static; no periodic refresh needed
+if(id==='marketplace')mpRefresh();
 }
 
 function toggleTool(el){el.classList.toggle('selected')}
@@ -1967,6 +2152,151 @@ tbody.innerHTML=h;
 }
 
 setInterval(()=>{if(document.getElementById('panel-analytics').classList.contains('active'))refreshAnalytics()},5000);
+
+// ── Marketplace helpers ──
+
+let _mpAgents=[];
+let _mpDetailId=null;
+
+async function mpRefresh(){
+  try{
+    const r=await fetch('/api/marketplace/list');
+    const d=await r.json();
+    _mpAgents=d.agents||[];
+    // stats
+    const s=d.stats||{};
+    document.getElementById('mp-stat-agents').textContent=s.total_agents||0;
+    document.getElementById('mp-stat-downloads').textContent=s.total_downloads||0;
+    document.getElementById('mp-stat-reviews').textContent=s.total_reviews||0;
+    document.getElementById('mp-stat-free').textContent=s.free_count||0;
+    // categories
+    const sel=document.getElementById('mp-cat');
+    const prev=sel.value;
+    sel.innerHTML='<option value="">All categories</option>';
+    (s.categories||[]).forEach(c=>{sel.innerHTML+='<option value="'+c+'">'+c+'</option>';});
+    sel.value=prev;
+    mpRenderGrid(_mpAgents);
+  }catch(e){console.error('mpRefresh',e);}
+}
+
+function mpRenderGrid(agents){
+  const g=document.getElementById('mp-grid');
+  if(!agents.length){g.innerHTML='<p style="color:#555;padding:20px;text-align:center">No agents found. Be the first to publish!</p>';return;}
+  g.innerHTML=agents.map(a=>{
+    const stars='★'.repeat(Math.round(a.rating))+'☆'.repeat(5-Math.round(a.rating));
+    const priceLabel=a.price===0?'Free':'$'+a.price;
+    return '<div class="template-card" style="cursor:pointer" onclick="mpShowDetail(\''+a.id+'\')">'+
+      '<div class="icon">'+a.icon+'</div>'+
+      '<h4>'+a.name+'</h4>'+
+      '<p>'+a.description+'</p>'+
+      '<div style="color:#f0b429;font-size:13px;margin:4px 0">'+stars+' <span style="color:#666">('+a.review_count+')</span></div>'+
+      '<div class="cat">by '+a.author+' · '+priceLabel+' · ↓'+a.downloads+'</div>'+
+      '<button class="btn btn-primary" style="width:100%;margin-top:8px;padding:6px" onclick="event.stopPropagation();mpInstall(\''+a.id+'\')">Install</button>'+
+    '</div>';
+  }).join('');
+}
+
+async function mpSearch(){
+  const q=document.getElementById('mp-search').value;
+  const cat=document.getElementById('mp-cat').value;
+  const sort=document.getElementById('mp-sort').value;
+  try{
+    const r=await fetch('/api/marketplace/search?q='+encodeURIComponent(q)+'&category='+encodeURIComponent(cat)+'&sort='+sort);
+    const d=await r.json();
+    mpRenderGrid(d.agents||[]);
+  }catch(e){console.error(e);}
+}
+
+async function mpInstall(id){
+  if(!confirm('Install this agent?'))return;
+  try{
+    const r=await fetch('/api/marketplace/install/'+id,{method:'POST'});
+    const d=await r.json();
+    if(d.status==='installed'){
+      alert('Installed '+d.agent.name+'! Downloads: '+d.agent.downloads);
+      mpRefresh();
+    }else{alert(d.message||'Install failed');}
+  }catch(e){alert('Install error: '+e);}
+}
+
+async function mpShowDetail(id){
+  _mpDetailId=id;
+  try{
+    const r=await fetch('/api/marketplace/'+id);
+    const d=await r.json();
+    if(d.status==='error'){alert(d.message);return;}
+    const det=document.getElementById('mp-detail');
+    document.getElementById('mp-detail-title').textContent=d.icon+' '+d.name+' v'+d.version;
+    let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
+    html+='<div><span style="color:#888">Author:</span> '+d.author+'</div>';
+    html+='<div><span style="color:#888">Category:</span> '+d.category+'</div>';
+    html+='<div><span style="color:#888">Price:</span> '+(d.price===0?'Free':'$'+d.price)+'</div>';
+    html+='<div><span style="color:#888">Downloads:</span> '+d.downloads+'</div>';
+    html+='<div><span style="color:#888">Rating:</span> '+d.rating+' ('+d.review_count+' reviews)</div>';
+    html+='<div><span style="color:#888">Tags:</span> '+(d.tags||[]).join(', ')+'</div>';
+    html+='</div>';
+    html+='<p>'+d.description+'</p>';
+    html+='<div style="margin-top:12px"><strong>Config:</strong><pre style="background:#0a0a14;padding:8px;border-radius:4px;font-size:12px;max-height:200px;overflow:auto">'+JSON.stringify(d.config||{},null,2)+'</pre></div>';
+    document.getElementById('mp-detail-body').innerHTML=html;
+    // reviews
+    let rhtml='';
+    (d.reviews||[]).forEach(rv=>{
+      const st='★'.repeat(Math.round(rv.rating))+'☆'.repeat(5-Math.round(rv.rating));
+      rhtml+='<div style="padding:8px 0;border-bottom:1px solid #1a1a2e"><span style="color:#f0b429">'+st+'</span> <strong>'+rv.user+'</strong> — '+rv.comment+'</div>';
+    });
+    document.getElementById('mp-reviews').innerHTML=rhtml;
+    det.style.display='block';
+    det.scrollIntoView({behavior:'smooth'});
+  }catch(e){console.error(e);}
+}
+
+async function mpReview(){
+  if(!_mpDetailId)return;
+  const comment=document.getElementById('mp-rev-comment').value;
+  const rating=parseInt(document.getElementById('mp-rev-rating').value)||5;
+  try{
+    const r=await fetch('/api/marketplace/review/'+_mpDetailId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user:'anonymous',rating,comment})});
+    const d=await r.json();
+    if(d.status==='reviewed'){
+      document.getElementById('mp-rev-comment').value='';
+      mpShowDetail(_mpDetailId);
+      mpRefresh();
+    }else{alert(d.message||'Review failed');}
+  }catch(e){alert('Review error: '+e);}
+}
+
+async function mpPublish(){
+  const name=document.getElementById('mp-pub-name').value.trim();
+  if(!name){alert('Agent name is required');return;}
+  const tools=[...document.querySelectorAll('#mp-pub-tools .tool-tag.selected')].map(t=>t.dataset.tool);
+  const body={
+    name,
+    description:document.getElementById('mp-pub-desc').value,
+    author:document.getElementById('mp-pub-author').value||'anonymous',
+    category:document.getElementById('mp-pub-cat').value,
+    icon:document.getElementById('mp-pub-icon').value||'🤖',
+    tags:(document.getElementById('mp-pub-tags').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    price:parseFloat(document.getElementById('mp-pub-price').value)||0,
+    version:document.getElementById('mp-pub-ver').value||'1.0.0',
+    config:{
+      name:name,
+      model:document.getElementById('mp-pub-model').value,
+      system_prompt:document.getElementById('mp-pub-prompt').value,
+      tools:tools,
+      temperature:0.7,
+      max_iterations:10,
+    }
+  };
+  document.getElementById('mp-pub-status').textContent='Publishing...';
+  try{
+    const r=await fetch('/api/marketplace/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.status==='published'){
+      document.getElementById('mp-pub-status').innerHTML='<span style="color:#10b981">Published! '+d.agent.name+' is now live.</span>';
+      mpRefresh();
+    }else{document.getElementById('mp-pub-status').textContent='Error: '+(d.message||'unknown');}
+  }catch(e){document.getElementById('mp-pub-status').textContent='Error: '+e;}
+}
 
 // ── Branching helpers ──
 

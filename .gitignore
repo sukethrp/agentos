@@ -29,5 +29,8 @@ htmlcov/
 src/agentos/auth/users.json
 src/agentos/auth/usage.json
 
+# Marketplace data
+agent_data/
+
 # Logs
 *.log
