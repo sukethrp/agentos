@@ -21,9 +21,13 @@ Usage:
 from __future__ import annotations
 import time
 import json
-import copy
-from typing import Any
+from typing import Any, Iterable
+
 from pydantic import BaseModel, Field
+
+from agentos.core.agent import Agent
+from agentos.core.ab_testing import ABTest, ABTestReport
+from agentos.tools import get_builtin_tools
 
 
 class AgentVersion(BaseModel):
@@ -143,6 +147,78 @@ class AgentVersionControl:
         self.current_tag = tag
         print(f"⏪ Rolled back to version [{tag}]")
         return v.config
+
+    def ab_test(
+        self,
+        tag_a: str,
+        tag_b: str,
+        test_queries: Iterable[str],
+        num_runs: int = 5,
+    ) -> ABTestReport | None:
+        """Run an A/B test between two saved versions using the Sandbox judge.
+
+        Args:
+            tag_a: Version tag for agent A.
+            tag_b: Version tag for agent B.
+            test_queries: Iterable of user queries to test.
+            num_runs: How many times to repeat the full query set.
+        """
+        a = self.versions.get(tag_a)
+        b = self.versions.get(tag_b)
+        if not a or not b:
+            print(f"❌ Version not found: {tag_a if not a else tag_b}")
+            return None
+
+        queries = [q for q in test_queries if q.strip()]
+        if not queries:
+            raise ValueError("test_queries must contain at least one non-empty query")
+
+        available_tools = get_builtin_tools()
+
+        def build_agent_from_version(v: AgentVersion, suffix: str) -> Agent:
+            tools = [available_tools[t] for t in v.tools if t in available_tools]
+            return Agent(
+                name=f"{self.agent_name}-{v.tag}{suffix}",
+                model=v.model,
+                tools=tools,
+                system_prompt=v.system_prompt or v.config.get("system_prompt", ""),
+                max_iterations=v.max_iterations,
+                temperature=v.temperature,
+            )
+
+        agent_a = build_agent_from_version(a, "-A")
+        agent_b = build_agent_from_version(b, "-B")
+
+        ab = ABTest(agent_a, agent_b)
+        report = ab.run_test(queries, num_runs=num_runs)
+
+        # Attach a brief summary of the A/B test to each version's test_results
+        summary_a = {
+            "opponent": tag_b,
+            "role": "A",
+            "winner": report.winner,
+            "confidence": report.confidence,
+            "avg_overall": report.scores["agent_a"].avg_overall,
+            "win_rate": report.scores["agent_a"].win_rate,
+        }
+        summary_b = {
+            "opponent": tag_a,
+            "role": "B",
+            "winner": report.winner,
+            "confidence": report.confidence,
+            "avg_overall": report.scores["agent_b"].avg_overall,
+            "win_rate": report.scores["agent_b"].win_rate,
+        }
+
+        a.test_results = a.test_results or {}
+        b.test_results = b.test_results or {}
+
+        a.test_results.setdefault("ab_tests", {})[tag_b] = summary_a
+        b.test_results.setdefault("ab_tests", {})[tag_a] = summary_b
+
+        print(f"\n🧪 A/B test [{tag_a}] vs [{tag_b}] → winner: {report.winner} (conf {report.confidence*100:.1f}%)")
+
+        return report
 
     def export_json(self) -> str:
         data = {tag: v.model_dump() for tag, v in self.versions.items()}

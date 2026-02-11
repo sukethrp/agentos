@@ -16,6 +16,7 @@ from agentos.scheduler import AgentScheduler
 from agentos.events import event_bus, WebhookTrigger
 from agentos.auth import User, create_user, get_current_user, get_user_by_email
 from agentos.auth.usage import usage_tracker
+from agentos.core.ab_testing import ABTest
 
 load_dotenv()
 
@@ -52,6 +53,21 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: str
+
+
+class ABTestAgentConfig(BaseModel):
+    name: str = "agent"
+    model: str = "gpt-4o-mini"
+    system_prompt: str
+    temperature: float = 0.7
+    tools: list[str] = []
+
+
+class ABTestRequest(BaseModel):
+    agent_a: ABTestAgentConfig
+    agent_b: ABTestAgentConfig
+    queries: list[str]
+    num_runs: int = 5
 
 
 # ── WebSocket Chat (streaming) ──
@@ -329,6 +345,36 @@ def get_my_usage(period: str = "month", current_user: User = Depends(get_current
     }
 
 
+@app.post("/api/ab-test")
+def run_ab_test(req: ABTestRequest, current_user: User = Depends(get_current_user)):
+    """Run an A/B test between two agent configs using the Sandbox judge."""
+    from agentos.core.agent import Agent
+
+    queries = [q.strip() for q in req.queries if q.strip()]
+    if not queries:
+        return {"status": "error", "message": "At least one non-empty query is required"}
+
+    available_tools = get_builtin_tools()
+
+    def build_agent(cfg: ABTestAgentConfig) -> Agent:
+        agent_tools = [available_tools[t] for t in cfg.tools if t in available_tools]
+        return Agent(
+            name=cfg.name,
+            model=cfg.model,
+            tools=agent_tools,
+            system_prompt=cfg.system_prompt,
+            temperature=cfg.temperature,
+        )
+
+    agent_a = build_agent(req.agent_a)
+    agent_b = build_agent(req.agent_b)
+
+    tester = ABTest(agent_a, agent_b)
+    report = tester.run_test(queries, num_runs=req.num_runs)
+
+    return {"status": "ok", "report": report.model_dump()}
+
+
 # ── Event Bus API ──
 
 @app.post("/api/webhook/{event_name}")
@@ -463,6 +509,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="nav-item" onclick="showPanel('monitor')">📊 Monitor</div>
 <div class="nav-item" onclick="showPanel('scheduler')">⏰ Scheduler</div>
 <div class="nav-item" onclick="showPanel('events')">⚡ Events</div>
+<div class="nav-item" onclick="showPanel('abtest')">🧪 A/B Testing</div>
 <h3>Manage</h3>
 <div class="nav-item" onclick="showPanel('auth')">🔑 Account & Usage</div>
 <div class="nav-item" onclick="showPanel('marketplace')">🏪 Marketplace</div>
@@ -706,6 +753,64 @@ POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
 </div>
 </div>
 
+<!-- A/B TESTING -->
+<div class="panel" id="panel-abtest">
+<div class="card">
+<h2>🧪 A/B Testing</h2>
+<p style="color:#888;margin-bottom:16px">Compare two agent configurations on the same set of queries using an LLM-as-judge.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div>
+<h3 style="font-size:14px;margin-bottom:8px;color:#fff">Agent A</h3>
+<label>Name</label>
+<input type="text" id="ab-a-name" value="agent-a">
+<label>Model</label>
+<select id="ab-a-model">
+<option value="gpt-4o-mini">GPT-4o Mini</option>
+<option value="gpt-4o">GPT-4o</option>
+</select>
+<label>System Prompt</label>
+<textarea id="ab-a-prompt">You are a helpful, concise assistant.</textarea>
+<label>Temperature</label>
+<input type="number" id="ab-a-temp" value="0.7" step="0.1" min="0" max="2">
+</div>
+<div>
+<h3 style="font-size:14px;margin-bottom:8px;color:#fff">Agent B</h3>
+<label>Name</label>
+<input type="text" id="ab-b-name" value="agent-b">
+<label>Model</label>
+<select id="ab-b-model">
+<option value="gpt-4o-mini">GPT-4o Mini</option>
+<option value="gpt-4o">GPT-4o</option>
+</select>
+<label>System Prompt</label>
+<textarea id="ab-b-prompt">You are a creative assistant. Provide richer, more detailed answers.</textarea>
+<label>Temperature</label>
+<input type="number" id="ab-b-temp" value="1.0" step="0.1" min="0" max="2">
+</div>
+</div>
+<label style="margin-top:16px">Tools (applied to both agents)</label>
+<div class="tools-grid" id="ab-tools">
+<div class="tool-tag selected" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
+<div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
+<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
+</div>
+<label style="margin-top:16px">Test Queries (one per line)</label>
+<textarea id="ab-queries" style="min-height:100px">Summarize the benefits of AgentOS in one paragraph.
+Explain the difference between GPT-4o and GPT-4o-mini.
+Give three ideas for onboarding flows for a SaaS dashboard.
+Help me debug why my Python script might be slow.
+Write a short product description for an AI agent platform.</textarea>
+<label style="margin-top:16px">Number of runs (repeats full query set)</label>
+<input type="number" id="ab-runs" value="3" min="1" max="10">
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="runAbTest()">🧪 Run A/B Test</button>
+<div id="ab-status" style="margin-top:8px;font-size:13px;color:#888"></div>
+</div>
+<div class="card">
+<h2>Results</h2>
+<div id="ab-results"><p style="color:#555">No A/B test run yet.</p></div>
+</div>
+</div>
+
 </div>
 </div>
 
@@ -719,6 +824,7 @@ if(id==='monitor')refreshMonitor();
 if(id==='templates')loadTemplates();
 if(id==='events')refreshEvents();
 if(id==='auth')refreshAuthUsage();
+if(id==='abtest'){}  // A/B panel is static; no periodic refresh needed
 }
 
 function toggleTool(el){el.classList.toggle('selected')}
@@ -1124,6 +1230,94 @@ usageEl.innerHTML=`
 </div>`;
 }catch(e){
 usageEl.innerHTML='<p style="color:#ff6666">Error: '+e.message+'</p>';
+}
+}
+
+async function runAbTest(){
+const statusEl=document.getElementById('ab-status');
+const resultsEl=document.getElementById('ab-results');
+statusEl.style.color='#888';
+statusEl.textContent='Running A/B test... this may take a while.';
+resultsEl.innerHTML='<p style="color:#888">Running A/B test...</p>';
+const tools=[...document.querySelectorAll('#ab-tools .tool-tag.selected')].map(t=>t.dataset.tool);
+const queriesRaw=document.getElementById('ab-queries').value.split('\\n').map(q=>q.trim()).filter(q=>q);
+const runs=parseInt(document.getElementById('ab-runs').value)||3;
+if(!queriesRaw.length){
+statusEl.style.color='#ff6666';
+statusEl.textContent='Please enter at least one test query.';
+return;
+}
+const body={
+agent_a:{
+name:document.getElementById('ab-a-name').value||'agent-a',
+model:document.getElementById('ab-a-model').value||'gpt-4o-mini',
+system_prompt:document.getElementById('ab-a-prompt').value||'You are a helpful, concise assistant.',
+temperature:parseFloat(document.getElementById('ab-a-temp').value)||0.7,
+tools:tools,
+},
+agent_b:{
+name:document.getElementById('ab-b-name').value||'agent-b',
+model:document.getElementById('ab-b-model').value||'gpt-4o-mini',
+system_prompt:document.getElementById('ab-b-prompt').value||'You are a creative assistant.',
+temperature:parseFloat(document.getElementById('ab-b-temp').value)||1.0,
+tools:tools,
+},
+queries:queriesRaw,
+num_runs:runs,
+};
+try{
+const headers={'Content-Type':'application/json'};
+const apiKey=localStorage.getItem('agentos_api_key');
+if(apiKey)headers['X-API-Key']=apiKey;
+const r=await fetch('/api/ab-test',{method:'POST',headers:headers,body:JSON.stringify(body)});
+const d=await r.json();
+if(d.status!=='ok'){
+statusEl.style.color='#ff6666';
+statusEl.textContent='Error: '+(d.message||'A/B test failed');
+return;
+}
+const rep=d.report;
+statusEl.style.color='#00ff88';
+statusEl.textContent=`Winner: ${rep.winner} (confidence ${(rep.confidence*100).toFixed(1)}%)`;
+const a=rep.scores.agent_a;
+const b=rep.scores.agent_b;
+let h='';
+h+=`<div class="stats-row">
+<div class="stat-chip">Winner: <span>${rep.winner}</span></div>
+<div class="stat-chip">Confidence: <span>${(rep.confidence*100).toFixed(1)}%</span></div>
+</div>`;
+h+=`<div class="stats-row" style="margin-top:8px">
+<div class="stat-chip">A · Avg Overall: <span>${a.avg_overall.toFixed(2)}</span></div>
+<div class="stat-chip">A · Win Rate: <span>${(a.win_rate*100).toFixed(1)}%</span></div>
+<div class="stat-chip">A · Pass Rate: <span>${a.pass_rate.toFixed(1)}%</span></div>
+</div>`;
+h+=`<div class="stats-row" style="margin-top:4px">
+<div class="stat-chip">B · Avg Overall: <span>${b.avg_overall.toFixed(2)}</span></div>
+<div class="stat-chip">B · Win Rate: <span>${(b.win_rate*100).toFixed(1)}%</span></div>
+<div class="stat-chip">B · Pass Rate: <span>${b.pass_rate.toFixed(1)}%</span></div>
+</div>`;
+if(rep.per_query&&rep.per_query.length){
+h+=`<div style="margin-top:12px;font-size:13px">
+<h3 style="font-size:14px;margin-bottom:6px">Per-query breakdown</h3>`;
+rep.per_query.forEach((r,i)=>{
+const icon=r.winner==='agent_a'?'A':r.winner==='agent_b'?'B':'=';
+h+=`<div style="background:#0a0a14;border:1px solid #1a1a2e;border-radius:8px;padding:10px 12px;margin-bottom:4px">
+<div style="display:flex;justify-content:space-between;font-size:13px">
+<span><strong>Q${i+1}</strong> ${r.query}</span>
+<span style="color:#00d4ff">Winner: ${icon}</span>
+</div>
+<div style="font-size:12px;color:#888;margin-top:4px">
+A: ${r.score_a.toFixed(1)} · B: ${r.score_b.toFixed(1)}
+</div>
+</div>`;
+});
+h+='</div>';
+}
+resultsEl.innerHTML=h;
+}catch(e){
+statusEl.style.color='#ff6666';
+statusEl.textContent='Error: '+e.message;
+resultsEl.innerHTML='<p style="color:#ff6666">Error: '+e.message+'</p>';
 }
 }
 
