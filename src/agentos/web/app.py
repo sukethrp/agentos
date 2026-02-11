@@ -1,8 +1,11 @@
 """AgentOS Web UI — Visual Agent Builder + Marketplace + Dashboard."""
 
 from __future__ import annotations
+import asyncio
 import json
-from fastapi import FastAPI
+import queue
+import threading
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -27,6 +30,142 @@ class RunRequest(BaseModel):
 class ChatRequest(BaseModel):
     query: str
     agent_id: str = "default"
+
+
+# ── WebSocket Chat (streaming) ──
+
+@app.websocket("/ws/chat")
+async def ws_chat(websocket: WebSocket):
+    """WebSocket endpoint that streams tokens in real-time."""
+    await websocket.accept()
+    try:
+        data = await websocket.receive_json()
+        query = data.get("query", "").strip()
+        if not query:
+            await websocket.send_json({"type": "error", "message": "Empty query"})
+            return
+
+        name = data.get("name", "chat-agent")
+        model = data.get("model", "gpt-4o-mini")
+        system_prompt = data.get("system_prompt", "You are a helpful assistant.")
+        tools_list = data.get("tools", [])
+        temperature = float(data.get("temperature", 0.7))
+
+        from agentos.core.agent import Agent
+        from agentos.core.tool import tool
+
+        available_tools = {}
+
+        @tool(description="Calculate a math expression")
+        def calculator(expression: str) -> str:
+            try:
+                allowed = set("0123456789+-*/.() ")
+                if not all(c in allowed for c in expression):
+                    return "Error: Only basic math"
+                return str(eval(expression))
+            except Exception as e:
+                return f"Error: {e}"
+        available_tools["calculator"] = calculator
+
+        @tool(description="Get weather for a city")
+        def weather(city: str) -> str:
+            import httpx
+            cities = {"boston": (42.36, -71.06), "new york": (40.71, -74.01), "tokyo": (35.68, 139.69), "london": (51.51, -0.13), "san francisco": (37.77, -122.42)}
+            coords = cities.get(city.lower())
+            if not coords:
+                return f"No data for {city}"
+            try:
+                r = httpx.get("https://api.open-meteo.com/v1/forecast", params={"latitude": coords[0], "longitude": coords[1], "current_weather": "true"}, timeout=10)
+                d = r.json().get("current_weather", {})
+                tc = d.get("temperature", "N/A")
+                tf = round(tc * 9 / 5 + 32, 1) if isinstance(tc, (int, float)) else "N/A"
+                return f"{city.title()}: {tf}°F ({tc}°C)"
+            except Exception:
+                return f"Weather unavailable for {city}"
+        available_tools["weather"] = weather
+
+        @tool(description="Search the web")
+        def web_search(query: str) -> str:
+            import httpx
+            try:
+                r = httpx.get("https://api.duckduckgo.com/", params={"q": query, "format": "json", "no_html": "1"}, timeout=10)
+                d = r.json()
+                if d.get("AbstractText"):
+                    return d["AbstractText"][:300]
+                for t in d.get("RelatedTopics", [])[:2]:
+                    if isinstance(t, dict) and t.get("Text"):
+                        return t["Text"][:300]
+                return f"No results for: {query}"
+            except Exception:
+                return "Search unavailable"
+        available_tools["web_search"] = web_search
+
+        agent_tools = [available_tools[t] for t in tools_list if t in available_tools]
+
+        agent = Agent(
+            name=name,
+            model=model,
+            tools=agent_tools,
+            system_prompt=system_prompt,
+            temperature=temperature,
+        )
+
+        chunk_queue: queue.Queue = queue.Queue()
+
+        def run_agent_stream():
+            try:
+                for chunk in agent.run(query, stream=True):
+                    chunk_queue.put(("chunk", chunk))
+                chunk_queue.put(("done", None))
+            except Exception as e:
+                chunk_queue.put(("error", str(e)))
+
+        stream_thread = threading.Thread(target=run_agent_stream)
+        stream_thread.start()
+
+        full_response = []
+        while True:
+            try:
+                msg_type, data = chunk_queue.get(timeout=0.05)
+            except queue.Empty:
+                await asyncio.sleep(0.01)
+                continue
+
+            if msg_type == "error":
+                await websocket.send_json({"type": "error", "message": data})
+                return
+            if msg_type == "done":
+                break
+
+            if isinstance(data, str):
+                full_response.append(data)
+                await websocket.send_json({"type": "token", "content": data})
+
+        stream_thread.join(timeout=1.0)
+
+        response_text = "".join(full_response)
+        cost = sum(e.cost_usd for e in agent.events)
+        tokens = sum(e.tokens_used for e in agent.events)
+        tools_used = [e.data.get("tool", "") for e in agent.events if e.event_type == "tool_call"]
+
+        for e in agent.events:
+            store.log_event(e)
+
+        await websocket.send_json({
+            "type": "done",
+            "response": response_text,
+            "cost": round(cost, 6),
+            "tokens": tokens,
+            "tools_used": tools_used,
+        })
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except Exception:
+            pass
 
 
 # ── API Endpoints ──
@@ -392,8 +531,52 @@ const q=input.value.trim();if(!q)return;
 input.value='';
 const msgs=document.getElementById('chat-messages');
 msgs.innerHTML+=`<div style="text-align:right;margin:8px 0"><span style="background:#00d4ff22;color:#00d4ff;padding:8px 14px;border-radius:12px;display:inline-block">${q}</span></div>`;
-msgs.innerHTML+=`<div style="margin:8px 0" id="chat-loading"><span class="loading"></span> Thinking...</div>`;
+msgs.innerHTML+=`<div style="margin:8px 0" id="chat-response"><span style="background:#1a1a2e;padding:8px 14px;border-radius:12px;display:inline-block;max-width:80%;white-space:pre-wrap;line-height:1.5"><span id="chat-streaming"><span class="loading"></span> Thinking...</span><span id="chat-content"></span><span style="font-size:11px;color:#555;display:none" id="chat-stats"></span></span></div>`;
 msgs.scrollTop=msgs.scrollHeight;
+const wsProto=location.protocol==='https:'?'wss:':'ws:';
+const wsUrl=`${wsProto}//${location.host}/ws/chat`;
+try{
+const ws=new WebSocket(wsUrl);
+ws.onmessage=function(ev){
+const d=JSON.parse(ev.data);
+if(d.type==='token'){
+document.getElementById('chat-streaming').style.display='none';
+document.getElementById('chat-content').textContent+=d.content;
+msgs.scrollTop=msgs.scrollHeight;
+}else if(d.type==='done'){
+document.getElementById('chat-streaming').style.display='none';
+document.getElementById('chat-stats').style.display='block';
+document.getElementById('chat-stats').textContent=`$${d.cost.toFixed(4)} · ${d.tokens} tokens`;
+}else if(d.type==='error'){
+document.getElementById('chat-streaming').innerHTML='<span style="color:#ff4444">Error: '+d.message+'</span>';
+document.getElementById('chat-streaming').style.display='inline';
+}
+};
+ws.onerror=function(){
+document.getElementById('chat-streaming').innerHTML='<span style="color:#ff4444">WebSocket error</span>';
+document.getElementById('chat-streaming').style.display='inline';
+ws.close();
+};
+ws.onclose=function(){
+};
+await new Promise((resolve,reject)=>{
+ws.onopen=resolve;
+ws.onerror=()=>reject(new Error('WebSocket failed'));
+setTimeout(()=>reject(new Error('timeout')),5000);
+});
+ws.send(JSON.stringify({
+query:q,
+name:document.getElementById('b-name').value||'chat-agent',
+model:document.getElementById('b-model').value||'gpt-4o-mini',
+system_prompt:document.getElementById('b-prompt').value||'You are a helpful assistant.',
+tools:getSelectedTools(),
+temperature:parseFloat(document.getElementById('b-temp').value)||0.7
+}));
+}catch(e){
+sendChatHttp(q,msgs);
+}
+}
+async function sendChatHttp(q,msgs){
 try{
 const r=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
 name:document.getElementById('b-name').value||'chat-agent',
@@ -402,12 +585,13 @@ system_prompt:document.getElementById('b-prompt').value||'You are a helpful assi
 query:q,tools:getSelectedTools(),temperature:0.7
 })});
 const d=await r.json();
-document.getElementById('chat-loading').remove();
-msgs.innerHTML+=`<div style="margin:8px 0"><span style="background:#1a1a2e;padding:8px 14px;border-radius:12px;display:inline-block;max-width:80%">${d.response}<br><span style="font-size:11px;color:#555">$${d.cost.toFixed(4)} · ${d.tokens} tokens</span></span></div>`;
+document.getElementById('chat-streaming').style.display='none';
+document.getElementById('chat-content').textContent=d.response||'';
+document.getElementById('chat-stats').style.display='block';
+document.getElementById('chat-stats').textContent=`$${d.cost.toFixed(4)} · ${d.tokens} tokens`;
 msgs.scrollTop=msgs.scrollHeight;
-}catch(e){
-document.getElementById('chat-loading').remove();
-msgs.innerHTML+=`<div style="color:#ff4444;margin:8px 0">Error: ${e.message}</div>`;
+}catch(err){
+document.getElementById('chat-streaming').innerHTML='<span style="color:#ff4444">Error: '+err.message+'</span>';
 }
 }
 

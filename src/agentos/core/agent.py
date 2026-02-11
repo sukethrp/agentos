@@ -1,8 +1,10 @@
 from __future__ import annotations
+from typing import Generator
 from agentos.core.types import AgentConfig, AgentEvent, Message, Role
 from agentos.core.tool import Tool
 from agentos.core.memory import Memory
 from agentos.providers.router import call_model as call_llm
+from agentos.providers.router import call_model_stream as call_llm_stream
 
 
 class Agent:
@@ -29,7 +31,8 @@ class Agent:
         self.messages: list[dict] = []
         self.memory = memory or Memory()
 
-    def run(self, user_input: str) -> Message:
+    def run(self, user_input: str, stream: bool = False) -> Message | Generator[str | Message, None, None]:
+        """Run the agent. If stream=True, yields tokens as they arrive, then returns the final Message."""
         # Build messages with memory context
         self.messages = self.memory.build_messages(
             self.config.system_prompt,
@@ -37,6 +40,11 @@ class Agent:
         )
         self.events = []
 
+        if not stream:
+            return self._run_sync(user_input)
+        return self._run_stream(user_input)
+
+    def _run_sync(self, user_input: str) -> Message:
         print(f"\n🤖 [{self.config.name}] Processing: {user_input}")
         print("-" * 60)
 
@@ -101,6 +109,68 @@ class Agent:
 
         print("⚠️ Max iterations reached")
         return Message(role=Role.ASSISTANT, content="Could not complete the task.")
+
+    def _run_stream(self, user_input: str) -> Generator[str | Message, None, None]:
+        for i in range(self.config.max_iterations):
+            stream = call_llm_stream(
+                model=self.config.model,
+                messages=self.messages,
+                tools=self.tools,
+                temperature=self.config.temperature,
+                agent_name=self.config.name,
+            )
+            last_item = None
+            for chunk in stream:
+                if isinstance(chunk, str):
+                    yield chunk
+                else:
+                    last_item = chunk
+
+            if last_item is None:
+                return Message(role=Role.ASSISTANT, content="")
+
+            tag, msg, event = last_item
+            self.events.append(event)
+
+            if tag == "done":
+                self.memory.add_exchange(user_input, msg.content or "")
+                self.memory.extract_facts_from_response(user_input, msg.content or "")
+                yield msg
+                return
+
+            self.messages.append({
+                "role": "assistant",
+                "content": msg.content,
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {"name": tc.name, "arguments": str(tc.arguments)},
+                    }
+                    for tc in (msg.tool_calls or [])
+                ],
+            })
+
+            for tc in msg.tool_calls or []:
+                tool = self._tool_map.get(tc.name)
+                if not tool:
+                    result_str = f"ERROR: Tool '{tc.name}' not found"
+                else:
+                    result = tool.execute(tc)
+                    result_str = result.result
+                    self.events.append(AgentEvent(
+                        agent_name=self.config.name,
+                        event_type="tool_call",
+                        data={"tool": tc.name, "args": tc.arguments, "result": result_str[:200]},
+                        latency_ms=result.latency_ms,
+                    ))
+                self.messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result_str,
+                })
+
+        yield Message(role=Role.ASSISTANT, content="Could not complete the task.")
 
     def _print_summary(self):
         total_cost = sum(e.cost_usd for e in self.events)

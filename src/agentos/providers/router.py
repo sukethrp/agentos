@@ -10,6 +10,7 @@ Usage:
 """
 
 from __future__ import annotations
+from typing import Generator
 from agentos.core.types import Message, AgentEvent
 from agentos.core.tool import Tool
 
@@ -57,6 +58,31 @@ def call_model(
 
     else:
         raise ValueError(f"Unknown provider for model: {model}")
+
+
+def call_model_stream(
+    model: str,
+    messages: list[dict],
+    tools: list[Tool],
+    temperature: float = 0.7,
+    max_tokens: int = 1024,
+    agent_name: str = "agent",
+) -> Generator[str | tuple[str, Message, AgentEvent], None, None]:
+    """Stream LLM response. Routes to provider's streaming implementation. Only OpenAI supported for now."""
+    provider = detect_provider(model)
+
+    if provider == "openai":
+        from agentos.providers.openai_provider import call_llm_stream
+        yield from call_llm_stream(
+            messages, tools, model=model, temperature=temperature,
+            max_tokens=max_tokens, agent_name=agent_name,
+        )
+    else:
+        msg, event = call_model(model, messages, tools, temperature=temperature, max_tokens=max_tokens, agent_name=agent_name)
+        if msg.tool_calls:
+            yield ("tool_calls", msg, event)
+        else:
+            yield ("done", msg, event)
 
 
 def list_providers() -> dict:
