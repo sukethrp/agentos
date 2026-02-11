@@ -12,7 +12,8 @@ import tempfile
 import uuid as _uuid
 from pathlib import Path as _Path
 from fastapi import Depends, FastAPI, File, Query, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from agentos.monitor.store import store
@@ -26,10 +27,20 @@ from agentos.auth import User, create_user, get_current_user, get_user_by_email
 from agentos.auth.usage import usage_tracker
 from agentos.core.ab_testing import ABTest
 from agentos.marketplace import get_marketplace_store
+from agentos.embed.widget import generate_widget, generate_widget_js, generate_snippet
 
 load_dotenv()
 
 app = FastAPI(title="AgentOS Platform", version="0.1.0")
+
+# CORS — allow cross-origin embedding of the chat widget
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Global scheduler instance
 _scheduler = AgentScheduler(max_concurrent=3)
@@ -892,6 +903,113 @@ def marketplace_delete(agent_id: str):
     return JSONResponse({"status": "error", "message": "Agent not found"}, 404)
 
 
+# ── Embed / Widget API ──
+
+
+class EmbedConfigRequest(BaseModel):
+    agent_name: str = "AgentOS"
+    theme: str = "dark"
+    position: str = "bottom-right"
+    accent_color: str = "#6c5ce7"
+    logo: str = ""
+    greeting: str = "Hi! How can I help you today?"
+    model: str = "gpt-4o-mini"
+    system_prompt: str = "You are a helpful assistant."
+    tools: list[str] = []
+    api_key: str = ""
+
+
+@app.get("/embed/chat.js")
+def embed_chat_js():
+    """Serve the embeddable widget JavaScript."""
+    js = generate_widget_js()
+    return PlainTextResponse(js, media_type="application/javascript")
+
+
+@app.get("/api/embed/widget")
+def embed_widget_get(
+    agent_name: str = "AgentOS",
+    theme: str = "dark",
+    position: str = "bottom-right",
+    accent_color: str = "#6c5ce7",
+    greeting: str = "Hi! How can I help you today?",
+    model: str = "gpt-4o-mini",
+):
+    """Return a self-contained HTML widget snippet."""
+    html = generate_widget(
+        agent_name=agent_name,
+        base_url="",  # empty = same origin
+        theme=theme,
+        position=position,
+        accent_color=accent_color,
+        greeting=greeting,
+        model=model,
+    )
+    return HTMLResponse(html)
+
+
+@app.post("/api/embed/widget")
+def embed_widget_post(req: EmbedConfigRequest):
+    """Return a self-contained HTML widget snippet (POST with full config)."""
+    html = generate_widget(
+        agent_name=req.agent_name,
+        base_url="",
+        api_key=req.api_key,
+        theme=req.theme,
+        position=req.position,
+        accent_color=req.accent_color,
+        greeting=req.greeting,
+        model=req.model,
+        system_prompt=req.system_prompt,
+        tools=req.tools,
+    )
+    return {"status": "ok", "html": html}
+
+
+@app.get("/api/embed/snippet")
+def embed_snippet(
+    base_url: str = "http://localhost:8000",
+    agent_name: str = "AgentOS",
+    theme: str = "dark",
+    position: str = "bottom-right",
+    accent_color: str = "#6c5ce7",
+    api_key: str = "",
+):
+    """Return a copy-paste code snippet for embedding."""
+    snippet = generate_snippet(
+        base_url=base_url,
+        api_key=api_key,
+        agent_name=agent_name,
+        theme=theme,
+        position=position,
+        accent_color=accent_color,
+    )
+    return {"status": "ok", "snippet": snippet}
+
+
+@app.get("/embed/preview")
+def embed_preview(
+    agent_name: str = "AgentOS",
+    theme: str = "dark",
+    accent_color: str = "#6c5ce7",
+):
+    """Render a full HTML page with the widget embedded — handy for previewing."""
+    widget_html = generate_widget(
+        agent_name=agent_name,
+        base_url="",
+        theme=theme,
+        accent_color=accent_color,
+    )
+    page = f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>AgentOS Widget Preview</title>
+<style>body{{margin:0;font-family:system-ui;background:{'#f5f5f5' if theme=='light' else '#1a1a2e'};
+color:{'#333' if theme=='light' else '#eee'};display:flex;align-items:center;justify-content:center;min-height:100vh}}
+.demo{{text-align:center}}.demo h1{{font-size:28px}}.demo p{{opacity:.6}}</style></head>
+<body><div class="demo"><h1>Your Website</h1><p>The AgentOS chat widget is in the corner ↘</p></div>
+{widget_html}</body></html>"""
+    return HTMLResponse(page)
+
+
 # ── Analytics API ──
 
 def _bucket_key(ts: float, granularity: str) -> str:
@@ -1165,6 +1283,7 @@ textarea{min-height:80px;resize:vertical}
 <h3>Manage</h3>
 <div class="nav-item" onclick="showPanel('auth')">🔑 Account & Usage</div>
 <div class="nav-item" onclick="showPanel('marketplace')">🏪 Marketplace</div>
+<div class="nav-item" onclick="showPanel('embed')">🔌 Embed SDK</div>
 </div>
 <div class="main">
 
@@ -1436,6 +1555,80 @@ textarea{min-height:80px;resize:vertical}
 </div>
 <div id="mp-reviews"></div>
 </div>
+</div>
+</div>
+
+<!-- EMBED SDK -->
+<div class="panel" id="panel-embed">
+<div class="card">
+<h2>🔌 Embeddable Chat Widget</h2>
+<p style="color:#888;margin-bottom:16px">Generate an embeddable widget so other companies can add AgentOS agents to their websites with a single script tag.</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div>
+<label>Widget Name</label>
+<input type="text" id="emb-name" value="Support Bot">
+<label>Theme</label>
+<select id="emb-theme"><option value="dark">Dark</option><option value="light">Light</option></select>
+<label>Position</label>
+<select id="emb-pos"><option value="bottom-right">Bottom-right</option><option value="bottom-left">Bottom-left</option></select>
+<label>Accent Colour</label>
+<div style="display:flex;gap:8px;align-items:center">
+<input type="color" id="emb-color" value="#6c5ce7" style="width:44px;height:36px;padding:2px;border-radius:4px;border:1px solid #1e1e3a;background:#0a0a14;cursor:pointer">
+<input type="text" id="emb-color-hex" value="#6c5ce7" style="flex:1" oninput="document.getElementById('emb-color').value=this.value">
+</div>
+</div>
+<div>
+<label>Greeting Message</label>
+<input type="text" id="emb-greet" value="Hi! How can I help you today?">
+<label>Logo URL (optional)</label>
+<input type="text" id="emb-logo" placeholder="https://example.com/logo.png">
+<label>Model</label>
+<select id="emb-model"><option value="gpt-4o-mini">GPT-4o Mini</option><option value="gpt-4o">GPT-4o</option></select>
+<label>System Prompt</label>
+<textarea id="emb-prompt" rows="2">You are a helpful assistant.</textarea>
+</div>
+</div>
+
+<label style="margin-top:8px">Server URL</label>
+<input type="text" id="emb-url" value="http://localhost:8000">
+
+<div style="display:flex;gap:8px;margin-top:16px">
+<button class="btn btn-primary" style="flex:1" onclick="embGenerate()">Generate Snippet</button>
+<button class="btn btn-secondary" style="flex:1" onclick="embPreview()">Live Preview ↗</button>
+</div>
+</div>
+
+<div class="card" id="emb-output" style="display:none">
+<h2>📋 Embed Code</h2>
+<p style="color:#888;margin-bottom:8px">Copy this snippet and paste it into any HTML page, just before <code>&lt;/body&gt;</code>:</p>
+<pre id="emb-snippet" style="background:#0a0a14;padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;border:1px solid #1e1e3a;color:#10b981;max-height:260px;overflow-y:auto"></pre>
+<button class="btn btn-secondary" style="margin-top:8px" onclick="embCopy()">📋 Copy to Clipboard</button>
+<span id="emb-copy-status" style="margin-left:8px;font-size:13px;color:#888"></span>
+</div>
+
+<div class="card">
+<h2>🐍 Python SDK</h2>
+<p style="color:#888;margin-bottom:8px">Use the Python SDK to integrate AgentOS into any backend:</p>
+<pre style="background:#0a0a14;padding:16px;border-radius:8px;font-size:13px;overflow-x:auto;white-space:pre-wrap;border:1px solid #1e1e3a;color:#e0e0e0">from agentos.embed import AgentOSClient
+
+client = AgentOSClient(
+    base_url="http://localhost:8000",
+    api_key="your-api-key",
+)
+
+# Single response
+response = client.run("How can I help?")
+print(response)
+
+# Streaming
+for token in client.stream("Tell me a story"):
+    print(token, end="", flush=True)
+
+# Browse marketplace
+agents = client.list_agents()
+for a in agents:
+    print(a["name"], a["downloads"])</pre>
 </div>
 </div>
 
@@ -2152,6 +2345,39 @@ tbody.innerHTML=h;
 }
 
 setInterval(()=>{if(document.getElementById('panel-analytics').classList.contains('active'))refreshAnalytics()},5000);
+
+// ── Embed SDK helpers ──
+
+function embGenerate(){
+  const baseUrl=document.getElementById('emb-url').value.trim()||'http://localhost:8000';
+  const name=document.getElementById('emb-name').value.trim()||'AgentOS';
+  const theme=document.getElementById('emb-theme').value;
+  const pos=document.getElementById('emb-pos').value;
+  const color=document.getElementById('emb-color').value;
+  const greet=document.getElementById('emb-greet').value;
+  const logo=document.getElementById('emb-logo').value;
+  const model=document.getElementById('emb-model').value;
+  const prompt=document.getElementById('emb-prompt').value;
+  const snippet=`<script>\n  window.AgentOSConfig = {\n    baseUrl: "${baseUrl}",\n    agentName: "${name}",\n    theme: "${theme}",\n    position: "${pos}",\n    accentColor: "${color}",\n    greeting: "${greet}",${logo?'\n    logo: "'+logo+'",'  :''}\n    model: "${model}",\n    systemPrompt: "${prompt.replace(/"/g,'\\"')}",\n  };\n<\/script>\n<script src="${baseUrl}/embed/chat.js"><\/script>`;
+  document.getElementById('emb-snippet').textContent=snippet;
+  document.getElementById('emb-output').style.display='block';
+  document.getElementById('emb-output').scrollIntoView({behavior:'smooth'});
+}
+
+function embCopy(){
+  const text=document.getElementById('emb-snippet').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    document.getElementById('emb-copy-status').textContent='Copied!';
+    setTimeout(()=>{document.getElementById('emb-copy-status').textContent='';},2000);
+  });
+}
+
+function embPreview(){
+  const name=document.getElementById('emb-name').value.trim()||'AgentOS';
+  const theme=document.getElementById('emb-theme').value;
+  const color=encodeURIComponent(document.getElementById('emb-color').value);
+  window.open('/embed/preview?agent_name='+encodeURIComponent(name)+'&theme='+theme+'&accent_color='+color,'_blank');
+}
 
 // ── Marketplace helpers ──
 

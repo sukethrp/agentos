@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgentOS Embed Demo — Customer Website</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #f8f9fb;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    /* ── Fake customer website ── */
+    nav {
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    nav .brand {
+      font-weight: 700;
+      font-size: 20px;
+      color: #6c5ce7;
+    }
+    nav .links a {
+      margin-left: 24px;
+      text-decoration: none;
+      color: #555;
+      font-size: 14px;
+    }
+    nav .links a:hover { color: #6c5ce7; }
+
+    .hero {
+      text-align: center;
+      padding: 80px 24px 60px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { color: #6c5ce7; }
+    .hero p {
+      font-size: 18px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+    .hero .cta {
+      display: inline-block;
+      padding: 14px 36px;
+      background: #6c5ce7;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background .2s;
+    }
+    .hero .cta:hover { background: #5a4bd6; }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto 80px;
+      padding: 0 24px;
+    }
+    .features .card {
+      background: #fff;
+      border: 1px solid #e8e8ee;
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .features .card h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .features .card p {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 13px;
+      color: #aaa;
+      border-top: 1px solid #e8e8ee;
+    }
+
+    .note {
+      max-width: 640px;
+      margin: 0 auto 40px;
+      padding: 16px 24px;
+      background: #eef0ff;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #333;
+      text-align: center;
+    }
+    .note code {
+      background: #ddd;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Simulated customer website -->
+<nav>
+  <div class="brand">Acme Corp</div>
+  <div class="links">
+    <a href="#">Products</a>
+    <a href="#">Pricing</a>
+    <a href="#">Docs</a>
+    <a href="#">Contact</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>Welcome to <span>Acme Corp</span></h1>
+  <p>
+    This is a demo of a customer website that has embedded the AgentOS chat
+    widget. Click the chat bubble in the bottom-right corner to talk to an
+    AI agent powered by AgentOS.
+  </p>
+  <a class="cta" href="#">Get Started</a>
+</div>
+
+<div class="note">
+  <strong>How it works:</strong> This entire chat widget was added with just
+  two lines of code — a <code>&lt;script&gt;</code> config block and a
+  <code>&lt;script src&gt;</code> tag. See the page source for details.
+</div>
+
+<div class="features">
+  <div class="card">
+    <h3>🚀 One-line Integration</h3>
+    <p>Add the AgentOS chat widget to any website with a single script tag. No build step required.</p>
+  </div>
+  <div class="card">
+    <h3>🎨 White-label Ready</h3>
+    <p>Customise colours, logo, greeting, position, and theme to match your brand perfectly.</p>
+  </div>
+  <div class="card">
+    <h3>⚡ Real-time Streaming</h3>
+    <p>Responses stream token-by-token via WebSocket for a ChatGPT-like typing experience.</p>
+  </div>
+</div>
+
+<footer>
+  &copy; 2026 Acme Corp (Demo) &mdash; Powered by AgentOS
+</footer>
+
+<!--
+  ════════════════════════════════════════════════════════
+  ✨  THIS IS ALL YOU NEED TO ADD TO YOUR WEBSITE  ✨
+
+  1. Set your configuration
+  2. Load the chat.js script from your AgentOS server
+  ════════════════════════════════════════════════════════
+-->
+<script>
+  window.AgentOSConfig = {
+    baseUrl: "http://localhost:8000",
+    agentName: "Acme Support",
+    theme: "dark",
+    position: "bottom-right",
+    accentColor: "#6c5ce7",
+    greeting: "Hi! I'm Acme's AI assistant. How can I help you today?",
+    model: "gpt-4o-mini",
+    systemPrompt: "You are Acme Corp's friendly customer support assistant. Be helpful, concise, and professional.",
+  };
+</script>
+<script src="http://localhost:8000/embed/chat.js"></script>
+
+</body>
+</html>
