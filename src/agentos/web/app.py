@@ -13,6 +13,7 @@ from agentos.monitor.store import store
 from agentos.core.types import AgentEvent
 from agentos.tools import get_builtin_tools
 from agentos.scheduler import AgentScheduler
+from agentos.events import event_bus, WebhookTrigger
 
 load_dotenv()
 
@@ -21,6 +22,10 @@ app = FastAPI(title="AgentOS Platform", version="0.1.0")
 # Global scheduler instance
 _scheduler = AgentScheduler(max_concurrent=3)
 _scheduler.start()
+
+# Global webhook trigger (passive — fires when /api/webhook/ is hit)
+_webhook_trigger = WebhookTrigger(name="web-webhook")
+_webhook_trigger.start()
 
 
 class RunRequest(BaseModel):
@@ -267,6 +272,59 @@ def resume_scheduler_job(job_id: str):
     return {"status": "error", "message": f"Cannot resume job {job_id}"}
 
 
+# ── Event Bus API ──
+
+@app.post("/api/webhook/{event_name}")
+async def webhook_receiver(event_name: str, body: dict = {}):
+    """Receive a webhook POST and emit it through the event bus.
+
+    Example: POST /api/webhook/deploy.completed  {"repo": "myapp", "status": "success"}
+    """
+    _webhook_trigger.event_name = f"webhook.{event_name}"
+    _webhook_trigger.fire(data=body, source=f"webhook:{event_name}")
+    return {
+        "status": "emitted",
+        "event": f"webhook.{event_name}",
+        "listeners_matched": len([
+            l for l in event_bus.list_listeners()
+            if l.matches(f"webhook.{event_name}")
+        ]),
+    }
+
+
+@app.get("/api/events/listeners")
+def list_event_listeners():
+    """List all registered event listeners."""
+    return {
+        "overview": event_bus.get_overview(),
+        "listeners": [l.to_dict() for l in event_bus.list_listeners()],
+    }
+
+
+@app.get("/api/events/history")
+def get_event_history(limit: int = 20):
+    """Get recent event emission history."""
+    return {
+        "history": [log.to_dict() for log in event_bus.get_history(limit=limit)],
+    }
+
+
+@app.post("/api/events/emit")
+async def emit_event(body: dict = {}):
+    """Manually emit an event through the bus.
+
+    Body: {"event_name": "custom.test", "data": {"key": "value"}}
+    """
+    event_name = body.get("event_name", "custom.manual")
+    data = body.get("data", {})
+    log = event_bus.emit(event_name, data=data, source="api:manual")
+    return {
+        "status": "emitted",
+        "event_name": event_name,
+        "listeners_triggered": log.listeners_triggered,
+    }
+
+
 # ── The Complete Web UI ──
 
 WEB_UI_HTML = """
@@ -346,6 +404,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="nav-item" onclick="showPanel('chat')">💬 Chat</div>
 <div class="nav-item" onclick="showPanel('monitor')">📊 Monitor</div>
 <div class="nav-item" onclick="showPanel('scheduler')">⏰ Scheduler</div>
+<div class="nav-item" onclick="showPanel('events')">⚡ Events</div>
 <h3>Manage</h3>
 <div class="nav-item" onclick="showPanel('marketplace')">🏪 Marketplace</div>
 </div>
@@ -516,6 +575,47 @@ textarea{min-height:80px;resize:vertical}
 </div>
 </div>
 
+<!-- EVENTS -->
+<div class="panel" id="panel-events">
+<div class="card">
+<h2>⚡ Event Bus</h2>
+<p style="color:#888;margin-bottom:16px">Fire events and see which agents react. Supports webhooks, timers, agent-to-agent chains, and custom events.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div>
+<label>Event Name</label>
+<input type="text" id="ev-name" value="custom.test" placeholder="webhook.received, agent.completed, custom.*">
+<label>Event Data (JSON)</label>
+<textarea id="ev-data" style="min-height:80px" placeholder='{"key": "value"}'>{"message": "Hello from the event bus!"}</textarea>
+</div>
+<div>
+<label>Quick Events</label>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="document.getElementById('ev-name').value='webhook.received'">webhook.received</button>
+<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="document.getElementById('ev-name').value='agent.completed'">agent.completed</button>
+<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="document.getElementById('ev-name').value='file.changed'">file.changed</button>
+<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="document.getElementById('ev-name').value='schedule.triggered'">schedule.triggered</button>
+<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="document.getElementById('ev-name').value='custom.test'">custom.test</button>
+</div>
+<label>Webhook URL</label>
+<div style="background:#08080f;border:1px solid #2a2a4a;border-radius:8px;padding:10px 14px;font-size:13px;color:#888;margin-top:4px;word-break:break-all">
+POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
+<br><span style="font-size:11px">Send JSON body to fire events from external services</span>
+</div>
+</div>
+</div>
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="emitEvent()">⚡ Emit Event</button>
+<div id="ev-result" style="display:none;margin-top:12px;background:#08080f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;font-size:13px"></div>
+</div>
+<div class="card">
+<h2>Registered Listeners</h2>
+<div id="ev-listeners"><p style="color:#555">No listeners registered. Use the Python API to register agents.</p></div>
+</div>
+<div class="card">
+<h2>Event History</h2>
+<div id="ev-history"><p style="color:#555">No events emitted yet.</p></div>
+</div>
+</div>
+
 </div>
 </div>
 
@@ -527,6 +627,7 @@ document.getElementById('panel-'+id).classList.add('active');
 event.target.classList.add('active');
 if(id==='monitor')refreshMonitor();
 if(id==='templates')loadTemplates();
+if(id==='events')refreshEvents();
 }
 
 function toggleTool(el){el.classList.toggle('selected')}
@@ -753,6 +854,73 @@ h+=`</div>`;
 document.getElementById('sc-jobs').innerHTML=h;
 }catch(e){console.log(e)}
 }
+
+async function emitEvent(){
+const evName=document.getElementById('ev-name').value.trim();
+let evData={};
+try{evData=JSON.parse(document.getElementById('ev-data').value);}catch(e){evData={raw:document.getElementById('ev-data').value};}
+try{
+const r=await fetch('/api/events/emit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_name:evName,data:evData})});
+const d=await r.json();
+const el=document.getElementById('ev-result');
+el.style.display='block';
+el.innerHTML=`<span style="color:#00ff88">✓ Emitted</span> <strong>${d.event_name}</strong> — ${d.listeners_triggered} listener(s) triggered`;
+refreshEvents();
+}catch(e){
+document.getElementById('ev-result').style.display='block';
+document.getElementById('ev-result').innerHTML='<span style="color:#ff4444">Error: '+e.message+'</span>';
+}
+}
+
+async function refreshEvents(){
+try{
+const lr=await fetch('/api/events/listeners');
+const ld=await lr.json();
+let lh='';
+if(!ld.listeners||ld.listeners.length===0){
+lh='<p style="color:#555">No listeners registered. Use the Python API to register agents.</p>';
+}else{
+lh+=`<div style="margin-bottom:12px;display:flex;gap:12px">
+<div class="stat-chip">Listeners: <span>${ld.overview.total_listeners}</span></div>
+<div class="stat-chip">Events Emitted: <span>${ld.overview.total_events_emitted}</span></div>
+<div class="stat-chip">Total Executions: <span>${ld.overview.total_executions}</span></div>
+</div>`;
+ld.listeners.forEach(l=>{
+const last=l.last_triggered?new Date(l.last_triggered*1000).toLocaleTimeString():'never';
+lh+=`<div style="background:#0a0a14;border:1px solid #1a1a2e;border-radius:8px;padding:12px;margin-bottom:6px;display:grid;grid-template-columns:1fr 1fr 80px 80px;gap:10px;font-size:13px;align-items:center">
+<div><span style="color:#00d4ff;font-weight:600">${l.event_pattern}</span></div>
+<div><strong style="color:#fff">${l.agent_name}</strong> <span style="color:#555;font-size:11px">· ${l.listener_id}</span></div>
+<div style="text-align:right;color:#00ff88">${l.execution_count} runs</div>
+<div style="text-align:right;color:#666">${last}</div>
+</div>`;
+});
+}
+document.getElementById('ev-listeners').innerHTML=lh;
+
+const hr=await fetch('/api/events/history?limit=15');
+const hd=await hr.json();
+let hh='';
+if(!hd.history||hd.history.length===0){
+hh='<p style="color:#555">No events emitted yet.</p>';
+}else{
+hd.history.reverse().forEach(h=>{
+const t=new Date(h.event.timestamp*1000).toLocaleTimeString();
+const results=h.results.map(r=>`<span style="color:${r.status==='completed'?'#00ff88':'#ff4444'}">${r.agent_name}: ${(r.result||r.error||'').slice(0,80)}</span>`).join('<br>');
+hh+=`<div style="background:#0a0a14;border:1px solid #12121f;border-radius:6px;padding:10px 14px;margin-bottom:4px;font-size:13px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<span style="color:#00d4ff;font-weight:600">${h.event.name}</span>
+<span style="color:#666;font-size:11px">${t}</span>
+</div>
+<div style="color:#888;font-size:12px;margin-top:4px">${h.listeners_triggered} listener(s) · source: ${h.event.source||'—'}</div>
+${results?'<div style="margin-top:6px;font-size:11px;border-top:1px solid #1a1a2e;padding-top:6px">'+results+'</div>':''}
+</div>`;
+});
+}
+document.getElementById('ev-history').innerHTML=hh;
+}catch(e){console.log(e)}
+}
+
+setInterval(()=>{if(document.getElementById('panel-events').classList.contains('active'))refreshEvents()},3000);
 </script>
 </body>
 </html>
