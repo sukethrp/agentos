@@ -20,6 +20,8 @@ from agentos.tools.http_tool import (
     news_tool,
     create_api_tool,
 )
+from agentos.tools.vision_tool import vision_tool
+from agentos.tools.document_tool import document_reader_tool, document_qa_tool
 
 
 def get_builtin_tools() -> dict[str, Tool]:
@@ -32,6 +34,9 @@ def get_builtin_tools() -> dict[str, Tool]:
         "weather": weather_tool(),
         "web_search": web_search_tool(),
         "news_search": news_tool(),
+        "analyze_image": vision_tool(),
+        "read_document": document_reader_tool(),
+        "analyze_document": document_qa_tool(),
     }
 
 
@@ -42,4 +47,7 @@ __all__ = [
     "web_search_tool",
     "news_tool",
     "create_api_tool",
+    "vision_tool",
+    "document_reader_tool",
+    "document_qa_tool",
 ]

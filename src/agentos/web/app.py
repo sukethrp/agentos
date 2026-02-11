@@ -7,13 +7,18 @@ import queue
 import threading
 import time as _time
 from collections import defaultdict
-from fastapi import Depends, FastAPI, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+import os
+import tempfile
+import uuid as _uuid
+from pathlib import Path as _Path
+from fastapi import Depends, FastAPI, File, Query, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from agentos.monitor.store import store
 from agentos.core.types import AgentEvent
 from agentos.tools import get_builtin_tools
+from agentos.core.multimodal import analyze_image, read_document, encode_image
 from agentos.scheduler import AgentScheduler
 from agentos.events import event_bus, WebhookTrigger
 from agentos.auth import User, create_user, get_current_user, get_user_by_email
@@ -31,6 +36,10 @@ _scheduler.start()
 # Global webhook trigger (passive — fires when /api/webhook/ is hit)
 _webhook_trigger = WebhookTrigger(name="web-webhook")
 _webhook_trigger.start()
+
+# Upload directory for files
+_UPLOAD_DIR = _Path(tempfile.gettempdir()) / "agentos_uploads"
+_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class RunRequest(BaseModel):
@@ -377,6 +386,126 @@ def run_ab_test(req: ABTestRequest, current_user: User = Depends(get_current_use
     return {"status": "ok", "report": report.model_dump()}
 
 
+# ── Multi-modal / File Upload API ──
+
+ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+ALLOWED_DOC_EXTS = {".txt", ".md", ".markdown", ".pdf", ".csv", ".json", ".log", ".rst"}
+ALLOWED_EXTS = ALLOWED_IMAGE_EXTS | ALLOWED_DOC_EXTS
+
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """Upload an image or document for analysis."""
+    if not file.filename:
+        return JSONResponse({"status": "error", "message": "No file provided"}, 400)
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_EXTS:
+        return JSONResponse({
+            "status": "error",
+            "message": f"Unsupported file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_EXTS))}",
+        }, 400)
+
+    # Save to temp directory with a unique name
+    unique_name = f"{_uuid.uuid4().hex[:8]}_{file.filename}"
+    dest = _UPLOAD_DIR / unique_name
+    content = await file.read()
+    dest.write_bytes(content)
+
+    file_type = "image" if ext in ALLOWED_IMAGE_EXTS else "document"
+
+    return {
+        "status": "uploaded",
+        "file_path": str(dest),
+        "file_name": file.filename,
+        "file_type": file_type,
+        "size_bytes": len(content),
+    }
+
+
+class AnalyzeFileRequest(BaseModel):
+    file_path: str
+    question: str = ""
+    model: str = "gpt-4o"
+
+
+@app.post("/api/analyze-file")
+def analyze_uploaded_file(req: AnalyzeFileRequest):
+    """Analyze an uploaded image or document.
+
+    For images: uses OpenAI Vision API.
+    For documents: reads content and uses an agent to answer the question.
+    Also accepts image URLs directly.
+    """
+    question = req.question.strip() or "Describe or summarize this content in detail."
+
+    # Handle URL-based image analysis
+    from agentos.core.multimodal import is_url
+    if is_url(req.file_path):
+        try:
+            result = analyze_image(
+                image_path_or_url=req.file_path,
+                prompt=question,
+                model=req.model,
+            )
+            return {"status": "ok", "type": "image", "analysis": result}
+        except Exception as e:
+            return JSONResponse({"status": "error", "message": str(e)}, 500)
+
+    path = _Path(req.file_path)
+    if not path.exists():
+        return JSONResponse({"status": "error", "message": "File not found"}, 404)
+
+    ext = path.suffix.lower()
+
+    if ext in ALLOWED_IMAGE_EXTS:
+        # Image analysis via Vision API
+        try:
+            result = analyze_image(
+                image_path_or_url=str(path),
+                prompt=question,
+                model=req.model,
+            )
+            return {"status": "ok", "type": "image", "analysis": result}
+        except Exception as e:
+            return JSONResponse({"status": "error", "message": str(e)}, 500)
+    else:
+        # Document analysis — read content, then use an LLM to answer
+        try:
+            content = read_document(str(path), max_chars=30_000)
+            from agentos.core.agent import Agent
+            agent = Agent(
+                name="doc-analyzer",
+                model=req.model if req.model != "gpt-4o" else "gpt-4o-mini",
+                system_prompt=(
+                    "You are a document analysis assistant. The user has uploaded a document "
+                    "and wants you to analyze it. Answer their question based solely on the "
+                    "document content provided."
+                ),
+            )
+            import io, sys
+            old = sys.stdout
+            sys.stdout = io.StringIO()
+            msg = agent.run(
+                f"Here is the document content:\n\n---\n{content}\n---\n\n"
+                f"Question: {question}"
+            )
+            sys.stdout = old
+            for e in agent.events:
+                store.log_event(e)
+            cost = sum(e.cost_usd for e in agent.events)
+            tokens = sum(e.tokens_used for e in agent.events)
+            return {
+                "status": "ok",
+                "type": "document",
+                "analysis": msg.content,
+                "cost": round(cost, 6),
+                "tokens": tokens,
+            }
+        except Exception as e:
+            return JSONResponse({"status": "error", "message": str(e)}, 500)
+
+
 # ── Event Bus API ──
 
 @app.post("/api/webhook/{event_name}")
@@ -651,6 +780,16 @@ textarea{min-height:80px;resize:vertical}
 .an-tabs{display:flex;gap:4px;margin-bottom:16px}
 .an-tab{padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid #2a2a4a;background:#08080f;color:#888;transition:all 0.2s}
 .an-tab.active{background:#00d4ff15;border-color:#00d4ff;color:#00d4ff}
+/* ── Multi-modal upload ── */
+.mm-upload-zone{border:2px dashed #2a2a4a;border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.3s;background:#08080f;margin-bottom:16px}
+.mm-upload-zone:hover,.mm-upload-zone.dragover{border-color:#00d4ff;background:#00d4ff08}
+.mm-upload-zone .icon{font-size:40px;margin-bottom:8px}
+.mm-upload-zone p{color:#888;font-size:14px}
+.mm-upload-zone .sub{color:#555;font-size:12px;margin-top:4px}
+.mm-preview{display:none;margin-bottom:16px;background:#0a0a14;border:1px solid #1a1a2e;border-radius:10px;padding:16px}
+.mm-preview img{max-width:100%;max-height:300px;border-radius:8px;margin-bottom:8px}
+.mm-preview .file-info{font-size:13px;color:#888}
+.mm-result{display:none;background:#08080f;border:1px solid #1a1a2e;border-radius:8px;padding:16px;margin-top:16px;white-space:pre-wrap;line-height:1.6;font-size:14px}
 </style>
 </head>
 <body>
@@ -670,6 +809,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="nav-item" onclick="showPanel('scheduler')">⏰ Scheduler</div>
 <div class="nav-item" onclick="showPanel('events')">⚡ Events</div>
 <div class="nav-item" onclick="showPanel('abtest')">🧪 A/B Testing</div>
+<div class="nav-item" onclick="showPanel('multimodal')">👁️ Multi-modal</div>
 <h3>Manage</h3>
 <div class="nav-item" onclick="showPanel('auth')">🔑 Account & Usage</div>
 <div class="nav-item" onclick="showPanel('marketplace')">🏪 Marketplace</div>
@@ -696,6 +836,9 @@ textarea{min-height:80px;resize:vertical}
 <div class="tool-tag selected" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
 <div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
 <div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
+<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">👁️ Vision</div>
+<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">📄 Doc Reader</div>
+<div class="tool-tag" data-tool="analyze_document" onclick="toggleTool(this)">📑 Doc Q&A</div>
 </div>
 <label>Temperature (creativity: 0=focused, 1=creative)</label>
 <input type="range" id="b-temp" min="0" max="1" step="0.1" value="0.7" oninput="document.getElementById('temp-val').textContent=this.value">
@@ -893,6 +1036,8 @@ textarea{min-height:80px;resize:vertical}
 <div class="tool-tag" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
 <div class="tool-tag selected" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
 <div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
+<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">👁️ Vision</div>
+<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">📄 Doc Reader</div>
 </div>
 <label>Max Executions (0 = unlimited)</label>
 <input type="number" id="sc-max" value="0" min="0">
@@ -1018,6 +1163,8 @@ POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
 <div class="tool-tag selected" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
 <div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
 <div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
+<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">👁️ Vision</div>
+<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">📄 Doc Reader</div>
 </div>
 <label style="margin-top:16px">Test Queries (one per line)</label>
 <textarea id="ab-queries" style="min-height:100px">Summarize the benefits of AgentOS in one paragraph.
@@ -1033,6 +1180,52 @@ Write a short product description for an AI agent platform.</textarea>
 <div class="card">
 <h2>Results</h2>
 <div id="ab-results"><p style="color:#555">No A/B test run yet.</p></div>
+</div>
+</div>
+
+<!-- MULTI-MODAL -->
+<div class="panel" id="panel-multimodal">
+<div class="card">
+<h2>👁️ Multi-modal Analysis</h2>
+<p style="color:#888;margin-bottom:16px">Upload an image or document and ask questions about it. Supports images (PNG, JPG, GIF, WebP) and documents (TXT, MD, PDF, CSV, JSON).</p>
+<div class="mm-upload-zone" id="mm-dropzone" onclick="document.getElementById('mm-file-input').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleDrop(event)">
+<div class="icon">📁</div>
+<p>Click to upload or drag &amp; drop</p>
+<p class="sub">Images: PNG, JPG, GIF, WebP &middot; Documents: TXT, MD, PDF, CSV, JSON</p>
+</div>
+<input type="file" id="mm-file-input" style="display:none" accept=".png,.jpg,.jpeg,.gif,.webp,.txt,.md,.markdown,.pdf,.csv,.json,.log,.rst" onchange="handleFileSelect(this)">
+<div class="mm-preview" id="mm-preview">
+<div id="mm-preview-content"></div>
+<div class="file-info" id="mm-file-info"></div>
+<button class="btn btn-secondary" style="margin-top:8px;font-size:12px" onclick="clearUpload()">Remove file</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end">
+<div>
+<label>Ask a question about your file</label>
+<input type="text" id="mm-question" placeholder="Describe this image... / Summarize the key points... / What is the main topic?" value="" onkeydown="if(event.key==='Enter')analyzeFile()">
+</div>
+<div>
+<label>Model</label>
+<select id="mm-model" style="width:140px">
+<option value="gpt-4o">GPT-4o (vision)</option>
+<option value="gpt-4o-mini">GPT-4o Mini</option>
+</select>
+</div>
+</div>
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="analyzeFile()" id="mm-analyze-btn">👁️ Analyze</button>
+<div id="mm-status" style="margin-top:8px;font-size:13px;color:#888"></div>
+<div class="mm-result" id="mm-result"></div>
+</div>
+<div class="card">
+<h2>Or Analyze by URL</h2>
+<p style="color:#888;margin-bottom:12px">Paste a public image URL to analyze without uploading.</p>
+<label>Image URL</label>
+<input type="text" id="mm-url" placeholder="https://example.com/photo.jpg">
+<label>Question</label>
+<input type="text" id="mm-url-question" placeholder="What is in this image?" onkeydown="if(event.key==='Enter')analyzeUrl()">
+<button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="analyzeUrl()">👁️ Analyze URL</button>
+<div id="mm-url-status" style="margin-top:8px;font-size:13px;color:#888"></div>
+<div class="mm-result" id="mm-url-result"></div>
 </div>
 </div>
 
@@ -1510,6 +1703,147 @@ tbody.innerHTML=h;
 }
 
 setInterval(()=>{if(document.getElementById('panel-analytics').classList.contains('active'))refreshAnalytics()},5000);
+
+// ── Multi-modal helpers ──
+
+let _mmFilePath=null;
+let _mmFileType=null;
+
+function handleDrop(e){
+e.preventDefault();
+e.currentTarget.classList.remove('dragover');
+if(e.dataTransfer.files.length>0)uploadFile(e.dataTransfer.files[0]);
+}
+
+function handleFileSelect(input){
+if(input.files.length>0)uploadFile(input.files[0]);
+}
+
+async function uploadFile(file){
+const statusEl=document.getElementById('mm-status');
+statusEl.style.color='#888';
+statusEl.textContent='Uploading...';
+const formData=new FormData();
+formData.append('file',file);
+try{
+const r=await fetch('/api/upload',{method:'POST',body:formData});
+const d=await r.json();
+if(d.status!=='uploaded'){
+statusEl.style.color='#ff6666';
+statusEl.textContent='Error: '+(d.message||'Upload failed');
+return;
+}
+_mmFilePath=d.file_path;
+_mmFileType=d.file_type;
+statusEl.style.color='#00ff88';
+statusEl.textContent='Uploaded: '+d.file_name+' ('+formatBytes(d.size_bytes)+')';
+// Show preview
+const previewEl=document.getElementById('mm-preview');
+const contentEl=document.getElementById('mm-preview-content');
+const infoEl=document.getElementById('mm-file-info');
+previewEl.style.display='block';
+if(d.file_type==='image'){
+const url=URL.createObjectURL(file);
+contentEl.innerHTML='<img src="'+url+'" alt="Preview">';
+document.getElementById('mm-question').placeholder='What is in this image? Describe the details...';
+}else{
+contentEl.innerHTML='<div style="font-size:36px;text-align:center;padding:20px">📄</div>';
+document.getElementById('mm-question').placeholder='Summarize this document... / What are the key points?';
+}
+infoEl.textContent=d.file_name+' · '+d.file_type+' · '+formatBytes(d.size_bytes);
+}catch(e){
+statusEl.style.color='#ff6666';
+statusEl.textContent='Error: '+e.message;
+}
+}
+
+function clearUpload(){
+_mmFilePath=null;
+_mmFileType=null;
+document.getElementById('mm-preview').style.display='none';
+document.getElementById('mm-preview-content').innerHTML='';
+document.getElementById('mm-file-info').textContent='';
+document.getElementById('mm-status').textContent='';
+document.getElementById('mm-result').style.display='none';
+document.getElementById('mm-file-input').value='';
+}
+
+function formatBytes(b){
+if(b<1024)return b+' B';
+if(b<1048576)return (b/1024).toFixed(1)+' KB';
+return (b/1048576).toFixed(1)+' MB';
+}
+
+async function analyzeFile(){
+if(!_mmFilePath){
+document.getElementById('mm-status').style.color='#ff6666';
+document.getElementById('mm-status').textContent='Please upload a file first.';
+return;
+}
+const btn=document.getElementById('mm-analyze-btn');
+btn.disabled=true;btn.innerHTML='<span class="loading"></span> Analyzing...';
+const statusEl=document.getElementById('mm-status');
+const resultEl=document.getElementById('mm-result');
+statusEl.style.color='#888';
+statusEl.textContent='Analyzing...';
+try{
+const r=await fetch('/api/analyze-file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+file_path:_mmFilePath,
+question:document.getElementById('mm-question').value||'',
+model:document.getElementById('mm-model').value
+})});
+const d=await r.json();
+if(d.status==='ok'){
+statusEl.style.color='#00ff88';
+let info=_mmFileType==='image'?'Image analysis complete':'Document analysis complete';
+if(d.cost)info+=' · $'+d.cost.toFixed(4);
+if(d.tokens)info+=' · '+d.tokens+' tokens';
+statusEl.textContent=info;
+resultEl.style.display='block';
+resultEl.textContent=d.analysis||'No result';
+}else{
+statusEl.style.color='#ff6666';
+statusEl.textContent='Error: '+(d.message||'Analysis failed');
+}
+}catch(e){
+statusEl.style.color='#ff6666';
+statusEl.textContent='Error: '+e.message;
+}
+btn.disabled=false;btn.innerHTML='👁️ Analyze';
+}
+
+async function analyzeUrl(){
+const url=document.getElementById('mm-url').value.trim();
+if(!url){
+document.getElementById('mm-url-status').style.color='#ff6666';
+document.getElementById('mm-url-status').textContent='Please enter an image URL.';
+return;
+}
+const statusEl=document.getElementById('mm-url-status');
+const resultEl=document.getElementById('mm-url-result');
+statusEl.style.color='#888';
+statusEl.textContent='Analyzing image from URL...';
+try{
+const r=await fetch('/api/analyze-file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+file_path:url,
+question:document.getElementById('mm-url-question').value||'Describe this image in detail.',
+model:'gpt-4o'
+})});
+const d=await r.json();
+if(d.status==='ok'){
+statusEl.style.color='#00ff88';
+statusEl.textContent='Analysis complete';
+resultEl.style.display='block';
+resultEl.textContent=d.analysis||'No result';
+}else{
+statusEl.style.color='#ff6666';
+statusEl.textContent='Error: '+(d.message||'Analysis failed');
+}
+}catch(e){
+statusEl.style.color='#ff6666';
+statusEl.textContent='Error: '+e.message;
+}
+}
 
 // ── Auth helpers ──
 
