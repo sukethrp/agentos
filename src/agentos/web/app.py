@@ -1,0 +1,468 @@
+"""AgentOS Web UI — Visual Agent Builder + Marketplace + Dashboard."""
+
+from __future__ import annotations
+import json
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+from dotenv import load_dotenv
+from agentos.monitor.store import store
+from agentos.core.types import AgentEvent
+
+load_dotenv()
+
+app = FastAPI(title="AgentOS Platform", version="0.1.0")
+
+
+class RunRequest(BaseModel):
+    name: str = "web-agent"
+    model: str = "gpt-4o-mini"
+    system_prompt: str = "You are a helpful assistant."
+    query: str = ""
+    tools: list[str] = []
+    temperature: float = 0.7
+    budget_limit: float = 5.0
+
+
+class ChatRequest(BaseModel):
+    query: str
+    agent_id: str = "default"
+
+
+# ── API Endpoints ──
+
+@app.get("/")
+def home():
+    return HTMLResponse(WEB_UI_HTML)
+
+
+@app.get("/api/overview")
+def overview():
+    return store.get_overview()
+
+
+@app.get("/api/events")
+def get_events(limit: int = 50):
+    return store.get_events(limit=limit)
+
+
+@app.get("/api/templates")
+def get_templates():
+    return {
+        "templates": [
+            {"id": "customer-support", "name": "Customer Support", "description": "Handle inquiries, complaints, tickets", "category": "support", "icon": "🎧"},
+            {"id": "research-assistant", "name": "Research Assistant", "description": "Research topics, gather data, analyze", "category": "research", "icon": "🔬"},
+            {"id": "sales-agent", "name": "Sales Agent", "description": "Qualify leads, answer product questions", "category": "sales", "icon": "💼"},
+            {"id": "code-reviewer", "name": "Code Reviewer", "description": "Review code for bugs and security", "category": "engineering", "icon": "👨‍💻"},
+            {"id": "custom", "name": "Custom Agent", "description": "Build your own from scratch", "category": "custom", "icon": "🛠️"},
+        ]
+    }
+
+
+@app.post("/api/run")
+def run_agent(req: RunRequest):
+    """Run an agent from the web UI."""
+    from agentos.core.agent import Agent
+    from agentos.core.tool import tool
+
+    # Built-in tools available from web UI
+    available_tools = {}
+
+    @tool(description="Calculate a math expression")
+    def calculator(expression: str) -> str:
+        try:
+            allowed = set("0123456789+-*/.() ")
+            if not all(c in allowed for c in expression):
+                return "Error: Only basic math"
+            return str(eval(expression))
+        except Exception as e:
+            return f"Error: {e}"
+    available_tools["calculator"] = calculator
+
+    @tool(description="Get weather for a city")
+    def weather(city: str) -> str:
+        import httpx
+        cities = {"boston":(42.36,-71.06),"new york":(40.71,-74.01),"tokyo":(35.68,139.69),"london":(51.51,-0.13),"san francisco":(37.77,-122.42)}
+        coords = cities.get(city.lower())
+        if not coords:
+            return f"No data for {city}"
+        try:
+            r = httpx.get("https://api.open-meteo.com/v1/forecast", params={"latitude":coords[0],"longitude":coords[1],"current_weather":"true"}, timeout=10)
+            d = r.json().get("current_weather",{})
+            tc = d.get("temperature","N/A")
+            tf = round(tc*9/5+32,1) if isinstance(tc,(int,float)) else "N/A"
+            return f"{city.title()}: {tf}°F ({tc}°C)"
+        except:
+            return f"Weather unavailable for {city}"
+    available_tools["weather"] = weather
+
+    @tool(description="Search the web")
+    def web_search(query: str) -> str:
+        import httpx
+        try:
+            r = httpx.get("https://api.duckduckgo.com/", params={"q":query,"format":"json","no_html":"1"}, timeout=10)
+            d = r.json()
+            if d.get("AbstractText"):
+                return d["AbstractText"][:300]
+            for t in d.get("RelatedTopics",[])[:2]:
+                if isinstance(t,dict) and t.get("Text"):
+                    return t["Text"][:300]
+            return f"No results for: {query}"
+        except:
+            return f"Search unavailable"
+    available_tools["web_search"] = web_search
+
+    # Build tool list
+    agent_tools = [available_tools[t] for t in req.tools if t in available_tools]
+
+    agent = Agent(
+        name=req.name,
+        model=req.model,
+        tools=agent_tools,
+        system_prompt=req.system_prompt,
+        temperature=req.temperature,
+    )
+
+    # Capture output
+    import io, sys
+    old = sys.stdout
+    sys.stdout = io.StringIO()
+    msg = agent.run(req.query)
+    terminal_output = sys.stdout.getvalue()
+    sys.stdout = old
+
+    # Log events to store
+    for e in agent.events:
+        store.log_event(e)
+
+    cost = sum(e.cost_usd for e in agent.events)
+    tokens = sum(e.tokens_used for e in agent.events)
+    tools_used = [e.data.get("tool","") for e in agent.events if e.event_type == "tool_call"]
+
+    return {
+        "response": msg.content,
+        "cost": round(cost, 6),
+        "tokens": tokens,
+        "tools_used": tools_used,
+        "terminal": terminal_output,
+    }
+
+
+# ── The Complete Web UI ──
+
+WEB_UI_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentOS Platform</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#08080f;color:#e0e0e0;min-height:100vh}
+.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;height:100vh}
+.topbar{grid-column:1/-1;background:#0d0d1a;border-bottom:1px solid #1a1a2e;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:18px;color:#00d4ff}
+.topbar .status{color:#00ff88;font-size:13px}
+.sidebar{background:#0a0a14;border-right:1px solid #1a1a2e;padding:16px;overflow-y:auto}
+.sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#555;margin:16px 0 8px}
+.nav-item{padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px;margin-bottom:4px;transition:all 0.2s;display:flex;align-items:center;gap:8px}
+.nav-item:hover{background:#12121f}
+.nav-item.active{background:#00d4ff15;color:#00d4ff}
+.main{padding:24px;overflow-y:auto}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:#0d0d1a;border:1px solid #1a1a2e;border-radius:12px;padding:24px;margin-bottom:16px}
+.card h2{font-size:20px;margin-bottom:16px;color:#fff}
+label{display:block;font-size:13px;color:#888;margin-bottom:6px;margin-top:16px}
+input,textarea,select{width:100%;padding:10px 14px;background:#08080f;border:1px solid #2a2a4a;border-radius:8px;color:#fff;font-size:14px;font-family:inherit}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#00d4ff}
+textarea{min-height:80px;resize:vertical}
+.btn{padding:12px 24px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.btn-primary{background:linear-gradient(135deg,#00d4ff,#0088ff);color:#000}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,212,255,0.3)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.btn-secondary{background:#1a1a2e;color:#fff}
+.tools-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.tool-tag{padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid #2a2a4a;background:#08080f;transition:all 0.2s}
+.tool-tag.selected{background:#00d4ff22;border-color:#00d4ff;color:#00d4ff}
+.tool-tag:hover{border-color:#00d4ff}
+.response-box{background:#08080f;border:1px solid #1a1a2e;border-radius:8px;padding:16px;margin-top:16px;min-height:100px;white-space:pre-wrap;line-height:1.6}
+.stats-row{display:flex;gap:12px;margin-top:12px}
+.stat-chip{background:#12121f;padding:6px 12px;border-radius:6px;font-size:12px;color:#888}
+.stat-chip span{color:#00d4ff;font-weight:600}
+.templates-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.template-card{background:#0d0d1a;border:1px solid #1a1a2e;border-radius:12px;padding:20px;cursor:pointer;transition:all 0.3s}
+.template-card:hover{border-color:#00d4ff33;transform:translateY(-2px)}
+.template-card .icon{font-size:28px;margin-bottom:8px}
+.template-card h4{color:#fff;margin-bottom:4px}
+.template-card p{color:#666;font-size:13px}
+.template-card .cat{font-size:11px;color:#00d4ff;margin-top:8px}
+.monitor-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.monitor-card{background:#0d0d1a;border:1px solid #1a1a2e;border-radius:12px;padding:20px}
+.monitor-card .label{font-size:11px;color:#666;text-transform:uppercase}
+.monitor-card .value{font-size:28px;font-weight:700;margin-top:4px}
+.monitor-card .value.blue{color:#00d4ff}
+.monitor-card .value.green{color:#00ff88}
+.monitor-card .value.yellow{color:#ffaa00}
+.event-row{background:#0a0a14;border:1px solid #12121f;padding:10px 14px;margin-bottom:4px;border-radius:6px;display:grid;grid-template-columns:120px 90px 1fr 80px 70px;gap:10px;font-size:13px;align-items:center}
+.event-type{padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600;text-align:center}
+.event-type.llm_call{background:#00d4ff22;color:#00d4ff}
+.event-type.tool_call{background:#ffaa0022;color:#ffaa00}
+.loading{display:inline-block;width:16px;height:16px;border:2px solid #333;border-top-color:#00d4ff;border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="topbar">
+<h1>🤖 AgentOS Platform</h1>
+<div class="status">● Online</div>
+</div>
+<div class="sidebar">
+<h3>Build</h3>
+<div class="nav-item active" onclick="showPanel('builder')">🛠️ Agent Builder</div>
+<div class="nav-item" onclick="showPanel('templates')">📦 Templates</div>
+<h3>Operate</h3>
+<div class="nav-item" onclick="showPanel('chat')">💬 Chat</div>
+<div class="nav-item" onclick="showPanel('monitor')">📊 Monitor</div>
+<h3>Manage</h3>
+<div class="nav-item" onclick="showPanel('marketplace')">🏪 Marketplace</div>
+</div>
+<div class="main">
+
+<!-- AGENT BUILDER -->
+<div class="panel active" id="panel-builder">
+<div class="card">
+<h2>🛠️ Build Your Agent</h2>
+<label>Agent Name</label>
+<input type="text" id="b-name" value="my-agent" placeholder="my-agent">
+<label>Model</label>
+<select id="b-model">
+<option value="gpt-4o-mini">GPT-4o Mini (cheap + fast)</option>
+<option value="gpt-4o">GPT-4o (powerful)</option>
+<option value="claude-sonnet">Claude Sonnet (balanced)</option>
+<option value="claude-haiku">Claude Haiku (fastest)</option>
+</select>
+<label>System Prompt (Agent's personality and instructions)</label>
+<textarea id="b-prompt" placeholder="You are a helpful assistant...">You are a helpful assistant. Use tools when needed to answer accurately.</textarea>
+<label>Tools (click to enable)</label>
+<div class="tools-grid">
+<div class="tool-tag selected" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
+<div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
+<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
+</div>
+<label>Temperature (creativity: 0=focused, 1=creative)</label>
+<input type="range" id="b-temp" min="0" max="1" step="0.1" value="0.7" oninput="document.getElementById('temp-val').textContent=this.value">
+<span id="temp-val" style="color:#00d4ff;font-size:13px">0.7</span>
+<label>Budget Limit ($/day)</label>
+<input type="number" id="b-budget" value="5.00" step="0.5" min="0.5">
+<div style="margin-top:24px">
+<label>Try Your Agent</label>
+<input type="text" id="b-query" placeholder="Ask your agent something..." onkeydown="if(event.key==='Enter')runBuilder()">
+<button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="runBuilder()" id="run-btn">▶️ Run Agent</button>
+</div>
+<div id="b-response" style="display:none">
+<label>Response</label>
+<div class="response-box" id="b-response-text"></div>
+<div class="stats-row" id="b-stats"></div>
+</div>
+</div>
+</div>
+
+<!-- TEMPLATES -->
+<div class="panel" id="panel-templates">
+<div class="card">
+<h2>📦 Agent Templates</h2>
+<p style="color:#888;margin-bottom:16px">Pre-built agents ready to deploy. Click one to load it into the builder.</p>
+<div class="templates-grid" id="templates-list"></div>
+</div>
+</div>
+
+<!-- CHAT -->
+<div class="panel" id="panel-chat">
+<div class="card" style="height:calc(100vh - 140px);display:flex;flex-direction:column">
+<h2>💬 Agent Chat</h2>
+<div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px 0"></div>
+<div style="display:flex;gap:8px">
+<input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()" style="flex:1">
+<button class="btn btn-primary" onclick="sendChat()">Send</button>
+</div>
+</div>
+</div>
+
+<!-- MONITOR -->
+<div class="panel" id="panel-monitor">
+<div class="monitor-grid" id="mon-overview">
+<div class="monitor-card"><div class="label">Agents</div><div class="value blue" id="m-agents">0</div></div>
+<div class="monitor-card"><div class="label">Events</div><div class="value green" id="m-events">0</div></div>
+<div class="monitor-card"><div class="label">Cost</div><div class="value yellow" id="m-cost">$0</div></div>
+<div class="monitor-card"><div class="label">Status</div><div class="value blue" id="m-status">Ready</div></div>
+</div>
+<div class="card">
+<h2>Live Events</h2>
+<div id="mon-events"></div>
+</div>
+</div>
+
+<!-- MARKETPLACE -->
+<div class="panel" id="panel-marketplace">
+<div class="card">
+<h2>🏪 Agent Marketplace</h2>
+<p style="color:#888;margin-bottom:24px">Share and discover agent templates from the community. Coming soon — be the first to publish!</p>
+<div class="templates-grid">
+<div class="template-card" style="border-style:dashed;text-align:center;padding:40px">
+<div style="font-size:40px;margin-bottom:8px">➕</div>
+<h4>Publish Your Agent</h4>
+<p>Share your agent template with the community and earn revenue.</p>
+<button class="btn btn-secondary" style="margin-top:12px">Coming Soon</button>
+</div>
+<div class="template-card">
+<div class="icon">🎧</div>
+<h4>Customer Support Pro</h4>
+<p>Advanced support with ticket management and escalation.</p>
+<div class="cat">by AgentOS Team · Free</div>
+</div>
+<div class="template-card">
+<div class="icon">📊</div>
+<h4>Data Analyst</h4>
+<p>Analyze datasets, create reports, and visualize trends.</p>
+<div class="cat">by community · $29</div>
+</div>
+<div class="template-card">
+<div class="icon">✍️</div>
+<h4>Content Writer</h4>
+<p>Write blog posts, emails, and social media content.</p>
+<div class="cat">by community · $19</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+function showPanel(id){
+document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+document.getElementById('panel-'+id).classList.add('active');
+event.target.classList.add('active');
+if(id==='monitor')refreshMonitor();
+if(id==='templates')loadTemplates();
+}
+
+function toggleTool(el){el.classList.toggle('selected')}
+
+function getSelectedTools(){
+return [...document.querySelectorAll('.tool-tag.selected')].map(t=>t.dataset.tool);
+}
+
+async function runBuilder(){
+const btn=document.getElementById('run-btn');
+btn.disabled=true;btn.innerHTML='<span class="loading"></span> Running...';
+const body={
+name:document.getElementById('b-name').value,
+model:document.getElementById('b-model').value,
+system_prompt:document.getElementById('b-prompt').value,
+query:document.getElementById('b-query').value,
+tools:getSelectedTools(),
+temperature:parseFloat(document.getElementById('b-temp').value),
+budget_limit:parseFloat(document.getElementById('b-budget').value),
+};
+try{
+const r=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+const d=await r.json();
+document.getElementById('b-response').style.display='block';
+document.getElementById('b-response-text').textContent=d.response||'No response';
+document.getElementById('b-stats').innerHTML=`
+<div class="stat-chip">Cost: <span>$${d.cost.toFixed(4)}</span></div>
+<div class="stat-chip">Tokens: <span>${d.tokens}</span></div>
+<div class="stat-chip">Tools: <span>${d.tools_used.join(', ')||'none'}</span></div>`;
+}catch(e){
+document.getElementById('b-response').style.display='block';
+document.getElementById('b-response-text').textContent='Error: '+e.message;
+}
+btn.disabled=false;btn.innerHTML='▶️ Run Agent';
+}
+
+async function sendChat(){
+const input=document.getElementById('chat-input');
+const q=input.value.trim();if(!q)return;
+input.value='';
+const msgs=document.getElementById('chat-messages');
+msgs.innerHTML+=`<div style="text-align:right;margin:8px 0"><span style="background:#00d4ff22;color:#00d4ff;padding:8px 14px;border-radius:12px;display:inline-block">${q}</span></div>`;
+msgs.innerHTML+=`<div style="margin:8px 0" id="chat-loading"><span class="loading"></span> Thinking...</div>`;
+msgs.scrollTop=msgs.scrollHeight;
+try{
+const r=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+name:document.getElementById('b-name').value||'chat-agent',
+model:document.getElementById('b-model').value||'gpt-4o-mini',
+system_prompt:document.getElementById('b-prompt').value||'You are a helpful assistant.',
+query:q,tools:getSelectedTools(),temperature:0.7
+})});
+const d=await r.json();
+document.getElementById('chat-loading').remove();
+msgs.innerHTML+=`<div style="margin:8px 0"><span style="background:#1a1a2e;padding:8px 14px;border-radius:12px;display:inline-block;max-width:80%">${d.response}<br><span style="font-size:11px;color:#555">$${d.cost.toFixed(4)} · ${d.tokens} tokens</span></span></div>`;
+msgs.scrollTop=msgs.scrollHeight;
+}catch(e){
+document.getElementById('chat-loading').remove();
+msgs.innerHTML+=`<div style="color:#ff4444;margin:8px 0">Error: ${e.message}</div>`;
+}
+}
+
+async function loadTemplates(){
+try{
+const r=await fetch('/api/templates');
+const d=await r.json();
+let h='';
+d.templates.forEach(t=>{
+h+=`<div class="template-card" onclick="loadTemplate('${t.id}')">
+<div class="icon">${t.icon}</div><h4>${t.name}</h4><p>${t.description}</p><div class="cat">${t.category}</div></div>`;
+});
+document.getElementById('templates-list').innerHTML=h;
+}catch(e){console.log(e)}
+}
+
+function loadTemplate(id){
+const prompts={
+'customer-support':'You are a friendly customer support agent. Be helpful, empathetic, and solution-oriented. Use the knowledge base for accurate answers.',
+'research-assistant':'You are a thorough research assistant. Search for current information, cross-reference sources, and present findings clearly.',
+'sales-agent':'You are a professional sales agent. Understand prospect needs, present solutions, handle objections, and guide toward next steps.',
+'code-reviewer':'You are an expert code reviewer. Analyze code for bugs, security issues, and best practices. Be constructive.',
+'custom':'You are a helpful assistant. Use tools when needed.'
+};
+document.getElementById('b-name').value=id;
+document.getElementById('b-prompt').value=prompts[id]||prompts['custom'];
+showPanel('builder');
+document.querySelector('.nav-item').classList.add('active');
+}
+
+async function refreshMonitor(){
+try{
+const r=await fetch('/api/overview');
+const d=await r.json();
+document.getElementById('m-agents').textContent=d.total_agents;
+document.getElementById('m-events').textContent=d.total_events;
+document.getElementById('m-cost').textContent='$'+d.total_cost.toFixed(4);
+document.getElementById('m-status').textContent=d.total_agents>0?'Active':'Ready';
+const er=await fetch('/api/events?limit=15');
+const events=await er.json();
+let h='';
+events.reverse().forEach(e=>{
+const t=new Date(e.timestamp*1000).toLocaleTimeString();
+const cls=e.event_type;
+const info=e.event_type==='tool_call'?`${e.data.tool||''}(${JSON.stringify(e.data.args||{}).slice(0,50)})`:
+`model:${e.data.model||''} tokens:${(e.data.prompt_tokens||0)+(e.data.completion_tokens||0)}`;
+h+=`<div class="event-row"><span style="color:#aa88ff">${e.agent_name}</span><span class="event-type ${cls}">${e.event_type}</span><span>${info}</span><span style="color:#00ff88;text-align:right">$${(e.cost_usd||0).toFixed(4)}</span><span style="color:#666;text-align:right">${(e.latency_ms||0).toFixed(0)}ms</span></div>`;
+});
+document.getElementById('mon-events').innerHTML=h||'<p style="color:#555;padding:16px">No events yet. Run an agent to see events here.</p>';
+}catch(e){console.log(e)}
+}
+
+loadTemplates();
+setInterval(()=>{if(document.getElementById('panel-monitor').classList.contains('active'))refreshMonitor()},3000);
+</script>
+</body>
+</html>
+"""
