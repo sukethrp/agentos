@@ -7,7 +7,7 @@ Example:
 
     class MyPlugin(BasePlugin):
         name = "my-plugin"
-        version = "0.1.0"
+        version = "0.3.0"
         description = "Adds cool tools"
         author = "me"
 
@@ -54,7 +54,7 @@ class BasePlugin:
     """
 
     name: str = "unnamed-plugin"
-    version: str = "0.1.0"
+    version: str = "0.3.0"
     description: str = ""
     author: str = ""
 

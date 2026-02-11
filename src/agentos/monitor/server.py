@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 from agentos.monitor.store import store
 from agentos.core.types import AgentEvent
 
-app = FastAPI(title="AgentOS Monitor", version="0.1.0")
+app = FastAPI(title="AgentOS Monitor", version="0.3.0")
 
 
 @app.get("/")

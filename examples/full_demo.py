@@ -83,7 +83,7 @@ agent = GovernedAgent(
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚀 AgentOS v0.1.0 — Full Platform Demo")
+    print("🚀 AgentOS v0.3.0 — Full Platform Demo")
     print("=" * 60)
 
     # Normal queries

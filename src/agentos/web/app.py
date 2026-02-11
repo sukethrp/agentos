@@ -31,7 +31,7 @@ from agentos.embed.widget import generate_widget, generate_widget_js, generate_s
 
 load_dotenv()
 
-app = FastAPI(title="AgentOS Platform", version="0.1.0")
+app = FastAPI(title="AgentOS Platform", version="0.3.0")
 
 # CORS — allow cross-origin embedding of the chat widget
 app.add_middleware(
@@ -2358,7 +2358,7 @@ function embGenerate(){
   const logo=document.getElementById('emb-logo').value;
   const model=document.getElementById('emb-model').value;
   const prompt=document.getElementById('emb-prompt').value;
-  const snippet=`<script>\n  window.AgentOSConfig = {\n    baseUrl: "${baseUrl}",\n    agentName: "${name}",\n    theme: "${theme}",\n    position: "${pos}",\n    accentColor: "${color}",\n    greeting: "${greet}",${logo?'\n    logo: "'+logo+'",'  :''}\n    model: "${model}",\n    systemPrompt: "${prompt.replace(/"/g,'\\"')}",\n  };\n<\/script>\n<script src="${baseUrl}/embed/chat.js"><\/script>`;
+  const snippet=`<script>\n  window.AgentOSConfig = {\n    baseUrl: "${baseUrl}",\n    agentName: "${name}",\n    theme: "${theme}",\n    position: "${pos}",\n    accentColor: "${color}",\n    greeting: "${greet}",${logo?'\n    logo: "'+logo+'",'  :''}\n    model: "${model}",\n    systemPrompt: "${prompt.replace(/"/g,'\\"')}",\n  };\n<\\/script>\n<script src="${baseUrl}/embed/chat.js"><\\/script>`;
   document.getElementById('emb-snippet').textContent=snippet;
   document.getElementById('emb-output').style.display='block';
   document.getElementById('emb-output').scrollIntoView({behavior:'smooth'});

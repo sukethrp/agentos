@@ -46,7 +46,7 @@ agent = Agent(
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚀 AgentOS v0.1.0 — Quickstart Demo")
+    print("🚀 AgentOS v0.3.0 — Quickstart Demo")
     print("=" * 60)
 
     agent.run("What's the weather in Boston right now?")

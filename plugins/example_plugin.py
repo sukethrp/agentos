@@ -17,7 +17,7 @@ from agentos.core.tool import Tool
 
 # ── Plugin metadata (optional but recommended) ──
 PLUGIN_NAME = "example-translate"
-PLUGIN_VERSION = "0.1.0"
+PLUGIN_VERSION = "0.3.0"
 PLUGIN_DESCRIPTION = "Adds a translate tool that converts text between languages."
 PLUGIN_AUTHOR = "AgentOS Team"
 

@@ -146,7 +146,7 @@ def _get_pull_requests(repo: str, state: str = "open") -> str:
 
 class GitHubPlugin(BasePlugin):
     name = "github"
-    version = "0.1.0"
+    version = "0.3.0"
     description = "GitHub integration — list repos, create issues, get pull requests."
     author = "AgentOS Team"
 

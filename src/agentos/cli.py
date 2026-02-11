@@ -82,7 +82,7 @@ def cmd_info(args):
     print("=" * 60)
     print("🤖 AgentOS — The Operating System for AI Agents")
     print("=" * 60)
-    print(f"   Version:  0.1.0")
+    print(f"   Version:  0.3.0")
     print(f"   License:  Apache 2.0")
     print(f"   GitHub:   https://github.com/sukethrp/agentos")
     print()

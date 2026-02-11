@@ -118,7 +118,7 @@ def governed_run(agent: Agent, gov: GovernanceEngine, query: str):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚀 AgentOS v0.1.0 — Governance Engine Demo")
+    print("🚀 AgentOS v0.3.0 — Governance Engine Demo")
     print("=" * 60)
 
     # TEST 1: Normal query — should work fine

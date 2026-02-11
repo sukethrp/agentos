@@ -244,7 +244,7 @@ class PluginManager:
             module = sys.modules.get(f"agentos_plugin_{info.name}")
             if module:
                 instance.name = getattr(module, "PLUGIN_NAME", info.name)
-                instance.version = getattr(module, "PLUGIN_VERSION", "0.1.0")
+                instance.version = getattr(module, "PLUGIN_VERSION", "0.3.0")
                 instance.description = getattr(module, "PLUGIN_DESCRIPTION", "")
                 instance.author = getattr(module, "PLUGIN_AUTHOR", "")
             else:

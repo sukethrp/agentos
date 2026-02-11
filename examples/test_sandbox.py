@@ -121,7 +121,7 @@ scenarios = [
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚀 AgentOS v0.1.0 — Simulation Sandbox Demo")
+    print("🚀 AgentOS v0.3.0 — Simulation Sandbox Demo")
     print("=" * 60)
 
     sandbox = Sandbox(agent, pass_threshold=6.0)
