@@ -5,7 +5,7 @@ import asyncio
 import json
 import queue
 import threading
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -14,6 +14,8 @@ from agentos.core.types import AgentEvent
 from agentos.tools import get_builtin_tools
 from agentos.scheduler import AgentScheduler
 from agentos.events import event_bus, WebhookTrigger
+from agentos.auth import User, create_user, get_current_user, get_user_by_email
+from agentos.auth.usage import usage_tracker
 
 load_dotenv()
 
@@ -41,6 +43,15 @@ class RunRequest(BaseModel):
 class ChatRequest(BaseModel):
     query: str
     agent_id: str = "default"
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    name: str
+
+
+class LoginRequest(BaseModel):
+    email: str
 
 
 # ── WebSocket Chat (streaming) ──
@@ -164,7 +175,7 @@ def get_templates():
 
 
 @app.post("/api/run")
-def run_agent(req: RunRequest):
+def run_agent(req: RunRequest, current_user: User = Depends(get_current_user)):
     """Run an agent from the web UI."""
     from agentos.core.agent import Agent
 
@@ -194,6 +205,9 @@ def run_agent(req: RunRequest):
     cost = sum(e.cost_usd for e in agent.events)
     tokens = sum(e.tokens_used for e in agent.events)
     tools_used = [e.data.get("tool","") for e in agent.events if e.event_type == "tool_call"]
+
+    # Track per-user usage
+    usage_tracker.log_usage(current_user.id, tokens=tokens, cost=cost)
 
     return {
         "response": msg.content,
@@ -272,6 +286,49 @@ def resume_scheduler_job(job_id: str):
     return {"status": "error", "message": f"Cannot resume job {job_id}"}
 
 
+# ── Auth API ──
+
+@app.post("/api/auth/register")
+def register_user(req: RegisterRequest):
+    """Create a new user and return an API key."""
+    try:
+        user = create_user(email=req.email, name=req.name)
+        return {
+            "status": "created",
+            "user": user,
+            "api_key": user.api_key,
+        }
+    except ValueError as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/auth/login")
+def login_user(req: LoginRequest):
+    """Login by email — returns existing API key."""
+    user = get_user_by_email(req.email)
+    if not user:
+        return {"status": "error", "message": "User not found"}
+    return {
+        "status": "ok",
+        "user": user,
+        "api_key": user.api_key,
+    }
+
+
+@app.get("/api/auth/usage")
+def get_my_usage(period: str = "month", current_user: User = Depends(get_current_user)):
+    """Return usage stats for the current user."""
+    total = usage_tracker.get_usage(current_user.id).to_dict()
+    window = usage_tracker.get_usage_by_period(current_user.id, period=period).to_dict()
+    return {
+        "status": "ok",
+        "user_id": current_user.id,
+        "period": period,
+        "total": total,
+        "window": window,
+    }
+
+
 # ── Event Bus API ──
 
 @app.post("/api/webhook/{event_name}")
@@ -340,7 +397,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;height:100vh}
 .topbar{grid-column:1/-1;background:#0d0d1a;border-bottom:1px solid #1a1a2e;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
 .topbar h1{font-size:18px;color:#00d4ff}
-.topbar .status{color:#00ff88;font-size:13px}
+.topbar .status{color:#00ff88;font-size:13px;display:flex;align-items:center;gap:8px}
+.topbar .status span.small{font-size:11px;color:#888}
 .sidebar{background:#0a0a14;border-right:1px solid #1a1a2e;padding:16px;overflow-y:auto}
 .sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#555;margin:16px 0 8px}
 .nav-item{padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px;margin-bottom:4px;transition:all 0.2s;display:flex;align-items:center;gap:8px}
@@ -394,7 +452,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="app">
 <div class="topbar">
 <h1>🤖 AgentOS Platform</h1>
-<div class="status">● Online</div>
+<div class="status">● Online <span class="small" id="user-status">Not logged in</span></div>
 </div>
 <div class="sidebar">
 <h3>Build</h3>
@@ -406,6 +464,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="nav-item" onclick="showPanel('scheduler')">⏰ Scheduler</div>
 <div class="nav-item" onclick="showPanel('events')">⚡ Events</div>
 <h3>Manage</h3>
+<div class="nav-item" onclick="showPanel('auth')">🔑 Account & Usage</div>
 <div class="nav-item" onclick="showPanel('marketplace')">🏪 Marketplace</div>
 </div>
 <div class="main">
@@ -616,6 +675,37 @@ POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
 </div>
 </div>
 
+<!-- AUTH / ACCOUNT -->
+<div class="panel" id="panel-auth">
+<div class="card">
+<h2>🔑 Account</h2>
+<p style="color:#888;margin-bottom:12px">Register or log in to get an API key. This key is used to track your usage.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div>
+<label>Email</label>
+<input type="email" id="auth-email" placeholder="you@example.com">
+<label>Name</label>
+<input type="text" id="auth-name" placeholder="Your name">
+<div style="display:flex;gap:8px;margin-top:16px">
+<button class="btn btn-primary" style="flex:1" onclick="registerUser()">Register</button>
+<button class="btn btn-secondary" style="flex:1" onclick="loginUser()">Login</button>
+</div>
+</div>
+<div>
+<label>Your API Key</label>
+<input type="text" id="auth-apikey" readonly placeholder="Not logged in">
+<button class="btn btn-secondary" style="margin-top:8px;width:100%" onclick="copyApiKey()">Copy API Key</button>
+<p style="font-size:11px;color:#555;margin-top:8px">API key is stored locally in your browser (localStorage) and sent as <code>X-API-Key</code> for API calls.</p>
+</div>
+</div>
+<div id="auth-message" style="margin-top:12px;font-size:13px;color:#888"></div>
+</div>
+<div class="card">
+<h2>📊 Your Usage</h2>
+<div id="auth-usage"><p style="color:#555">Log in to see your usage.</p></div>
+</div>
+</div>
+
 </div>
 </div>
 
@@ -628,6 +718,7 @@ event.target.classList.add('active');
 if(id==='monitor')refreshMonitor();
 if(id==='templates')loadTemplates();
 if(id==='events')refreshEvents();
+if(id==='auth')refreshAuthUsage();
 }
 
 function toggleTool(el){el.classList.toggle('selected')}
@@ -649,7 +740,10 @@ temperature:parseFloat(document.getElementById('b-temp').value),
 budget_limit:parseFloat(document.getElementById('b-budget').value),
 };
 try{
-const r=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+const headers={'Content-Type':'application/json'};
+const apiKey=localStorage.getItem('agentos_api_key');
+if(apiKey)headers['X-API-Key']=apiKey;
+const r=await fetch('/api/run',{method:'POST',headers:headers,body:JSON.stringify(body)});
 const d=await r.json();
 document.getElementById('b-response').style.display='block';
 document.getElementById('b-response-text').textContent=d.response||'No response';
@@ -717,7 +811,10 @@ sendChatHttp(q,msgs);
 }
 async function sendChatHttp(q,msgs){
 try{
-const r=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+const headers={'Content-Type':'application/json'};
+const apiKey=localStorage.getItem('agentos_api_key');
+if(apiKey)headers['X-API-Key']=apiKey;
+const r=await fetch('/api/run',{method:'POST',headers:headers,body:JSON.stringify({
 name:document.getElementById('b-name').value||'chat-agent',
 model:document.getElementById('b-model').value||'gpt-4o-mini',
 system_prompt:document.getElementById('b-prompt').value||'You are a helpful assistant.',
@@ -921,6 +1018,125 @@ document.getElementById('ev-history').innerHTML=hh;
 }
 
 setInterval(()=>{if(document.getElementById('panel-events').classList.contains('active'))refreshEvents()},3000);
+
+// ── Auth helpers ──
+
+function setUserStatus(email){
+const el=document.getElementById('user-status');
+if(!el)return;
+if(email){
+el.textContent='Logged in as '+email;
+}else{
+el.textContent='Not logged in';
+}
+}
+
+async function registerUser(){
+const email=document.getElementById('auth-email').value.trim();
+const name=document.getElementById('auth-name').value.trim();
+const msgEl=document.getElementById('auth-message');
+msgEl.style.color='#888';
+msgEl.textContent='Registering...';
+try{
+const r=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,name})});
+const d=await r.json();
+if(d.status==='created'){
+localStorage.setItem('agentos_api_key',d.api_key);
+document.getElementById('auth-apikey').value=d.api_key;
+setUserStatus(d.user.email);
+msgEl.style.color='#00ff88';
+msgEl.textContent='User created. API key stored in this browser.';
+refreshAuthUsage();
+}else{
+msgEl.style.color='#ff6666';
+msgEl.textContent='Error: '+(d.message||'Unable to register');
+}
+}catch(e){
+msgEl.style.color='#ff6666';
+msgEl.textContent='Error: '+e.message;
+}
+}
+
+async function loginUser(){
+const email=document.getElementById('auth-email').value.trim();
+const msgEl=document.getElementById('auth-message');
+msgEl.style.color='#888';
+msgEl.textContent='Logging in...';
+try{
+const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+const d=await r.json();
+if(d.status==='ok'){
+localStorage.setItem('agentos_api_key',d.api_key);
+document.getElementById('auth-apikey').value=d.api_key;
+setUserStatus(d.user.email);
+msgEl.style.color='#00ff88';
+msgEl.textContent='Logged in. API key stored in this browser.';
+refreshAuthUsage();
+}else{
+msgEl.style.color='#ff6666';
+msgEl.textContent='Error: '+(d.message||'Unable to login');
+}
+}catch(e){
+msgEl.style.color='#ff6666';
+msgEl.textContent='Error: '+e.message;
+}
+}
+
+function copyApiKey(){
+const el=document.getElementById('auth-apikey');
+if(!el.value)return;
+navigator.clipboard.writeText(el.value).then(()=>{
+const msgEl=document.getElementById('auth-message');
+msgEl.style.color='#00d4ff';
+msgEl.textContent='API key copied to clipboard.';
+});
+}
+
+async function refreshAuthUsage(){
+const apiKey=localStorage.getItem('agentos_api_key');
+const usageEl=document.getElementById('auth-usage');
+if(!apiKey){
+setUserStatus(null);
+usageEl.innerHTML='<p style="color:#555">Log in to see your usage.</p>';
+return;
+}
+document.getElementById('auth-apikey').value=apiKey;
+try{
+const r=await fetch('/api/auth/usage?period=month',{headers:{'X-API-Key':apiKey}});
+const d=await r.json();
+if(d.status!=='ok'){
+usageEl.innerHTML='<p style="color:#ff6666">Error: '+(d.message||'Unable to load usage')+'</p>';
+return;
+}
+setUserStatus(d.total && d.total.user_id ? d.total.user_id : 'user');
+const total=d.total;
+const window=d.window;
+usageEl.innerHTML=`
+<div class="stats-row">
+<div class="stat-chip">Total Queries: <span>${total.queries}</span></div>
+<div class="stat-chip">Total Tokens: <span>${total.tokens}</span></div>
+<div class="stat-chip">Total Cost: <span>$${total.cost.toFixed(4)}</span></div>
+</div>
+<div class="stats-row" style="margin-top:8px">
+<div class="stat-chip">Last ${d.period} · Queries: <span>${window.queries}</span></div>
+<div class="stat-chip">Last ${d.period} · Tokens: <span>${window.tokens}</span></div>
+<div class="stat-chip">Last ${d.period} · Cost: <span>$${window.cost.toFixed(4)}</span></div>
+</div>`;
+}catch(e){
+usageEl.innerHTML='<p style="color:#ff6666">Error: '+e.message+'</p>';
+}
+}
+
+// Initialize API key if already stored
+(function initAuth(){
+const apiKey=localStorage.getItem('agentos_api_key');
+if(apiKey){
+document.getElementById('auth-apikey').value=apiKey;
+setUserStatus('user');
+refreshAuthUsage();
+}
+})();
+
 </script>
 </body>
 </html>

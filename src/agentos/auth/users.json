@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "id": "2b335b2454394de4",
+      "email": "testuser@example.com",
+      "name": "Test User",
+      "api_key": "agt_bab0275a77df002cea12f653f7dabc485b5efbaa292837e7402dd38574c85706c76e7e4d",
+      "created_at": 1770825408.416378,
+      "is_admin": false
+    },
+    {
+      "id": "98fd72e9de7340fa",
+      "email": "alice@example.com",
+      "name": "Alice",
+      "api_key": "agt_081cffb3dfe2d0624df710f3ddf1a5847e2b4bdec2e922f1ba39f264f1bd355f3fa4ff31",
+      "created_at": 1770825411.74161,
+      "is_admin": false
+    },
+    {
+      "id": "3fbe2be2eaf840d7",
+      "email": "bob@example.com",
+      "name": "Bob",
+      "api_key": "agt_93f38310fdc8692a66f837025ab268c9ba4b47ed5a7ba1c8487074a5cac76cb56235fa8c",
+      "created_at": 1770825411.741848,
+      "is_admin": false
+    }
+  ]
+}
