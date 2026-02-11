@@ -180,6 +180,32 @@ python examples/full_demo.py
 
 ---
 
+## Docker deployment
+
+You can run the entire AgentOS platform in a single container using Docker.
+
+### Using docker-compose
+
+From the project root:
+
+```bash
+docker-compose up -d
+# or
+docker compose up -d
+```
+
+Then open `http://localhost:8000` in your browser to access the web UI.
+
+### Using the helper script
+
+```bash
+./scripts/deploy.sh
+```
+
+This script checks for Docker, builds the image, starts the `agentos-web` service with `docker-compose`, and prints the access URL.
+
+---
+
 ## Project Structure
 
 ```

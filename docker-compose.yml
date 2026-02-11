@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  agentos-web:
+    build: .
+    container_name: agentos-web
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - agentos-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/overview"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  agentos-data:
+    driver: local
+
