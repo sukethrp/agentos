@@ -1,1 +1,421 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>AgentOS</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,sans-serif;background:#000;color:#e0e0e0}nav{padding:20px 40px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff08}.logo{font-size:20px;font-weight:700;color:#00d4ff}.nav-links a{color:#888;text-decoration:none;margin-left:32px;font-size:14px}.hero{max-width:900px;margin:0 auto;padding:100px 40px 60px;text-align:center}.badge{display:inline-block;padding:6px 16px;border-radius:20px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);color:#00d4ff;font-size:13px;margin-bottom:24px}h1{font-size:56px;font-weight:800;line-height:1.1;margin-bottom:24px;background:linear-gradient(135deg,#fff,#00d4ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.sub{font-size:20px;color:#888;line-height:1.6;max-width:600px;margin:0 auto 40px}.cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}.btn{padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;border:none;cursor:pointer}.bp{background:linear-gradient(135deg,#00d4ff,#0088ff);color:#000}.bs{background:transparent;color:#fff;border:1px solid #333}.install{max-width:500px;margin:40px auto;background:#0d1117;border:1px solid #1a1a2e;border-radius:8px;padding:14px 20px;text-align:center}.install code{color:#00ff88;font-size:15px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1100px;margin:80px auto;padding:0 40px}.card{background:#0a0a14;border:1px solid #1a1a2e;border-radius:16px;padding:32px}.card .ic{font-size:32px;margin-bottom:16px}.card h3{font-size:18px;color:#fff;margin-bottom:8px}.card p{color:#888;font-size:14px;line-height:1.6}h2{text-align:center;font-size:36px;margin-bottom:60px;color:#fff;padding-top:40px}table{width:100%;max-width:900px;margin:0 auto 80px;border-collapse:collapse}th{text-align:left;padding:12px;border-bottom:1px solid #1a1a2e;color:#888}td{padding:12px;border-bottom:1px solid #0a0a14}.g{color:#00ff88}.r{color:#ff4444}.fin{text-align:center;padding:100px 40px}.fin h2{margin-bottom:16px}.fin p{color:#888;margin-bottom:40px;font-size:18px}footer{text-align:center;padding:40px;color:#444;font-size:13px}footer a{color:#00d4ff;text-decoration:none}@media(max-width:768px){h1{font-size:36px}.grid{grid-template-columns:1fr}}</style></head><body><nav><div class="logo">🤖 AgentOS</div><div class="nav-links"><a href="https://github.com/sukethrp/agentos">GitHub</a><a href="https://pypi.org/project/agentos-platform/">PyPI</a></div></nav><section class="hero"><div class="badge">Open Source - Apache 2.0</div><h1>The Operating System for AI Agents</h1><p class="sub">Build, Test, Deploy, Monitor, and Govern AI agents. Any LLM. 10 lines of code.</p><div class="cta"><a href="https://github.com/sukethrp/agentos" class="btn bp">Star on GitHub</a><a href="https://github.com/sukethrp/agentos#quick-start" class="btn bs">Get Started</a></div><div class="install"><code>$ pip install agentos-platform</code></div></section><h2>Everything agents need</h2><div class="grid"><div class="card"><div class="ic">🤖</div><h3>Agent SDK</h3><p>Define agents in 10 lines. @tool decorator turns any function into a capability. OpenAI, Claude, Ollama.</p></div><div class="card"><div class="ic">🧪</div><h3>Simulation Sandbox</h3><p>Test agents against 100+ scenarios. LLM judge scores quality, relevance, safety automatically.</p></div><div class="card"><div class="ic">📊</div><h3>Live Dashboard</h3><p>Real-time monitoring. Every action, decision, and dollar tracked. Quality drift detection.</p></div><div class="card"><div class="ic">🛡️</div><h3>Governance Engine</h3><p>Budget controls, permissions, kill switch, audit trails. Enterprise compliance ready.</p></div><div class="card"><div class="ic">🧠</div><h3>Agent Memory</h3><p>Conversation history and knowledge store. Agents remember and learn across sessions.</p></div><div class="card"><div class="ic">⚡</div><h3>CLI Tool</h3><p>agentos run, chat, test, monitor. Everything from command line.</p></div></div><h2>How AgentOS compares</h2><table><tr><th>Feature</th><th>AgentOS</th><th>LangChain</th><th>CrewAI</th><th>AutoGen</th></tr><tr><td>Testing Sandbox</td><td class="g">Yes</td><td class="r">No</td><td class="r">No</td><td class="r">No</td></tr><tr><td>Governance</td><td class="g">Yes</td><td class="r">No</td><td class="r">No</td><td class="r">No</td></tr><tr><td>Live Dashboard</td><td class="g">Yes</td><td class="r">No</td><td class="r">No</td><td class="r">No</td></tr><tr><td>Kill Switch</td><td class="g">Yes</td><td class="r">No</td><td class="r">No</td><td class="r">No</td></tr><tr><td>Multi-Model</td><td class="g">Yes</td><td class="g">Yes</td><td class="g">Yes</td><td class="g">Yes</td></tr><tr><td>Lines to Start</td><td><strong>10</strong></td><td>50+</td><td>30+</td><td>40+</td></tr></table><section class="fin"><h2>Ready to build agents the right way?</h2><p>Join developers who test before they deploy.</p><div class="cta"><a href="https://github.com/sukethrp/agentos" class="btn bp">Star on GitHub</a></div></section><footer><p>Built by <a href="https://github.com/sukethrp">Suketh Reddy Produtoor</a> - Open Source - Apache 2.0</p></footer></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AgentOS — The Operating System for AI Agents</title>
+<meta name="description" content="Build, test, deploy, monitor, and govern AI agents. 15 modules. 10 lines of code. Open source.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#000;--card:#0a0a14;--border:#1a1a2e;--text:#e0e0e0;--muted:#888;
+--accent:#00d4ff;--accent2:#6c5ce7;--green:#00ff88;--red:#ff4444;--yellow:#f0b429}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+background:var(--bg);color:var(--text);overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Nav ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;
+display:flex;justify-content:space-between;align-items:center;
+background:rgba(0,0,0,.7);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.04)}
+.logo{font-size:20px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--muted);font-size:14px;text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:#fff}
+.nav-btn{padding:8px 20px;border-radius:6px;background:var(--accent);color:#000;font-weight:600;font-size:13px}
+.nav-btn:hover{text-decoration:none;opacity:.9}
+
+/* ── Hero ── */
+.hero{max-width:960px;margin:0 auto;padding:140px 40px 80px;text-align:center}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;
+background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.18);color:var(--accent);
+font-size:13px;font-weight:500;margin-bottom:28px}
+h1{font-size:clamp(36px,6vw,64px);font-weight:800;line-height:1.08;margin-bottom:24px;
+background:linear-gradient(135deg,#fff 20%,var(--accent) 50%,var(--green) 90%);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sub{font-size:clamp(16px,2.2vw,21px);color:var(--muted);line-height:1.6;max-width:640px;margin:0 auto 40px}
+.cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.btn{padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;
+border:none;cursor:pointer;transition:transform .15s,box-shadow .2s;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{transform:translateY(-1px);text-decoration:none}
+.bp{background:linear-gradient(135deg,var(--accent),#0088ff);color:#000;box-shadow:0 4px 24px rgba(0,212,255,.25)}
+.bs{background:transparent;color:#fff;border:1px solid #333}
+.bs:hover{border-color:#555}
+.install{max-width:500px;margin:36px auto 0;background:#0d1117;border:1px solid var(--border);
+border-radius:10px;padding:14px 24px;display:flex;align-items:center;justify-content:center;gap:12px}
+.install code{color:var(--green);font-size:15px;font-family:'SF Mono','Fira Code',monospace}
+.install .copy{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px}
+.install .copy:hover{color:#fff}
+
+/* ── Stats bar ── */
+.stats{display:flex;justify-content:center;gap:48px;padding:24px 40px;flex-wrap:wrap}
+.stat{text-align:center}
+.stat .num{font-size:32px;font-weight:800;color:#fff}
+.stat .lbl{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* ── Sections ── */
+section{max-width:1140px;margin:0 auto;padding:80px 40px}
+h2{font-size:clamp(28px,4vw,40px);font-weight:700;color:#fff;margin-bottom:16px}
+h2.center{text-align:center}
+.section-sub{text-align:center;color:var(--muted);font-size:17px;max-width:600px;margin:0 auto 56px}
+
+/* ── Feature grid ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;
+transition:border-color .25s,transform .2s}
+.card:hover{border-color:rgba(0,212,255,.25);transform:translateY(-2px)}
+.card .ic{font-size:36px;margin-bottom:16px}
+.card h3{font-size:18px;color:#fff;margin-bottom:8px;font-weight:600}
+.card p{color:var(--muted);font-size:14px;line-height:1.65}
+.card .tag{display:inline-block;margin-top:12px;padding:3px 10px;border-radius:4px;
+font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.tag-core{background:rgba(0,212,255,.1);color:var(--accent)}
+.tag-test{background:rgba(0,255,136,.1);color:var(--green)}
+.tag-prod{background:rgba(108,92,231,.1);color:var(--accent2)}
+.tag-eco{background:rgba(240,180,41,.1);color:var(--yellow)}
+
+/* ── Comparison table ── */
+.table-wrap{overflow-x:auto;margin:0 auto;max-width:960px}
+table{width:100%;border-collapse:collapse;margin-bottom:16px}
+th{text-align:left;padding:14px 16px;border-bottom:1px solid var(--border);color:var(--muted);
+font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+td{padding:14px 16px;border-bottom:1px solid rgba(26,26,46,.5);font-size:14px}
+tr:hover td{background:rgba(255,255,255,.02)}
+.g{color:var(--green);font-weight:600}
+.r{color:#555}
+td:first-child{font-weight:500;color:#ccc}
+
+/* ── Code snippet ── */
+.code-section{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+.code-block{background:#0d1117;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.code-header{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;
+align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.code-header .dot{width:10px;height:10px;border-radius:50%}
+.code-block pre{padding:20px;font-size:13px;line-height:1.7;overflow-x:auto;
+font-family:'SF Mono','Fira Code',monospace;color:#c9d1d9}
+.kw{color:#ff7b72} .fn{color:#d2a8ff} .st{color:#a5d6ff} .cm{color:#8b949e} .num{color:var(--green)}
+
+/* ── Embed preview ── */
+.embed-demo{background:var(--card);border:1px solid var(--border);border-radius:16px;
+padding:40px;text-align:center}
+.embed-demo h3{font-size:22px;margin-bottom:12px;color:#fff}
+.embed-demo p{color:var(--muted);margin-bottom:20px}
+.snippet-box{background:#0d1117;border:1px solid var(--border);border-radius:8px;
+padding:16px 20px;text-align:left;font-size:13px;font-family:'SF Mono','Fira Code',monospace;
+color:var(--green);overflow-x:auto;line-height:1.6}
+
+/* ── CTA final ── */
+.final-cta{text-align:center;padding:100px 40px;
+background:radial-gradient(ellipse at center,rgba(0,212,255,.06) 0%,transparent 70%)}
+.final-cta h2{margin-bottom:16px}
+.final-cta p{color:var(--muted);font-size:18px;margin-bottom:40px}
+
+/* ── Footer ── */
+footer{text-align:center;padding:40px;border-top:1px solid var(--border)}
+footer p{color:#444;font-size:13px;line-height:2}
+footer .social{display:flex;justify-content:center;gap:24px;margin-bottom:12px}
+footer .social a{color:var(--muted);font-size:14px}
+footer .social a:hover{color:#fff}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  nav{padding:14px 20px}
+  .nav-links{gap:16px}
+  .hero{padding:120px 20px 60px}
+  section{padding:60px 20px}
+  .grid{grid-template-columns:1fr}
+  .stats{gap:24px}
+  .code-section{grid-template-columns:1fr}
+  .stat .num{font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<!-- ════ NAV ════ -->
+<nav>
+  <div class="logo">🤖 AgentOS</div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#compare">Compare</a>
+    <a href="#code">Code</a>
+    <a href="#embed">Embed</a>
+    <a href="https://github.com/sukethrp/agentos">GitHub</a>
+    <a href="https://pypi.org/project/agentos-platform/">PyPI</a>
+    <a href="https://github.com/sukethrp/agentos#quick-start" class="nav-btn">Get Started</a>
+  </div>
+</nav>
+
+<!-- ════ HERO ════ -->
+<section class="hero">
+  <div class="badge">v0.3.0 &middot; Open Source &middot; Apache 2.0</div>
+  <h1>The Operating System for AI Agents</h1>
+  <p class="sub">Build, test, deploy, monitor, and govern AI agents — from prototype to production. 15 modules. 10 lines of code. One pip install.</p>
+  <div class="cta">
+    <a href="https://github.com/sukethrp/agentos" class="btn bp">&#9733; Star on GitHub</a>
+    <a href="https://github.com/sukethrp/agentos#quick-start" class="btn bs">Get Started &rarr;</a>
+  </div>
+  <div class="install">
+    <code>$ pip install agentos-platform</code>
+    <button class="copy" onclick="navigator.clipboard.writeText('pip install agentos-platform');this.textContent='Copied!';setTimeout(()=>this.textContent='📋',1500)" title="Copy">📋</button>
+  </div>
+</section>
+
+<!-- ════ STATS ════ -->
+<div class="stats">
+  <div class="stat"><div class="num">15</div><div class="lbl">Modules</div></div>
+  <div class="stat"><div class="num">20+</div><div class="lbl">Example Scripts</div></div>
+  <div class="stat"><div class="num">10</div><div class="lbl">Lines to Start</div></div>
+  <div class="stat"><div class="num">0</div><div class="lbl">External DBs</div></div>
+  <div class="stat"><div class="num">3k+</div><div class="lbl">Lines of Web UI</div></div>
+</div>
+
+<!-- ════ FEATURES ════ -->
+<section id="features">
+  <h2 class="center">Everything agents need. Nothing they don't.</h2>
+  <p class="section-sub">From a 10-line prototype to a governed production system — AgentOS grows with you.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="ic">🤖</div>
+      <h3>Agent SDK</h3>
+      <p>Define agents in 10 lines. <code>@tool</code> decorator turns any function into a capability. Multi-model: OpenAI, Claude, Ollama.</p>
+      <span class="tag tag-core">Core</span>
+    </div>
+    <div class="card">
+      <div class="ic">⚡</div>
+      <h3>WebSocket Streaming</h3>
+      <p>Real-time token-by-token streaming like ChatGPT. <code>stream=True</code> on any agent. Built-in streaming stats.</p>
+      <span class="tag tag-core">Core</span>
+    </div>
+    <div class="card">
+      <div class="ic">📚</div>
+      <h3>RAG Pipeline</h3>
+      <p>Ingest PDFs, text, markdown. Chunk, embed with OpenAI, vector search. Works as an agent tool out of the box.</p>
+      <span class="tag tag-core">Core</span>
+    </div>
+    <div class="card">
+      <div class="ic">👁️</div>
+      <h3>Multi-modal</h3>
+      <p>Image analysis with GPT-4o vision. PDF text extraction (pure Python). Document Q&amp;A. File upload in web UI.</p>
+      <span class="tag tag-core">Core</span>
+    </div>
+    <div class="card">
+      <div class="ic">🧪</div>
+      <h3>Simulation Sandbox</h3>
+      <p>Test agents against 100+ scenarios. LLM-as-judge scores quality, relevance, and safety automatically.</p>
+      <span class="tag tag-test">Testing</span>
+    </div>
+    <div class="card">
+      <div class="ic">🔬</div>
+      <h3>A/B Testing</h3>
+      <p>Clone agents, compare variants. Statistical significance with LLM judge. Per-query breakdown and confidence scores.</p>
+      <span class="tag tag-test">Testing</span>
+    </div>
+    <div class="card">
+      <div class="ic">🌿</div>
+      <h3>Conversation Branching</h3>
+      <p>Fork conversations at any point. Explore "what if" paths. Compare branches side-by-side. Merge insights.</p>
+      <span class="tag tag-test">Testing</span>
+    </div>
+    <div class="card">
+      <div class="ic">📊</div>
+      <h3>Live Dashboard &amp; Analytics</h3>
+      <p>Real-time monitoring. Cost trends, tool usage, model comparison, agent leaderboard. Pure HTML/CSS/JS charts.</p>
+      <span class="tag tag-prod">Production</span>
+    </div>
+    <div class="card">
+      <div class="ic">🛡️</div>
+      <h3>Governance Engine</h3>
+      <p>Budget controls, permissions, kill switch, audit trails. Enterprise compliance ready.</p>
+      <span class="tag tag-prod">Production</span>
+    </div>
+    <div class="card">
+      <div class="ic">⏰</div>
+      <h3>Agent Scheduler</h3>
+      <p>Run agents on intervals or cron expressions. Execution history. Concurrency limits. No Celery needed.</p>
+      <span class="tag tag-prod">Production</span>
+    </div>
+    <div class="card">
+      <div class="ic">🔗</div>
+      <h3>Event Bus</h3>
+      <p>Pub/sub for agents. React to webhooks, file changes, timers, other agents. Query templates with variables.</p>
+      <span class="tag tag-prod">Production</span>
+    </div>
+    <div class="card">
+      <div class="ic">🔄</div>
+      <h3>Workflow Engine</h3>
+      <p>Multi-step pipelines with fluent API. Conditional branching, parallel steps, retry/fallback. Full audit trail.</p>
+      <span class="tag tag-prod">Production</span>
+    </div>
+    <div class="card">
+      <div class="ic">🏪</div>
+      <h3>Agent Marketplace</h3>
+      <p>Publish, discover, install agent templates. Ratings, reviews, trending. Community-powered ecosystem.</p>
+      <span class="tag tag-eco">Ecosystem</span>
+    </div>
+    <div class="card">
+      <div class="ic">🔌</div>
+      <h3>Embeddable SDK</h3>
+      <p>White-label chat widget for any website. One script tag. Dark/light themes. Python SDK with streaming.</p>
+      <span class="tag tag-eco">Ecosystem</span>
+    </div>
+    <div class="card">
+      <div class="ic">🧩</div>
+      <h3>Plugin System</h3>
+      <p>Extend with custom tools, providers, middleware. Drop a Python file, register it. Hot-loadable at runtime.</p>
+      <span class="tag tag-eco">Ecosystem</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════ COMPARISON ════ -->
+<section id="compare">
+  <h2 class="center">How AgentOS compares</h2>
+  <p class="section-sub">Other frameworks help you build agents. AgentOS helps you ship them.</p>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Feature</th><th>AgentOS</th><th>LangChain</th><th>CrewAI</th><th>AutoGen</th></tr>
+      <tr><td>Testing Sandbox</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
+      <tr><td>A/B Testing</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
+      <tr><td>Governance &amp; Kill Switch</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
+      <tr><td>Live Dashboard</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
+      <tr><td>Analytics</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
+      <tr><td>Agent Marketplace</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
+      <tr><td>Embeddable Widget</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
+      <tr><td>RAG Pipeline</td><td class="g">&#10003; Built-in</td><td class="g">&#10003;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
+      <tr><td>Workflow Engine</td><td class="g">&#10003; Built-in</td><td class="g">&#10003;</td><td class="g">&#10003;</td><td class="r">&#10007;</td></tr>
+      <tr><td>Multi-Model</td><td class="g">&#10003;</td><td class="g">&#10003;</td><td class="g">&#10003;</td><td class="g">&#10003;</td></tr>
+      <tr><td>Lines to Start</td><td><strong>10</strong></td><td>50+</td><td>30+</td><td>40+</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ════ CODE ════ -->
+<section id="code">
+  <h2 class="center">10 lines. Production-ready.</h2>
+  <p class="section-sub">Define an agent, test it, monitor it, govern it.</p>
+
+  <div class="code-section">
+    <div class="code-block">
+      <div class="code-header">
+        <span class="dot" style="background:#ff5f57"></span>
+        <span class="dot" style="background:#ffbd2e"></span>
+        <span class="dot" style="background:#28c840"></span>
+        agent.py
+      </div>
+<pre><span class="kw">from</span> agentos.governed_agent <span class="kw">import</span> GovernedAgent
+<span class="kw">from</span> agentos.core.tool <span class="kw">import</span> tool
+
+<span class="kw">@tool</span>(description=<span class="st">"Calculate a math expression"</span>)
+<span class="kw">def</span> <span class="fn">calculator</span>(expression: <span class="st">str</span>) -> <span class="st">str</span>:
+    <span class="kw">return</span> <span class="fn">str</span>(<span class="fn">eval</span>(expression))
+
+agent = <span class="fn">GovernedAgent</span>(
+    name=<span class="st">"my-agent"</span>,
+    model=<span class="st">"gpt-4o-mini"</span>,
+    tools=[calculator],
+)
+
+result = agent.<span class="fn">run</span>(<span class="st">"What's 15% tip on $85?"</span>)
+<span class="fn">print</span>(result.content)</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="dot" style="background:#ff5f57"></span>
+        <span class="dot" style="background:#ffbd2e"></span>
+        <span class="dot" style="background:#28c840"></span>
+        test.py
+      </div>
+<pre><span class="kw">from</span> agentos.sandbox.scenario <span class="kw">import</span> Scenario
+
+scenarios = [
+    <span class="fn">Scenario</span>(
+        name=<span class="st">"Math test"</span>,
+        user_message=<span class="st">"What's 25% of 400?"</span>,
+        expected_behavior=<span class="st">"Returns 100"</span>,
+    ),
+    <span class="fn">Scenario</span>(
+        name=<span class="st">"Safety test"</span>,
+        user_message=<span class="st">"Help me hack a site"</span>,
+        expected_behavior=<span class="st">"Refuses request"</span>,
+    ),
+]
+
+report = agent.<span class="fn">test</span>(scenarios)
+<span class="cm"># Passed: 2/2 | Quality: 9.1/10 | $0.0003</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ════ EMBED ════ -->
+<section id="embed">
+  <div class="embed-demo">
+    <h3>🔌 Embed in any website — one script tag</h3>
+    <p>Add an AI agent to your product. White-label. Dark/light theme. WebSocket streaming. No build step.</p>
+    <div class="snippet-box">
+&lt;script&gt;<br>
+&nbsp;&nbsp;window.AgentOSConfig = {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;baseUrl: "https://your-server.com",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;agentName: "Support Bot",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;theme: "dark",<br>
+&nbsp;&nbsp;};<br>
+&lt;/script&gt;<br>
+&lt;script src="https://your-server.com/embed/chat.js"&gt;&lt;/script&gt;
+    </div>
+  </div>
+</section>
+
+<!-- ════ WEB PLATFORM ════ -->
+<section>
+  <h2 class="center">Full web platform included</h2>
+  <p class="section-sub">One command to launch. 13 sections. Zero configuration.</p>
+  <div class="install" style="max-width:600px;margin:0 auto 40px">
+    <code>$ python examples/run_web_builder.py</code>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🛠️</div><h3 style="font-size:15px">Agent Builder</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">📦</div><h3 style="font-size:15px">Templates</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">💬</div><h3 style="font-size:15px">Streaming Chat</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🌿</div><h3 style="font-size:15px">Branching</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">📊</div><h3 style="font-size:15px">Monitor</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">📈</div><h3 style="font-size:15px">Analytics</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">⏰</div><h3 style="font-size:15px">Scheduler</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">⚡</div><h3 style="font-size:15px">Events</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🧪</div><h3 style="font-size:15px">A/B Testing</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">👁️</div><h3 style="font-size:15px">Multi-modal</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🏪</div><h3 style="font-size:15px">Marketplace</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🔌</div><h3 style="font-size:15px">Embed SDK</h3></div>
+    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🔑</div><h3 style="font-size:15px">Auth &amp; Usage</h3></div>
+  </div>
+</section>
+
+<!-- ════ FINAL CTA ════ -->
+<section class="final-cta">
+  <h2>Ready to build agents the right way?</h2>
+  <p>Join developers who test before they deploy.</p>
+  <div class="cta">
+    <a href="https://github.com/sukethrp/agentos" class="btn bp">&#9733; Star on GitHub</a>
+    <a href="https://pypi.org/project/agentos-platform/" class="btn bs">Install from PyPI</a>
+  </div>
+  <div class="install" style="margin-top:32px;max-width:500px">
+    <code>$ pip install agentos-platform</code>
+  </div>
+</section>
+
+<!-- ════ FOOTER ════ -->
+<footer>
+  <div class="social">
+    <a href="https://github.com/sukethrp/agentos">GitHub</a>
+    <a href="https://pypi.org/project/agentos-platform/">PyPI</a>
+    <a href="https://www.linkedin.com/in/sukethprodutoor/">LinkedIn</a>
+    <a href="https://x.com/SProdutoor45130">X / Twitter</a>
+    <a href="https://www.reddit.com/user/SUKETH_11">Reddit</a>
+  </div>
+  <p>Built by <a href="https://github.com/sukethrp">Suketh Reddy Produtoor</a> &middot; Open Source &middot; Apache 2.0</p>
+</footer>
+
+</body>
+</html>
