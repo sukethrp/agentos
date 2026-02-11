@@ -12,10 +12,15 @@ from dotenv import load_dotenv
 from agentos.monitor.store import store
 from agentos.core.types import AgentEvent
 from agentos.tools import get_builtin_tools
+from agentos.scheduler import AgentScheduler
 
 load_dotenv()
 
 app = FastAPI(title="AgentOS Platform", version="0.1.0")
+
+# Global scheduler instance
+_scheduler = AgentScheduler(max_concurrent=3)
+_scheduler.start()
 
 
 class RunRequest(BaseModel):
@@ -194,6 +199,74 @@ def run_agent(req: RunRequest):
     }
 
 
+# ── Scheduler API ──
+
+class ScheduleRequest(BaseModel):
+    agent_name: str = "scheduled-agent"
+    model: str = "gpt-4o-mini"
+    system_prompt: str = "You are a helpful assistant."
+    query: str
+    tools: list[str] = []
+    interval: str = ""     # e.g. "5m", "1h", "30s"
+    cron: str = ""         # e.g. "0 9 * * *"
+    max_executions: int = 0
+
+
+@app.get("/api/scheduler/jobs")
+def list_scheduler_jobs():
+    """List all scheduled jobs."""
+    return {
+        "overview": _scheduler.get_overview(),
+        "jobs": [j.to_dict() for j in _scheduler.list_jobs()],
+    }
+
+
+@app.post("/api/scheduler/create")
+def create_scheduler_job(req: ScheduleRequest):
+    """Create a new scheduled job."""
+    available_tools = get_builtin_tools()
+    agent_tools = [available_tools[t] for t in req.tools if t in available_tools]
+
+    try:
+        job = _scheduler.schedule_from_config(
+            agent_name=req.agent_name,
+            model=req.model,
+            query=req.query,
+            tools=agent_tools,
+            system_prompt=req.system_prompt,
+            interval=req.interval,
+            cron=req.cron,
+            max_executions=req.max_executions,
+        )
+        return {"status": "created", "job": job.to_dict()}
+    except ValueError as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.delete("/api/scheduler/delete/{job_id}")
+def delete_scheduler_job(job_id: str):
+    """Delete a scheduled job."""
+    if _scheduler.delete_job(job_id):
+        return {"status": "deleted", "job_id": job_id}
+    return {"status": "error", "message": f"Job {job_id} not found"}
+
+
+@app.post("/api/scheduler/pause/{job_id}")
+def pause_scheduler_job(job_id: str):
+    """Pause a scheduled job."""
+    if _scheduler.pause_job(job_id):
+        return {"status": "paused", "job_id": job_id}
+    return {"status": "error", "message": f"Cannot pause job {job_id}"}
+
+
+@app.post("/api/scheduler/resume/{job_id}")
+def resume_scheduler_job(job_id: str):
+    """Resume a paused job."""
+    if _scheduler.resume_job(job_id):
+        return {"status": "resumed", "job_id": job_id}
+    return {"status": "error", "message": f"Cannot resume job {job_id}"}
+
+
 # ── The Complete Web UI ──
 
 WEB_UI_HTML = """
@@ -272,6 +345,7 @@ textarea{min-height:80px;resize:vertical}
 <h3>Operate</h3>
 <div class="nav-item" onclick="showPanel('chat')">💬 Chat</div>
 <div class="nav-item" onclick="showPanel('monitor')">📊 Monitor</div>
+<div class="nav-item" onclick="showPanel('scheduler')">⏰ Scheduler</div>
 <h3>Manage</h3>
 <div class="nav-item" onclick="showPanel('marketplace')">🏪 Marketplace</div>
 </div>
@@ -382,6 +456,63 @@ textarea{min-height:80px;resize:vertical}
 <div class="cat">by community · $19</div>
 </div>
 </div>
+</div>
+</div>
+
+<!-- SCHEDULER -->
+<div class="panel" id="panel-scheduler">
+<div class="card">
+<h2>⏰ Agent Scheduler</h2>
+<p style="color:#888;margin-bottom:16px">Schedule agents to run automatically at intervals or cron times.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div>
+<label>Agent Name</label>
+<input type="text" id="sc-name" value="scheduled-agent" placeholder="scheduled-agent">
+<label>Model</label>
+<select id="sc-model">
+<option value="gpt-4o-mini">GPT-4o Mini</option>
+<option value="gpt-4o">GPT-4o</option>
+</select>
+<label>Query / Task</label>
+<textarea id="sc-query" placeholder="What should the agent do each run?">Check the weather in Tokyo and summarize it.</textarea>
+</div>
+<div>
+<label>Schedule Type</label>
+<select id="sc-type" onchange="document.getElementById('sc-interval').style.display=this.value==='interval'?'block':'none';document.getElementById('sc-cron').style.display=this.value==='cron'?'block':'none'">
+<option value="interval">Interval (every N minutes)</option>
+<option value="cron">Cron Expression</option>
+</select>
+<div id="sc-interval">
+<label>Interval</label>
+<select id="sc-interval-val">
+<option value="30s">Every 30 seconds</option>
+<option value="1m">Every 1 minute</option>
+<option value="5m" selected>Every 5 minutes</option>
+<option value="15m">Every 15 minutes</option>
+<option value="1h">Every 1 hour</option>
+<option value="1d">Every 1 day</option>
+</select>
+</div>
+<div id="sc-cron" style="display:none">
+<label>Cron Expression</label>
+<input type="text" id="sc-cron-val" value="0 9 * * *" placeholder="min hour dom month dow">
+<span style="font-size:11px;color:#555">e.g. 0 9 * * * = 9am daily</span>
+</div>
+<label>Tools</label>
+<div class="tools-grid">
+<div class="tool-tag" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
+<div class="tool-tag selected" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
+<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
+</div>
+<label>Max Executions (0 = unlimited)</label>
+<input type="number" id="sc-max" value="0" min="0">
+</div>
+</div>
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="createScheduledJob()">⏰ Create Scheduled Job</button>
+</div>
+<div class="card">
+<h2>Active Jobs</h2>
+<div id="sc-jobs"><p style="color:#555">No scheduled jobs. Create one above.</p></div>
 </div>
 </div>
 
@@ -553,6 +684,75 @@ document.getElementById('mon-events').innerHTML=h||'<p style="color:#555;padding
 
 loadTemplates();
 setInterval(()=>{if(document.getElementById('panel-monitor').classList.contains('active'))refreshMonitor()},3000);
+setInterval(()=>{if(document.getElementById('panel-scheduler').classList.contains('active'))refreshScheduler()},2000);
+
+async function createScheduledJob(){
+const type=document.getElementById('sc-type').value;
+const body={
+agent_name:document.getElementById('sc-name').value,
+model:document.getElementById('sc-model').value,
+query:document.getElementById('sc-query').value,
+tools:[...document.querySelectorAll('#panel-scheduler .tool-tag.selected')].map(t=>t.dataset.tool),
+interval:type==='interval'?document.getElementById('sc-interval-val').value:'',
+cron:type==='cron'?document.getElementById('sc-cron-val').value:'',
+max_executions:parseInt(document.getElementById('sc-max').value)||0,
+};
+try{
+const r=await fetch('/api/scheduler/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+const d=await r.json();
+if(d.status==='created'){refreshScheduler();}
+else{alert('Error: '+(d.message||'Unknown'));}
+}catch(e){alert('Error: '+e.message);}
+}
+
+async function refreshScheduler(){
+try{
+const r=await fetch('/api/scheduler/jobs');
+const d=await r.json();
+let h='';
+if(!d.jobs||d.jobs.length===0){
+h='<p style="color:#555">No scheduled jobs. Create one above.</p>';
+}else{
+h+=`<div style="margin-bottom:12px;display:flex;gap:12px">
+<div class="stat-chip">Active: <span>${d.overview.active_jobs}</span></div>
+<div class="stat-chip">Total Runs: <span>${d.overview.total_executions}</span></div>
+<div class="stat-chip">Total Cost: <span>$${d.overview.total_cost.toFixed(4)}</span></div>
+</div>`;
+d.jobs.forEach(j=>{
+const status=j.status==='running'?'🟢 Running':j.status==='pending'?'🔵 Pending':j.status==='paused'?'⏸️ Paused':j.status==='completed'?'✅ Done':'⭕ '+j.status;
+const next=j.next_run?new Date(j.next_run*1000).toLocaleTimeString():'—';
+const last=j.last_run?new Date(j.last_run*1000).toLocaleTimeString():'never';
+const sched=j.interval_seconds>0?(j.interval_seconds<60?j.interval_seconds+'s':j.interval_seconds<3600?Math.round(j.interval_seconds/60)+'m':Math.round(j.interval_seconds/3600)+'h'):j.cron_expression;
+h+=`<div style="background:#0a0a14;border:1px solid #1a1a2e;border-radius:8px;padding:14px;margin-bottom:8px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div><strong style="color:#fff">${j.agent_name}</strong> <span style="color:#555;font-size:12px">· ${j.job_id}</span></div>
+<div style="display:flex;gap:6px">
+<button onclick="fetch('/api/scheduler/${j.status==='paused'?'resume':'pause'}/${j.job_id}',{method:'POST'}).then(()=>refreshScheduler())" style="background:#1a1a2e;border:1px solid #2a2a4a;color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">${j.status==='paused'?'▶️ Resume':'⏸️ Pause'}</button>
+<button onclick="if(confirm('Delete this job?'))fetch('/api/scheduler/delete/${j.job_id}',{method:'DELETE'}).then(()=>refreshScheduler())" style="background:#2a1a1a;border:1px solid #4a2a2a;color:#ff6666;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">🗑️ Delete</button>
+</div>
+</div>
+<div style="color:#888;font-size:13px;margin-top:6px">${j.query}</div>
+<div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:#666">
+<span>${status}</span>
+<span>⏱️ ${sched}</span>
+<span>Runs: ${j.execution_count}${j.max_executions>0?'/'+j.max_executions:''}</span>
+<span>Next: ${next}</span>
+<span>Last: ${last}</span>
+</div>`;
+if(j.history&&j.history.length>0){
+h+=`<div style="margin-top:8px;font-size:11px;color:#555">`;
+j.history.slice(-3).reverse().forEach(e=>{
+const t=new Date(e.started_at*1000).toLocaleTimeString();
+const st=e.status==='completed'?'✅':'❌';
+h+=`<div style="padding:3px 0;border-top:1px solid #12121f">${st} ${t} · ${e.result.slice(0,100)}${e.result.length>100?'...':''} · $${e.cost_usd.toFixed(4)} · ${e.duration_ms.toFixed(0)}ms</div>`;
+});
+h+=`</div>`;}
+h+=`</div>`;
+});
+}
+document.getElementById('sc-jobs').innerHTML=h;
+}catch(e){console.log(e)}
+}
 </script>
 </body>
 </html>
