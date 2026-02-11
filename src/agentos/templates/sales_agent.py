@@ -2,6 +2,7 @@
 
 from agentos.core.agent import Agent
 from agentos.core.tool import tool
+from agentos.tools.http_tool import calculator_tool
 
 
 @tool(description="Look up a lead or company in the CRM database")
@@ -29,22 +30,11 @@ def product_catalog(query: str) -> str:
     return f"Product info: AgentOS is the operating system for AI agents. Visit agentos.dev for details."
 
 
-@tool(description="Calculate pricing, discounts, or ROI for sales quotes")
-def calculator(expression: str) -> str:
-    try:
-        allowed = set("0123456789+-*/.() ")
-        if not all(c in allowed for c in expression):
-            return "Error: Only basic math allowed"
-        return str(eval(expression))
-    except Exception as e:
-        return f"Error: {e}"
-
-
 def create_sales_agent(model: str = "gpt-4o-mini", **kwargs) -> Agent:
     return Agent(
         name="sales-agent",
         model=model,
-        tools=[crm_lookup, product_catalog, calculator],
+        tools=[crm_lookup, product_catalog, calculator_tool()],
         system_prompt="""You are a professional sales qualification agent for AgentOS. Your goals:
 1. Understand the prospect's needs and pain points
 2. Look up their company in CRM for context

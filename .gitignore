@@ -24,3 +24,10 @@ htmlcov/
 .idea/
 *.swp
 *.swo
+
+# Runtime data (auth, usage)
+src/agentos/auth/users.json
+src/agentos/auth/usage.json
+
+# Logs
+*.log

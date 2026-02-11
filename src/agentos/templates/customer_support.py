@@ -2,6 +2,7 @@
 
 from agentos.core.agent import Agent
 from agentos.core.tool import tool
+from agentos.tools.http_tool import calculator_tool
 
 
 @tool(description="Search the knowledge base for product information, policies, and FAQs")
@@ -29,22 +30,11 @@ def ticket_system(action: str, details: str = "") -> str:
     return f"Ticket action '{action}' completed."
 
 
-@tool(description="Calculate prices, discounts, or refund amounts")
-def calculator(expression: str) -> str:
-    try:
-        allowed = set("0123456789+-*/.() ")
-        if not all(c in allowed for c in expression):
-            return "Error: Only basic math allowed"
-        return str(eval(expression))
-    except Exception as e:
-        return f"Error: {e}"
-
-
 def create_customer_support_agent(model: str = "gpt-4o-mini", **kwargs) -> Agent:
     return Agent(
         name="support-agent",
         model=model,
-        tools=[knowledge_base, ticket_system, calculator],
+        tools=[knowledge_base, ticket_system, calculator_tool()],
         system_prompt="""You are a friendly and professional customer support agent. Follow these rules:
 1. Always greet the customer warmly
 2. Listen to their issue carefully
