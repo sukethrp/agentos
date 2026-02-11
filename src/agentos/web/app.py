@@ -5,7 +5,9 @@ import asyncio
 import json
 import queue
 import threading
-from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
+import time as _time
+from collections import defaultdict
+from fastapi import Depends, FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -428,6 +430,132 @@ async def emit_event(body: dict = {}):
     }
 
 
+# ── Analytics API ──
+
+def _bucket_key(ts: float, granularity: str) -> str:
+    """Convert a unix timestamp to a bucket key string."""
+    import datetime
+    dt = datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc)
+    if granularity == "hour":
+        return dt.strftime("%Y-%m-%d %H:00")
+    elif granularity == "week":
+        # ISO week start (Monday)
+        start = dt - datetime.timedelta(days=dt.weekday())
+        return start.strftime("%Y-%m-%d")
+    else:  # day (default)
+        return dt.strftime("%Y-%m-%d")
+
+
+@app.get("/api/analytics/cost-over-time")
+def analytics_cost_over_time(granularity: str = Query("day", pattern="^(hour|day|week)$")):
+    """Aggregate cost by time bucket (hour / day / week)."""
+    buckets: dict[str, dict] = {}
+    for ev in store.events:
+        key = _bucket_key(ev["timestamp"], granularity)
+        if key not in buckets:
+            buckets[key] = {"bucket": key, "cost": 0.0, "tokens": 0, "queries": 0}
+        buckets[key]["cost"] += ev.get("cost_usd", 0.0)
+        buckets[key]["tokens"] += ev.get("tokens_used", 0)
+        if ev.get("event_type") == "llm_call":
+            buckets[key]["queries"] += 1
+    series = sorted(buckets.values(), key=lambda b: b["bucket"])
+    for b in series:
+        b["cost"] = round(b["cost"], 6)
+    return {"granularity": granularity, "series": series}
+
+
+@app.get("/api/analytics/popular-tools")
+def analytics_popular_tools():
+    """Rank tools by usage count."""
+    counts: dict[str, dict] = {}
+    for ev in store.events:
+        if ev.get("event_type") != "tool_call":
+            continue
+        tool_name = (ev.get("data") or {}).get("tool", "unknown")
+        if tool_name not in counts:
+            counts[tool_name] = {"tool": tool_name, "count": 0, "total_latency_ms": 0.0, "total_cost": 0.0}
+        counts[tool_name]["count"] += 1
+        counts[tool_name]["total_latency_ms"] += ev.get("latency_ms", 0.0)
+        counts[tool_name]["total_cost"] += ev.get("cost_usd", 0.0)
+    ranked = sorted(counts.values(), key=lambda t: t["count"], reverse=True)
+    for t in ranked:
+        t["avg_latency_ms"] = round(t["total_latency_ms"] / max(t["count"], 1), 1)
+        t["total_cost"] = round(t["total_cost"], 6)
+    return {"tools": ranked}
+
+
+@app.get("/api/analytics/model-comparison")
+def analytics_model_comparison():
+    """Compare models by cost, speed, tokens, and call count."""
+    models: dict[str, dict] = {}
+    for ev in store.events:
+        if ev.get("event_type") != "llm_call":
+            continue
+        model = (ev.get("data") or {}).get("model", "unknown")
+        if model not in models:
+            models[model] = {
+                "model": model, "calls": 0, "total_cost": 0.0,
+                "total_tokens": 0, "total_latency_ms": 0.0,
+                "quality_scores": [],
+            }
+        m = models[model]
+        m["calls"] += 1
+        m["total_cost"] += ev.get("cost_usd", 0.0)
+        m["total_tokens"] += ev.get("tokens_used", 0)
+        m["total_latency_ms"] += ev.get("latency_ms", 0.0)
+    # Attach quality scores from agent data
+    for agent_data in store.agents.values():
+        for qs in agent_data.get("quality_scores", []):
+            # Attempt to attribute to last-used model (best effort)
+            pass
+    result = []
+    for m in models.values():
+        m["avg_cost"] = round(m["total_cost"] / max(m["calls"], 1), 6)
+        m["avg_latency_ms"] = round(m["total_latency_ms"] / max(m["calls"], 1), 1)
+        m["avg_tokens"] = round(m["total_tokens"] / max(m["calls"], 1))
+        m["total_cost"] = round(m["total_cost"], 6)
+        result.append(m)
+    result.sort(key=lambda x: x["calls"], reverse=True)
+    return {"models": result}
+
+
+@app.get("/api/analytics/agent-leaderboard")
+def analytics_agent_leaderboard():
+    """Rank agents by quality, cost-efficiency, and usage."""
+    leaderboard = []
+    for name, a in store.agents.items():
+        scores = [s["score"] for s in a.get("quality_scores", [])]
+        avg_quality = round(sum(scores) / len(scores), 2) if scores else None
+        total_queries = a.get("total_llm_calls", 0)
+        cost_per_query = round(a["total_cost"] / max(total_queries, 1), 6)
+        leaderboard.append({
+            "agent": name,
+            "avg_quality": avg_quality,
+            "total_cost": round(a["total_cost"], 6),
+            "total_tokens": a["total_tokens"],
+            "total_queries": total_queries,
+            "total_tool_calls": a.get("total_tool_calls", 0),
+            "cost_per_query": cost_per_query,
+            "total_events": a["total_events"],
+        })
+    # Sort: quality first (desc), then by queries (desc)
+    leaderboard.sort(key=lambda x: (x["avg_quality"] or 0, x["total_queries"]), reverse=True)
+    # Compute summary totals
+    total_spend = round(sum(a["total_cost"] for a in store.agents.values()), 6)
+    total_queries = sum(a.get("total_llm_calls", 0) for a in store.agents.values())
+    avg_cost = round(total_spend / max(total_queries, 1), 6)
+    return {
+        "leaderboard": leaderboard,
+        "summary": {
+            "total_spend": total_spend,
+            "total_queries": total_queries,
+            "avg_cost_per_query": avg_cost,
+            "total_agents": len(store.agents),
+            "total_events": len(store.events),
+        },
+    }
+
+
 # ── The Complete Web UI ──
 
 WEB_UI_HTML = """
@@ -492,6 +620,37 @@ textarea{min-height:80px;resize:vertical}
 .event-type.tool_call{background:#ffaa0022;color:#ffaa00}
 .loading{display:inline-block;width:16px;height:16px;border:2px solid #333;border-top-color:#00d4ff;border-radius:50%;animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* ── Analytics charts (pure CSS) ── */
+.an-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.an-summary .monitor-card .value{font-size:24px}
+.an-chart-wrap{position:relative;height:220px;background:#08080f;border:1px solid #1a1a2e;border-radius:10px;padding:16px 16px 32px 48px;margin-bottom:20px;overflow:hidden}
+.an-chart-wrap .y-axis{position:absolute;left:0;top:16px;bottom:32px;width:44px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding-right:6px;font-size:10px;color:#555}
+.an-chart-wrap .x-axis{position:absolute;left:48px;right:16px;bottom:4px;display:flex;justify-content:space-between;font-size:10px;color:#555;overflow:hidden}
+.an-line-area{position:absolute;left:48px;top:16px;right:16px;bottom:32px}
+.an-line-area svg{width:100%;height:100%;overflow:visible}
+.an-line-area svg polyline{fill:none;stroke:#00d4ff;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.an-line-area svg polygon{fill:url(#costGrad);opacity:0.25}
+.an-line-area svg circle{fill:#00d4ff;r:3}
+.an-bar-wrap{display:flex;align-items:flex-end;gap:10px;height:160px;padding:0 4px}
+.an-bar{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0}
+.an-bar .bar{width:100%;max-width:56px;border-radius:6px 6px 0 0;transition:height 0.4s ease;position:relative}
+.an-bar .bar:hover{opacity:0.85}
+.an-bar .bar-label{font-size:10px;color:#888;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center}
+.an-bar .bar-value{font-size:11px;color:#fff;font-weight:600;margin-bottom:4px}
+.an-table{width:100%;border-collapse:separate;border-spacing:0}
+.an-table th{text-align:left;font-size:11px;text-transform:uppercase;color:#555;letter-spacing:0.5px;padding:8px 12px;border-bottom:1px solid #1a1a2e}
+.an-table td{padding:10px 12px;font-size:13px;border-bottom:1px solid #0d0d1a}
+.an-table tr:hover td{background:#0a0a14}
+.an-rank{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:12px;font-weight:700}
+.an-rank.gold{background:#ffaa0033;color:#ffaa00}
+.an-rank.silver{background:#88888833;color:#aaa}
+.an-rank.bronze{background:#cc774433;color:#cc7744}
+.an-rank.normal{background:#1a1a2e;color:#666}
+.an-quality-bar{height:6px;border-radius:3px;background:#1a1a2e;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px}
+.an-quality-bar .fill{height:100%;border-radius:3px}
+.an-tabs{display:flex;gap:4px;margin-bottom:16px}
+.an-tab{padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid #2a2a4a;background:#08080f;color:#888;transition:all 0.2s}
+.an-tab.active{background:#00d4ff15;border-color:#00d4ff;color:#00d4ff}
 </style>
 </head>
 <body>
@@ -507,6 +666,7 @@ textarea{min-height:80px;resize:vertical}
 <h3>Operate</h3>
 <div class="nav-item" onclick="showPanel('chat')">💬 Chat</div>
 <div class="nav-item" onclick="showPanel('monitor')">📊 Monitor</div>
+<div class="nav-item" onclick="showPanel('analytics')">📈 Analytics</div>
 <div class="nav-item" onclick="showPanel('scheduler')">⏰ Scheduler</div>
 <div class="nav-item" onclick="showPanel('events')">⚡ Events</div>
 <div class="nav-item" onclick="showPanel('abtest')">🧪 A/B Testing</div>
@@ -587,6 +747,71 @@ textarea{min-height:80px;resize:vertical}
 <div class="card">
 <h2>Live Events</h2>
 <div id="mon-events"></div>
+</div>
+</div>
+
+<!-- ANALYTICS -->
+<div class="panel" id="panel-analytics">
+<!-- Summary cards -->
+<div class="an-summary" id="an-summary">
+<div class="monitor-card"><div class="label">Total Spend</div><div class="value yellow" id="an-total-spend">$0</div></div>
+<div class="monitor-card"><div class="label">Total Queries</div><div class="value blue" id="an-total-queries">0</div></div>
+<div class="monitor-card"><div class="label">Avg Cost / Query</div><div class="value green" id="an-avg-cost">$0</div></div>
+<div class="monitor-card"><div class="label">Total Events</div><div class="value purple" id="an-total-events">0</div></div>
+<div class="monitor-card"><div class="label">Active Agents</div><div class="value blue" id="an-total-agents">0</div></div>
+</div>
+
+<!-- Cost over time chart -->
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<h2>Cost Over Time</h2>
+<div class="an-tabs">
+<div class="an-tab active" onclick="switchCostGranularity('hour',this)">Hour</div>
+<div class="an-tab" onclick="switchCostGranularity('day',this)">Day</div>
+<div class="an-tab" onclick="switchCostGranularity('week',this)">Week</div>
+</div>
+</div>
+<div class="an-chart-wrap" id="an-cost-chart">
+<div class="y-axis" id="an-cost-y"></div>
+<div class="an-line-area" id="an-cost-area">
+<svg viewBox="0 0 100 100" preserveAspectRatio="none">
+<defs><linearGradient id="costGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00d4ff"/><stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/></linearGradient></defs>
+<polygon id="an-cost-fill" points="0,100 100,100"/>
+<polyline id="an-cost-line" points=""/>
+<g id="an-cost-dots"></g>
+</svg>
+</div>
+<div class="x-axis" id="an-cost-x"></div>
+</div>
+</div>
+
+<!-- Popular tools bar chart -->
+<div class="card">
+<h2>Most Used Tools</h2>
+<div class="an-bar-wrap" id="an-tools-bars"></div>
+<p style="color:#555;font-size:12px;text-align:center;margin-top:8px" id="an-tools-empty">No tool usage recorded yet. Run an agent with tools enabled.</p>
+</div>
+
+<!-- Model comparison table -->
+<div class="card">
+<h2>Model Comparison</h2>
+<div style="overflow-x:auto">
+<table class="an-table" id="an-model-table">
+<thead><tr><th>Model</th><th>Calls</th><th>Total Cost</th><th>Avg Cost</th><th>Avg Latency</th><th>Avg Tokens</th><th>Total Tokens</th></tr></thead>
+<tbody id="an-model-tbody"><tr><td colspan="7" style="color:#555;text-align:center;padding:20px">No model data yet.</td></tr></tbody>
+</table>
+</div>
+</div>
+
+<!-- Agent leaderboard -->
+<div class="card">
+<h2>Agent Leaderboard</h2>
+<div style="overflow-x:auto">
+<table class="an-table" id="an-leader-table">
+<thead><tr><th>#</th><th>Agent</th><th>Quality</th><th>Queries</th><th>Tool Calls</th><th>Total Cost</th><th>Cost/Query</th><th>Events</th></tr></thead>
+<tbody id="an-leader-tbody"><tr><td colspan="8" style="color:#555;text-align:center;padding:20px">No agent data yet.</td></tr></tbody>
+</table>
+</div>
 </div>
 </div>
 
@@ -822,6 +1047,7 @@ document.getElementById('panel-'+id).classList.add('active');
 event.target.classList.add('active');
 if(id==='monitor')refreshMonitor();
 if(id==='templates')loadTemplates();
+if(id==='analytics')refreshAnalytics();
 if(id==='events')refreshEvents();
 if(id==='auth')refreshAuthUsage();
 if(id==='abtest'){}  // A/B panel is static; no periodic refresh needed
@@ -1124,6 +1350,166 @@ document.getElementById('ev-history').innerHTML=hh;
 }
 
 setInterval(()=>{if(document.getElementById('panel-events').classList.contains('active'))refreshEvents()},3000);
+
+// ── Analytics ──
+
+let _anGranularity='hour';
+
+function switchCostGranularity(g,el){
+_anGranularity=g;
+document.querySelectorAll('#panel-analytics .an-tab').forEach(t=>t.classList.remove('active'));
+el.classList.add('active');
+refreshAnalytics();
+}
+
+async function refreshAnalytics(){
+try{
+// Fetch all analytics endpoints in parallel
+const [costR,toolsR,modelsR,leaderR]=await Promise.all([
+fetch('/api/analytics/cost-over-time?granularity='+_anGranularity),
+fetch('/api/analytics/popular-tools'),
+fetch('/api/analytics/model-comparison'),
+fetch('/api/analytics/agent-leaderboard'),
+]);
+const costD=await costR.json();
+const toolsD=await toolsR.json();
+const modelsD=await modelsR.json();
+const leaderD=await leaderR.json();
+
+// ── Summary cards ──
+const s=leaderD.summary||{};
+document.getElementById('an-total-spend').textContent='$'+(s.total_spend||0).toFixed(4);
+document.getElementById('an-total-queries').textContent=(s.total_queries||0).toLocaleString();
+document.getElementById('an-avg-cost').textContent='$'+(s.avg_cost_per_query||0).toFixed(4);
+document.getElementById('an-total-events').textContent=(s.total_events||0).toLocaleString();
+document.getElementById('an-total-agents').textContent=s.total_agents||0;
+
+// ── Cost line chart ──
+renderCostChart(costD.series||[]);
+
+// ── Tools bar chart ──
+renderToolsBars(toolsD.tools||[]);
+
+// ── Model comparison table ──
+renderModelTable(modelsD.models||[]);
+
+// ── Agent leaderboard ──
+renderLeaderboard(leaderD.leaderboard||[]);
+
+}catch(e){console.log('Analytics refresh error:',e);}
+}
+
+function renderCostChart(series){
+const line=document.getElementById('an-cost-line');
+const fill=document.getElementById('an-cost-fill');
+const dotsG=document.getElementById('an-cost-dots');
+const yAxis=document.getElementById('an-cost-y');
+const xAxis=document.getElementById('an-cost-x');
+dotsG.innerHTML='';
+if(!series.length){
+line.setAttribute('points','');
+fill.setAttribute('points','0,100 100,100');
+yAxis.innerHTML='<span>0</span><span>0</span>';
+xAxis.innerHTML='<span>No data</span>';
+return;
+}
+const maxCost=Math.max(...series.map(s=>s.cost),0.0001);
+const n=series.length;
+let pts=[];
+for(let i=0;i<n;i++){
+const x=n===1?50:(i/(n-1))*100;
+const y=100-(series[i].cost/maxCost)*100;
+pts.push(x.toFixed(2)+','+y.toFixed(2));
+dotsG.innerHTML+=`<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.5"><title>$${series[i].cost.toFixed(4)} — ${series[i].bucket}</title></circle>`;
+}
+line.setAttribute('points',pts.join(' '));
+fill.setAttribute('points','0,100 '+pts.join(' ')+' 100,100');
+// Y axis labels (5 ticks)
+let yH='';
+for(let i=0;i<5;i++){
+const val=(maxCost*(4-i)/4);
+yH+=`<span>$${val<0.01?val.toFixed(4):val.toFixed(2)}</span>`;
+}
+yAxis.innerHTML=yH;
+// X axis labels (max 8)
+let xH='';
+const step=Math.max(1,Math.floor(n/8));
+for(let i=0;i<n;i+=step){
+const lbl=series[i].bucket;
+const short=_anGranularity==='hour'?lbl.slice(11):_anGranularity==='week'?'Wk '+lbl.slice(5):lbl.slice(5);
+xH+=`<span>${short}</span>`;
+}
+xAxis.innerHTML=xH;
+}
+
+function renderToolsBars(tools){
+const wrap=document.getElementById('an-tools-bars');
+const empty=document.getElementById('an-tools-empty');
+if(!tools.length){wrap.innerHTML='';empty.style.display='block';return;}
+empty.style.display='none';
+const maxCount=Math.max(...tools.map(t=>t.count),1);
+const colors=['#00d4ff','#00ff88','#ffaa00','#aa88ff','#ff6688','#66ddaa','#dd88ff','#ff8844'];
+let h='';
+tools.slice(0,10).forEach((t,i)=>{
+const pct=Math.max(8,(t.count/maxCount)*100);
+const c=colors[i%colors.length];
+h+=`<div class="an-bar">
+<div class="bar-value">${t.count}</div>
+<div class="bar" style="height:${pct}%;background:${c}" title="${t.tool}: ${t.count} calls, avg ${t.avg_latency_ms}ms"></div>
+<div class="bar-label">${t.tool}</div>
+</div>`;
+});
+wrap.innerHTML=h;
+}
+
+function renderModelTable(models){
+const tbody=document.getElementById('an-model-tbody');
+if(!models.length){
+tbody.innerHTML='<tr><td colspan="7" style="color:#555;text-align:center;padding:20px">No model data yet. Run an agent to see comparisons.</td></tr>';
+return;
+}
+let h='';
+models.forEach(m=>{
+h+=`<tr>
+<td style="color:#00d4ff;font-weight:600">${m.model}</td>
+<td>${m.calls}</td>
+<td style="color:#ffaa00">$${m.total_cost.toFixed(4)}</td>
+<td>$${m.avg_cost.toFixed(6)}</td>
+<td>${m.avg_latency_ms.toFixed(0)}ms</td>
+<td>${m.avg_tokens.toLocaleString()}</td>
+<td>${m.total_tokens.toLocaleString()}</td>
+</tr>`;
+});
+tbody.innerHTML=h;
+}
+
+function renderLeaderboard(agents){
+const tbody=document.getElementById('an-leader-tbody');
+if(!agents.length){
+tbody.innerHTML='<tr><td colspan="8" style="color:#555;text-align:center;padding:20px">No agent data yet.</td></tr>';
+return;
+}
+let h='';
+agents.forEach((a,i)=>{
+const rankCls=i===0?'gold':i===1?'silver':i===2?'bronze':'normal';
+const qStr=a.avg_quality!==null?a.avg_quality.toFixed(1):'—';
+const qColor=a.avg_quality===null?'#555':a.avg_quality>=8?'#00ff88':a.avg_quality>=6?'#ffaa00':'#ff6666';
+const qPct=a.avg_quality!==null?Math.min(100,a.avg_quality*10):0;
+h+=`<tr>
+<td><span class="an-rank ${rankCls}">${i+1}</span></td>
+<td style="color:#fff;font-weight:600">${a.agent}</td>
+<td><span style="color:${qColor}">${qStr}</span><span class="an-quality-bar"><span class="fill" style="width:${qPct}%;background:${qColor}"></span></span></td>
+<td>${a.total_queries}</td>
+<td>${a.total_tool_calls}</td>
+<td style="color:#ffaa00">$${a.total_cost.toFixed(4)}</td>
+<td>$${a.cost_per_query.toFixed(6)}</td>
+<td>${a.total_events}</td>
+</tr>`;
+});
+tbody.innerHTML=h;
+}
+
+setInterval(()=>{if(document.getElementById('panel-analytics').classList.contains('active'))refreshAnalytics()},5000);
 
 // ── Auth helpers ──
 
