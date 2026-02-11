@@ -19,6 +19,7 @@ from agentos.monitor.store import store
 from agentos.core.types import AgentEvent
 from agentos.tools import get_builtin_tools
 from agentos.core.multimodal import analyze_image, read_document, encode_image
+from agentos.core.branching import ConversationTree, get_or_create_tree, get_tree, list_trees
 from agentos.scheduler import AgentScheduler
 from agentos.events import event_bus, WebhookTrigger
 from agentos.auth import User, create_user, get_current_user, get_user_by_email
@@ -506,6 +507,216 @@ def analyze_uploaded_file(req: AnalyzeFileRequest):
             return JSONResponse({"status": "error", "message": str(e)}, 500)
 
 
+# ── Conversation Branching API ──
+
+
+class BranchRequest(BaseModel):
+    tree_id: str
+    at_message_index: int | None = None
+    label: str = ""
+    source_branch_id: str | None = None
+
+
+class BranchMessageRequest(BaseModel):
+    tree_id: str
+    branch_id: str | None = None
+    role: str = "user"
+    content: str = ""
+
+
+class CompareBranchesRequest(BaseModel):
+    tree_id: str
+    branch_a: str
+    branch_b: str
+
+
+class MergeBranchesRequest(BaseModel):
+    tree_id: str
+    branch_a: str
+    branch_b: str
+    label: str = "merged"
+
+
+@app.post("/api/branch")
+def create_branch(req: BranchRequest):
+    """Create a new conversation branch."""
+    tree = get_tree(req.tree_id)
+    if not tree:
+        return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
+    try:
+        new_id = tree.branch(
+            at_message_index=req.at_message_index,
+            label=req.label,
+            source_branch_id=req.source_branch_id,
+        )
+        return {"status": "created", "branch_id": new_id, "tree": tree.to_dict()}
+    except (KeyError, IndexError) as e:
+        return JSONResponse({"status": "error", "message": str(e)}, 400)
+
+
+@app.get("/api/branches")
+def list_branches(tree_id: str | None = None):
+    """List branches. If tree_id provided, show that tree; else list all trees."""
+    if tree_id:
+        tree = get_tree(tree_id)
+        if not tree:
+            return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
+        return {"status": "ok", "tree": tree.to_dict()}
+    return {"status": "ok", "trees": list_trees()}
+
+
+@app.post("/api/branch/switch")
+def switch_branch(tree_id: str, branch_id: str):
+    """Switch the active branch for a tree."""
+    tree = get_tree(tree_id)
+    if not tree:
+        return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
+    try:
+        tree.switch_branch(branch_id)
+        return {"status": "ok", "active_branch_id": branch_id}
+    except KeyError as e:
+        return JSONResponse({"status": "error", "message": str(e)}, 404)
+
+
+@app.post("/api/branch/message")
+def add_branch_message(req: BranchMessageRequest):
+    """Add a message to a branch (or the active branch)."""
+    tree = get_tree(req.tree_id)
+    if not tree:
+        return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
+    if req.branch_id:
+        try:
+            tree.switch_branch(req.branch_id)
+        except KeyError as e:
+            return JSONResponse({"status": "error", "message": str(e)}, 404)
+    msg = tree.add_message(req.role, req.content)
+    return {"status": "ok", "message": msg.to_dict(), "branch_id": tree.active_branch_id}
+
+
+@app.post("/api/branch/chat")
+def chat_on_branch(req: BranchMessageRequest):
+    """Send a user message on a branch and get an agent response.
+
+    This adds the user message, runs the agent with the branch's full
+    history, and adds the assistant response.
+    """
+    tree = get_tree(req.tree_id)
+    if not tree:
+        return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
+    if req.branch_id:
+        try:
+            tree.switch_branch(req.branch_id)
+        except KeyError as e:
+            return JSONResponse({"status": "error", "message": str(e)}, 404)
+
+    # Add user message
+    tree.add_message("user", req.content)
+
+    # Run agent with branch history
+    from agentos.core.agent import Agent
+
+    agent = Agent(
+        name="branch-agent",
+        model="gpt-4o-mini",
+        system_prompt="You are a helpful assistant.",
+    )
+    # Feed the branch history into the agent's messages
+    agent.messages = tree.get_messages_openai()
+    agent.events = []
+
+    import io, sys
+    old = sys.stdout
+    sys.stdout = io.StringIO()
+    try:
+        msg, event = agent._run_sync_step()
+    except AttributeError:
+        # Fallback: run full agent
+        from agentos.providers.router import call_model as call_llm_direct
+        msg_result, event = call_llm_direct(
+            model="gpt-4o-mini",
+            messages=tree.get_messages_openai(),
+            tools=[],
+            agent_name="branch-agent",
+        )
+        response_text = msg_result.content or ""
+        tree.add_message("assistant", response_text)
+        for e in [event]:
+            store.log_event(e)
+        sys.stdout = old
+        return {
+            "status": "ok",
+            "response": response_text,
+            "cost": round(event.cost_usd, 6),
+            "tokens": event.tokens_used,
+            "branch_id": tree.active_branch_id,
+            "messages": [m.to_dict() for m in tree.get_messages()],
+        }
+    finally:
+        sys.stdout = old
+
+
+@app.post("/api/branch/compare")
+def compare_branches(req: CompareBranchesRequest):
+    """Compare two branches side by side."""
+    tree = get_tree(req.tree_id)
+    if not tree:
+        return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
+    try:
+        result = tree.compare_branches(req.branch_a, req.branch_b)
+        return {"status": "ok", "comparison": result}
+    except KeyError as e:
+        return JSONResponse({"status": "error", "message": str(e)}, 404)
+
+
+@app.post("/api/branch/merge")
+def merge_branches(req: MergeBranchesRequest):
+    """Merge two branches into a new combined branch."""
+    tree = get_tree(req.tree_id)
+    if not tree:
+        return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
+    try:
+        merged_id = tree.merge_branches(req.branch_a, req.branch_b, label=req.label)
+        return {"status": "ok", "merged_branch_id": merged_id, "tree": tree.to_dict()}
+    except KeyError as e:
+        return JSONResponse({"status": "error", "message": str(e)}, 404)
+
+
+@app.delete("/api/branch/{tree_id}/{branch_id}")
+def delete_branch(tree_id: str, branch_id: str):
+    """Delete a branch (cannot delete the main branch)."""
+    tree = get_tree(tree_id)
+    if not tree:
+        return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
+    if tree.delete_branch(branch_id):
+        return {"status": "deleted", "branch_id": branch_id}
+    return JSONResponse({"status": "error", "message": "Cannot delete main branch or branch not found"}, 400)
+
+
+@app.get("/api/branch/messages")
+def get_branch_messages(tree_id: str, branch_id: str | None = None):
+    """Get all messages for a specific branch (or the active branch)."""
+    tree = get_tree(tree_id)
+    if not tree:
+        return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
+    try:
+        bid = branch_id or tree.active_branch_id
+        msgs = tree.get_messages(bid)
+        return {
+            "status": "ok",
+            "branch_id": bid,
+            "messages": [m.to_dict() for m in msgs],
+        }
+    except KeyError as e:
+        return JSONResponse({"status": "error", "message": str(e)}, 404)
+
+
+@app.post("/api/branch/new-tree")
+def create_new_tree():
+    """Create a new conversation tree."""
+    tree = get_or_create_tree()
+    return {"status": "created", "tree": tree.to_dict()}
+
+
 # ── Event Bus API ──
 
 @app.post("/api/webhook/{event_name}")
@@ -790,6 +1001,24 @@ textarea{min-height:80px;resize:vertical}
 .mm-preview img{max-width:100%;max-height:300px;border-radius:8px;margin-bottom:8px}
 .mm-preview .file-info{font-size:13px;color:#888}
 .mm-result{display:none;background:#08080f;border:1px solid #1a1a2e;border-radius:8px;padding:16px;margin-top:16px;white-space:pre-wrap;line-height:1.6;font-size:14px}
+/* ── Branching ── */
+.br-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.br-chip{padding:5px 12px;border-radius:16px;font-size:12px;cursor:pointer;border:1px solid #2a2a4a;background:#08080f;transition:all 0.2s;white-space:nowrap}
+.br-chip:hover{border-color:#00d4ff}
+.br-chip.active{background:#00d4ff18;border-color:#00d4ff;color:#00d4ff;font-weight:600}
+.br-chip .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.br-msg{padding:8px 14px;border-radius:10px;display:inline-block;max-width:80%;white-space:pre-wrap;line-height:1.5;font-size:14px}
+.br-msg.user{background:#00d4ff18;color:#00d4ff;margin-left:auto}
+.br-msg.assistant{background:#1a1a2e;color:#e0e0e0}
+.br-msg.system{background:#1a0a2e;color:#aa88ff;font-size:12px;font-style:italic}
+.br-row{display:flex;margin:6px 0}
+.br-row.right{justify-content:flex-end}
+.br-idx{font-size:10px;color:#444;width:22px;flex-shrink:0;padding-top:10px;text-align:right;margin-right:6px}
+.br-fork-btn{font-size:10px;color:#555;cursor:pointer;margin-left:4px;opacity:0;transition:opacity 0.2s}
+.br-row:hover .br-fork-btn{opacity:1}
+.br-fork-btn:hover{color:#00d4ff}
+.br-compare-col{flex:1;min-width:0;padding:8px;background:#08080f;border-radius:8px;border:1px solid #1a1a2e;max-height:400px;overflow-y:auto}
+.br-compare-col h4{font-size:13px;margin-bottom:8px;color:#fff}
 </style>
 </head>
 <body>
@@ -804,6 +1033,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="nav-item" onclick="showPanel('templates')">📦 Templates</div>
 <h3>Operate</h3>
 <div class="nav-item" onclick="showPanel('chat')">💬 Chat</div>
+<div class="nav-item" onclick="showPanel('branching')">🌿 Branching</div>
 <div class="nav-item" onclick="showPanel('monitor')">📊 Monitor</div>
 <div class="nav-item" onclick="showPanel('analytics')">📈 Analytics</div>
 <div class="nav-item" onclick="showPanel('scheduler')">⏰ Scheduler</div>
@@ -875,6 +1105,39 @@ textarea{min-height:80px;resize:vertical}
 <div style="display:flex;gap:8px">
 <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()" style="flex:1">
 <button class="btn btn-primary" onclick="sendChat()">Send</button>
+</div>
+</div>
+</div>
+
+<!-- BRANCHING CHAT -->
+<div class="panel" id="panel-branching">
+<div class="card" style="height:calc(100vh - 140px);display:flex;flex-direction:column">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+<h2>🌿 Branching Chat</h2>
+<button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="brNewTree()">+ New Conversation</button>
+</div>
+<p style="color:#888;font-size:13px;margin-bottom:8px">Explore "what if" scenarios by forking conversations. Click the fork icon on any message to create a branch.</p>
+<!-- Branch selector bar -->
+<div class="br-bar" id="br-bar"><span style="color:#555;font-size:12px">Start a conversation to see branches.</span></div>
+<!-- Action buttons -->
+<div style="display:flex;gap:6px;margin-bottom:10px" id="br-actions" style="display:none">
+<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="brCompare()" id="br-compare-btn" title="Select two branches then compare">Compare</button>
+<button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="brMerge()" id="br-merge-btn" title="Merge two branches">Merge</button>
+</div>
+<!-- Messages area -->
+<div id="br-messages" style="flex:1;overflow-y:auto;padding:8px 0"></div>
+<!-- Compare results area (hidden by default) -->
+<div id="br-compare-area" style="display:none;margin-bottom:8px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+<span style="color:#888;font-size:12px;font-weight:600">Branch Comparison</span>
+<span style="font-size:11px;color:#555;cursor:pointer" onclick="document.getElementById('br-compare-area').style.display='none'">close</span>
+</div>
+<div style="display:flex;gap:8px" id="br-compare-cols"></div>
+</div>
+<!-- Input -->
+<div style="display:flex;gap:8px">
+<input type="text" id="br-input" placeholder="Type a message... (fork icon on messages to branch)" onkeydown="if(event.key==='Enter')brSend()" style="flex:1">
+<button class="btn btn-primary" onclick="brSend()">Send</button>
 </div>
 </div>
 </div>
@@ -1241,6 +1504,7 @@ event.target.classList.add('active');
 if(id==='monitor')refreshMonitor();
 if(id==='templates')loadTemplates();
 if(id==='analytics')refreshAnalytics();
+if(id==='branching')brRefresh();
 if(id==='events')refreshEvents();
 if(id==='auth')refreshAuthUsage();
 if(id==='abtest'){}  // A/B panel is static; no periodic refresh needed
@@ -1703,6 +1967,203 @@ tbody.innerHTML=h;
 }
 
 setInterval(()=>{if(document.getElementById('panel-analytics').classList.contains('active'))refreshAnalytics()},5000);
+
+// ── Branching helpers ──
+
+let _brTreeId=null;
+let _brActiveBranch=null;
+let _brBranches=[];
+
+async function brNewTree(){
+try{
+const r=await fetch('/api/branch/new-tree',{method:'POST'});
+const d=await r.json();
+_brTreeId=d.tree.tree_id;
+_brActiveBranch=d.tree.active_branch_id;
+_brBranches=d.tree.branches;
+brRenderBar();
+brRenderMessages([]);
+}catch(e){console.log('brNewTree error:',e);}
+}
+
+function brRenderBar(){
+const bar=document.getElementById('br-bar');
+if(!_brBranches.length){bar.innerHTML='<span style="color:#555;font-size:12px">Start a conversation.</span>';return;}
+const colors=['#00d4ff','#00ff88','#ffaa00','#aa88ff','#ff6688','#66ddaa'];
+let h='';
+_brBranches.forEach((b,i)=>{
+const c=colors[i%colors.length];
+const cls=b.branch_id===_brActiveBranch?'active':'';
+const icon=b.is_main?'●':'◆';
+h+=`<div class="br-chip ${cls}" onclick="brSwitch('${b.branch_id}')" title="${b.message_count} messages">`;
+h+=`<span class="dot" style="background:${c}"></span>${icon} ${b.label} (${b.message_count})</div>`;
+});
+bar.innerHTML=h;
+}
+
+async function brSwitch(branchId){
+if(!_brTreeId)return;
+try{
+const r=await fetch('/api/branch/switch?tree_id='+encodeURIComponent(_brTreeId)+'&branch_id='+encodeURIComponent(branchId),{method:'POST'});
+const d=await r.json();
+if(d.status==='ok'){
+_brActiveBranch=branchId;
+await brRefresh();
+}
+}catch(e){console.log('brSwitch error:',e);}
+}
+
+async function brRefresh(){
+if(!_brTreeId)return;
+try{
+const r=await fetch('/api/branches?tree_id='+encodeURIComponent(_brTreeId));
+const d=await r.json();
+if(d.status==='ok'){
+_brBranches=d.tree.branches;
+_brActiveBranch=d.tree.active_branch_id;
+brRenderBar();
+// Fetch messages for active branch
+const msgs=_brBranches.find(b=>b.branch_id===_brActiveBranch);
+// We need to get messages from the branch — use the compare trick or add_message list
+// Just re-render from branch data
+await brLoadMessages();
+}
+}catch(e){console.log('brRefresh error:',e);}
+}
+
+async function brLoadMessages(){
+if(!_brTreeId||!_brActiveBranch)return;
+try{
+const r=await fetch('/api/branch/messages?tree_id='+encodeURIComponent(_brTreeId)+'&branch_id='+encodeURIComponent(_brActiveBranch));
+const d=await r.json();
+if(d.status==='ok'){
+brRenderMessages(d.messages);
+}
+}catch(e){console.log('brLoadMessages error:',e);}
+}
+
+function brRenderMessages(msgs){
+const el=document.getElementById('br-messages');
+if(!msgs||msgs.length===0){
+el.innerHTML='<div style="color:#555;text-align:center;padding:40px">No messages yet. Type below to start the conversation.</div>';
+return;
+}
+let h='';
+msgs.forEach((m,i)=>{
+const align=m.role==='user'?'right':'';
+const cls=m.role;
+const forkBtn=`<span class="br-fork-btn" onclick="brForkAt(${i})" title="Fork conversation here">🌿 fork</span>`;
+h+=`<div class="br-row ${align}">`;
+h+=`<span class="br-idx">${i}</span>`;
+h+=`<span class="br-msg ${cls}">${escHtml(m.content)}</span>`;
+h+=forkBtn;
+h+=`</div>`;
+});
+el.innerHTML=h;
+el.scrollTop=el.scrollHeight;
+}
+
+function escHtml(s){
+if(!s)return'';
+return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function brForkAt(msgIndex){
+if(!_brTreeId)return;
+const label=prompt('Label for the new branch:','branch-'+((_brBranches||[]).length));
+if(label===null)return;
+try{
+const r=await fetch('/api/branch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+tree_id:_brTreeId,at_message_index:msgIndex,label:label,source_branch_id:_brActiveBranch
+})});
+const d=await r.json();
+if(d.status==='created'){
+_brActiveBranch=d.branch_id;
+_brBranches=d.tree.branches;
+brRenderBar();
+await brLoadMessages();
+}
+}catch(e){console.log('brForkAt error:',e);}
+}
+
+async function brSend(){
+const input=document.getElementById('br-input');
+const q=input.value.trim();
+if(!q)return;
+input.value='';
+
+// Auto-create tree if none exists
+if(!_brTreeId){
+await brNewTree();
+}
+try{
+const r=await fetch('/api/branch/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+tree_id:_brTreeId,branch_id:_brActiveBranch,role:'user',content:q
+})});
+const d=await r.json();
+if(d.status==='ok'){
+await brRefresh();
+}else{
+console.log('brSend error:',d.message);
+}
+}catch(e){console.log('brSend error:',e);}
+}
+
+async function brCompare(){
+if(!_brTreeId||_brBranches.length<2){alert('Need at least 2 branches to compare.');return;}
+const ids=_brBranches.map(b=>b.branch_id);
+const aLabel=_brBranches[0].label;
+const bLabel=_brBranches.length>1?_brBranches[1].label:aLabel;
+const a=prompt('Branch A ID or label:',ids[0]);
+const b=prompt('Branch B ID or label:',ids.length>1?ids[1]:ids[0]);
+if(!a||!b)return;
+try{
+const r=await fetch('/api/branch/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+tree_id:_brTreeId,branch_a:a,branch_b:b
+})});
+const d=await r.json();
+if(d.status==='ok'){
+const c=d.comparison;
+const area=document.getElementById('br-compare-area');
+area.style.display='block';
+let h=`<div class="br-compare-col"><h4>${c.branch_a.label} (${c.branch_a.total_messages} msgs)</h4>`;
+c.branch_a_unique.forEach(m=>{
+h+=`<div style="margin:4px 0;font-size:12px"><span style="color:${m.role==='user'?'#00d4ff':'#888'}">${m.role}:</span> ${escHtml((m.content||'').slice(0,200))}</div>`;
+});
+if(!c.branch_a_unique.length)h+='<div style="color:#555;font-size:12px">No unique messages.</div>';
+h+=`</div>`;
+h+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 4px"><div style="font-size:11px;color:#555">${c.shared_count} shared</div><div style="font-size:16px;color:#555">⇔</div></div>`;
+h+=`<div class="br-compare-col"><h4>${c.branch_b.label} (${c.branch_b.total_messages} msgs)</h4>`;
+c.branch_b_unique.forEach(m=>{
+h+=`<div style="margin:4px 0;font-size:12px"><span style="color:${m.role==='user'?'#00d4ff':'#888'}">${m.role}:</span> ${escHtml((m.content||'').slice(0,200))}</div>`;
+});
+if(!c.branch_b_unique.length)h+='<div style="color:#555;font-size:12px">No unique messages.</div>';
+h+=`</div>`;
+document.getElementById('br-compare-cols').innerHTML=h;
+}
+}catch(e){console.log('brCompare error:',e);}
+}
+
+async function brMerge(){
+if(!_brTreeId||_brBranches.length<2){alert('Need at least 2 branches to merge.');return;}
+const ids=_brBranches.map(b=>b.branch_id);
+const a=prompt('Branch A ID:',ids[0]);
+const b=prompt('Branch B ID:',ids.length>1?ids[1]:ids[0]);
+const label=prompt('Label for merged branch:','merged');
+if(!a||!b||!label)return;
+try{
+const r=await fetch('/api/branch/merge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+tree_id:_brTreeId,branch_a:a,branch_b:b,label:label
+})});
+const d=await r.json();
+if(d.status==='ok'){
+_brActiveBranch=d.merged_branch_id;
+_brBranches=d.tree.branches;
+brRenderBar();
+await brLoadMessages();
+}
+}catch(e){console.log('brMerge error:',e);}
+}
 
 // ── Multi-modal helpers ──
 
