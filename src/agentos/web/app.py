@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from agentos.monitor.store import store
 from agentos.core.types import AgentEvent
+from agentos.tools import get_builtin_tools
 
 load_dotenv()
 
@@ -52,54 +53,8 @@ async def ws_chat(websocket: WebSocket):
         temperature = float(data.get("temperature", 0.7))
 
         from agentos.core.agent import Agent
-        from agentos.core.tool import tool
 
-        available_tools = {}
-
-        @tool(description="Calculate a math expression")
-        def calculator(expression: str) -> str:
-            try:
-                allowed = set("0123456789+-*/.() ")
-                if not all(c in allowed for c in expression):
-                    return "Error: Only basic math"
-                return str(eval(expression))
-            except Exception as e:
-                return f"Error: {e}"
-        available_tools["calculator"] = calculator
-
-        @tool(description="Get weather for a city")
-        def weather(city: str) -> str:
-            import httpx
-            cities = {"boston": (42.36, -71.06), "new york": (40.71, -74.01), "tokyo": (35.68, 139.69), "london": (51.51, -0.13), "san francisco": (37.77, -122.42)}
-            coords = cities.get(city.lower())
-            if not coords:
-                return f"No data for {city}"
-            try:
-                r = httpx.get("https://api.open-meteo.com/v1/forecast", params={"latitude": coords[0], "longitude": coords[1], "current_weather": "true"}, timeout=10)
-                d = r.json().get("current_weather", {})
-                tc = d.get("temperature", "N/A")
-                tf = round(tc * 9 / 5 + 32, 1) if isinstance(tc, (int, float)) else "N/A"
-                return f"{city.title()}: {tf}°F ({tc}°C)"
-            except Exception:
-                return f"Weather unavailable for {city}"
-        available_tools["weather"] = weather
-
-        @tool(description="Search the web")
-        def web_search(query: str) -> str:
-            import httpx
-            try:
-                r = httpx.get("https://api.duckduckgo.com/", params={"q": query, "format": "json", "no_html": "1"}, timeout=10)
-                d = r.json()
-                if d.get("AbstractText"):
-                    return d["AbstractText"][:300]
-                for t in d.get("RelatedTopics", [])[:2]:
-                    if isinstance(t, dict) and t.get("Text"):
-                        return t["Text"][:300]
-                return f"No results for: {query}"
-            except Exception:
-                return "Search unavailable"
-        available_tools["web_search"] = web_search
-
+        available_tools = get_builtin_tools()
         agent_tools = [available_tools[t] for t in tools_list if t in available_tools]
 
         agent = Agent(
@@ -202,56 +157,8 @@ def get_templates():
 def run_agent(req: RunRequest):
     """Run an agent from the web UI."""
     from agentos.core.agent import Agent
-    from agentos.core.tool import tool
 
-    # Built-in tools available from web UI
-    available_tools = {}
-
-    @tool(description="Calculate a math expression")
-    def calculator(expression: str) -> str:
-        try:
-            allowed = set("0123456789+-*/.() ")
-            if not all(c in allowed for c in expression):
-                return "Error: Only basic math"
-            return str(eval(expression))
-        except Exception as e:
-            return f"Error: {e}"
-    available_tools["calculator"] = calculator
-
-    @tool(description="Get weather for a city")
-    def weather(city: str) -> str:
-        import httpx
-        cities = {"boston":(42.36,-71.06),"new york":(40.71,-74.01),"tokyo":(35.68,139.69),"london":(51.51,-0.13),"san francisco":(37.77,-122.42)}
-        coords = cities.get(city.lower())
-        if not coords:
-            return f"No data for {city}"
-        try:
-            r = httpx.get("https://api.open-meteo.com/v1/forecast", params={"latitude":coords[0],"longitude":coords[1],"current_weather":"true"}, timeout=10)
-            d = r.json().get("current_weather",{})
-            tc = d.get("temperature","N/A")
-            tf = round(tc*9/5+32,1) if isinstance(tc,(int,float)) else "N/A"
-            return f"{city.title()}: {tf}°F ({tc}°C)"
-        except:
-            return f"Weather unavailable for {city}"
-    available_tools["weather"] = weather
-
-    @tool(description="Search the web")
-    def web_search(query: str) -> str:
-        import httpx
-        try:
-            r = httpx.get("https://api.duckduckgo.com/", params={"q":query,"format":"json","no_html":"1"}, timeout=10)
-            d = r.json()
-            if d.get("AbstractText"):
-                return d["AbstractText"][:300]
-            for t in d.get("RelatedTopics",[])[:2]:
-                if isinstance(t,dict) and t.get("Text"):
-                    return t["Text"][:300]
-            return f"No results for: {query}"
-        except:
-            return f"Search unavailable"
-    available_tools["web_search"] = web_search
-
-    # Build tool list
+    available_tools = get_builtin_tools()
     agent_tools = [available_tools[t] for t in req.tools if t in available_tools]
 
     agent = Agent(

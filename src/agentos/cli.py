@@ -18,23 +18,12 @@ load_dotenv()
 def cmd_run(args):
     """Run a single query."""
     from agentos.core.agent import Agent
-    from agentos.core.tool import tool
-
-    # Built-in tools
-    @tool(description="Calculate a math expression like '2+2' or '100*0.15'")
-    def calculator(expression: str) -> str:
-        try:
-            allowed = set("0123456789+-*/.() ")
-            if not all(c in allowed for c in expression):
-                return "Error: Only basic math allowed"
-            return str(eval(expression))
-        except Exception as e:
-            return f"Error: {e}"
+    from agentos.tools import get_builtin_tools
 
     agent = Agent(
         name="cli-agent",
         model=args.model,
-        tools=[calculator],
+        tools=list(get_builtin_tools().values()),
         system_prompt="You are a helpful assistant. Use tools when needed. Be concise.",
     )
     agent.run(args.query)
@@ -43,22 +32,12 @@ def cmd_run(args):
 def cmd_chat(args):
     """Interactive chat mode."""
     from agentos.core.agent import Agent
-    from agentos.core.tool import tool
-
-    @tool(description="Calculate a math expression")
-    def calculator(expression: str) -> str:
-        try:
-            allowed = set("0123456789+-*/.() ")
-            if not all(c in allowed for c in expression):
-                return "Error: Only basic math allowed"
-            return str(eval(expression))
-        except Exception as e:
-            return f"Error: {e}"
+    from agentos.tools import get_builtin_tools
 
     agent = Agent(
         name="chat-agent",
         model=args.model,
-        tools=[calculator],
+        tools=list(get_builtin_tools().values()),
         system_prompt="You are a helpful assistant. Use tools when needed.",
     )
 
@@ -124,24 +103,14 @@ def cmd_info(args):
 def cmd_test(args):
     """Run sandbox tests on an agent."""
     from agentos.core.agent import Agent
-    from agentos.core.tool import tool
+    from agentos.tools import get_builtin_tools
     from agentos.sandbox.scenario import Scenario
     from agentos.sandbox.runner import Sandbox
-
-    @tool(description="Calculate a math expression")
-    def calculator(expression: str) -> str:
-        try:
-            allowed = set("0123456789+-*/.() ")
-            if not all(c in allowed for c in expression):
-                return "Error: Only basic math allowed"
-            return str(eval(expression))
-        except Exception as e:
-            return f"Error: {e}"
 
     agent = Agent(
         name="test-agent",
         model=args.model,
-        tools=[calculator],
+        tools=list(get_builtin_tools().values()),
     )
 
     scenarios = [

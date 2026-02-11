@@ -121,7 +121,21 @@ def create_api_tool(
     return Tool(fn=api_caller, name=name, description=description)
 
 
-# ── Pre-built API Tools ──
+# ── Pre-built Tools ──
+
+def calculator_tool() -> Tool:
+    """Create a calculator tool for evaluating math expressions."""
+    def calculator(expression: str) -> str:
+        try:
+            allowed = set("0123456789+-*/.() ")
+            if not all(c in allowed for c in expression):
+                return "Error: Only basic math allowed"
+            return str(eval(expression))
+        except Exception as e:
+            return f"Error: {e}"
+
+    return Tool(fn=calculator, name="calculator", description="Calculate a math expression like '2+2' or '100*0.15'")
+
 
 def web_search_tool(api_key: str | None = None) -> Tool:
     """Create a web search tool using DuckDuckGo (no API key needed)."""
