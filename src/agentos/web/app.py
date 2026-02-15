@@ -23,7 +23,7 @@ from agentos.core.multimodal import analyze_image, read_document, encode_image
 from agentos.core.branching import ConversationTree, get_or_create_tree, get_tree, list_trees
 from agentos.scheduler import AgentScheduler
 from agentos.events import event_bus, WebhookTrigger
-from agentos.auth import User, create_user, get_current_user, get_user_by_email
+from agentos.auth import User, create_user, get_current_user, get_optional_user, get_user_by_email
 from agentos.auth.usage import usage_tracker
 from agentos.core.ab_testing import ABTest
 from agentos.marketplace import get_marketplace_store
@@ -215,8 +215,8 @@ def get_templates():
 
 
 @app.post("/api/run")
-def run_agent(req: RunRequest, current_user: User = Depends(get_current_user)):
-    """Run an agent from the web UI."""
+def run_agent(req: RunRequest, current_user: User | None = Depends(get_optional_user)):
+    """Run an agent from the web UI.  Auth is optional — anonymous use is allowed."""
     from agentos.core.agent import Agent
 
     available_tools = get_builtin_tools()
@@ -246,8 +246,9 @@ def run_agent(req: RunRequest, current_user: User = Depends(get_current_user)):
     tokens = sum(e.tokens_used for e in agent.events)
     tools_used = [e.data.get("tool","") for e in agent.events if e.event_type == "tool_call"]
 
-    # Track per-user usage
-    usage_tracker.log_usage(current_user.id, tokens=tokens, cost=cost)
+    # Track per-user usage (only if authenticated)
+    if current_user:
+        usage_tracker.log_usage(current_user.id, tokens=tokens, cost=cost)
 
     return {
         "response": msg.content,
@@ -370,7 +371,7 @@ def get_my_usage(period: str = "month", current_user: User = Depends(get_current
 
 
 @app.post("/api/ab-test")
-def run_ab_test(req: ABTestRequest, current_user: User = Depends(get_current_user)):
+def run_ab_test(req: ABTestRequest, current_user: User | None = Depends(get_optional_user)):
     """Run an A/B test between two agent configs using the Sandbox judge."""
     from agentos.core.agent import Agent
 
@@ -1269,21 +1270,21 @@ textarea{min-height:80px;resize:vertical}
 </div>
 <div class="sidebar">
 <h3>Build</h3>
-<div class="nav-item active" onclick="showPanel('builder')">🛠️ Agent Builder</div>
-<div class="nav-item" onclick="showPanel('templates')">📦 Templates</div>
+<div class="nav-item active" onclick="showPanel('builder',this)">🛠️ Agent Builder</div>
+<div class="nav-item" onclick="showPanel('templates',this)">📦 Templates</div>
 <h3>Operate</h3>
-<div class="nav-item" onclick="showPanel('chat')">💬 Chat</div>
-<div class="nav-item" onclick="showPanel('branching')">🌿 Branching</div>
-<div class="nav-item" onclick="showPanel('monitor')">📊 Monitor</div>
-<div class="nav-item" onclick="showPanel('analytics')">📈 Analytics</div>
-<div class="nav-item" onclick="showPanel('scheduler')">⏰ Scheduler</div>
-<div class="nav-item" onclick="showPanel('events')">⚡ Events</div>
-<div class="nav-item" onclick="showPanel('abtest')">🧪 A/B Testing</div>
-<div class="nav-item" onclick="showPanel('multimodal')">👁️ Multi-modal</div>
+<div class="nav-item" onclick="showPanel('chat',this)">💬 Chat</div>
+<div class="nav-item" onclick="showPanel('branching',this)">🌿 Branching</div>
+<div class="nav-item" onclick="showPanel('monitor',this)">📊 Monitor</div>
+<div class="nav-item" onclick="showPanel('analytics',this)">📈 Analytics</div>
+<div class="nav-item" onclick="showPanel('scheduler',this)">⏰ Scheduler</div>
+<div class="nav-item" onclick="showPanel('events',this)">⚡ Events</div>
+<div class="nav-item" onclick="showPanel('abtest',this)">🧪 A/B Testing</div>
+<div class="nav-item" onclick="showPanel('multimodal',this)">👁️ Multi-modal</div>
 <h3>Manage</h3>
-<div class="nav-item" onclick="showPanel('auth')">🔑 Account & Usage</div>
-<div class="nav-item" onclick="showPanel('marketplace')">🏪 Marketplace</div>
-<div class="nav-item" onclick="showPanel('embed')">🔌 Embed SDK</div>
+<div class="nav-item" onclick="showPanel('auth',this)">🔑 Account & Usage</div>
+<div class="nav-item" onclick="showPanel('marketplace',this)">🏪 Marketplace</div>
+<div class="nav-item" onclick="showPanel('embed',this)">🔌 Embed SDK</div>
 </div>
 <div class="main">
 
@@ -1873,18 +1874,20 @@ Write a short product description for an AI agent platform.</textarea>
 </div>
 
 <script>
-function showPanel(id){
+function showPanel(id,el){
 document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
 document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-document.getElementById('panel-'+id).classList.add('active');
-event.target.classList.add('active');
+var panel=document.getElementById('panel-'+id);
+if(!panel){console.error('Panel not found: panel-'+id);return;}
+panel.classList.add('active');
+if(el)el.classList.add('active');
 if(id==='monitor')refreshMonitor();
 if(id==='templates')loadTemplates();
 if(id==='analytics')refreshAnalytics();
 if(id==='branching')brRefresh();
 if(id==='events')refreshEvents();
 if(id==='auth')refreshAuthUsage();
-if(id==='abtest'){}  // A/B panel is static; no periodic refresh needed
+if(id==='abtest'){}
 if(id==='marketplace')mpRefresh();
 }
 
@@ -2021,8 +2024,7 @@ const prompts={
 };
 document.getElementById('b-name').value=id;
 document.getElementById('b-prompt').value=prompts[id]||prompts['custom'];
-showPanel('builder');
-document.querySelector('.nav-item').classList.add('active');
+showPanel('builder',document.querySelector('.nav-item'));
 }
 
 async function refreshMonitor(){
@@ -2358,7 +2360,7 @@ function embGenerate(){
   const logo=document.getElementById('emb-logo').value;
   const model=document.getElementById('emb-model').value;
   const prompt=document.getElementById('emb-prompt').value;
-  const snippet=`<script>\n  window.AgentOSConfig = {\n    baseUrl: "${baseUrl}",\n    agentName: "${name}",\n    theme: "${theme}",\n    position: "${pos}",\n    accentColor: "${color}",\n    greeting: "${greet}",${logo?'\n    logo: "'+logo+'",'  :''}\n    model: "${model}",\n    systemPrompt: "${prompt.replace(/"/g,'\\"')}",\n  };\n<\\/script>\n<script src="${baseUrl}/embed/chat.js"><\\/script>`;
+  const snippet=`<script>\\n  window.AgentOSConfig = {\\n    baseUrl: "${baseUrl}",\\n    agentName: "${name}",\\n    theme: "${theme}",\\n    position: "${pos}",\\n    accentColor: "${color}",\\n    greeting: "${greet}",${logo?'\\n    logo: "'+logo+'",'  :''}\\n    model: "${model}",\\n    systemPrompt: "${prompt.replace(/"/g,'\\\\"')}",\\n  };\\n<\\/script>\\n<script src="${baseUrl}/embed/chat.js"><\\/script>`;
   document.getElementById('emb-snippet').textContent=snippet;
   document.getElementById('emb-output').style.display='block';
   document.getElementById('emb-output').scrollIntoView({behavior:'smooth'});
@@ -2411,13 +2413,13 @@ function mpRenderGrid(agents){
   g.innerHTML=agents.map(a=>{
     const stars='★'.repeat(Math.round(a.rating))+'☆'.repeat(5-Math.round(a.rating));
     const priceLabel=a.price===0?'Free':'$'+a.price;
-    return '<div class="template-card" style="cursor:pointer" onclick="mpShowDetail(\''+a.id+'\')">'+
+    return '<div class="template-card" style="cursor:pointer" onclick="mpShowDetail(&quot;'+a.id+'&quot;)">'+
       '<div class="icon">'+a.icon+'</div>'+
       '<h4>'+a.name+'</h4>'+
       '<p>'+a.description+'</p>'+
       '<div style="color:#f0b429;font-size:13px;margin:4px 0">'+stars+' <span style="color:#666">('+a.review_count+')</span></div>'+
       '<div class="cat">by '+a.author+' · '+priceLabel+' · ↓'+a.downloads+'</div>'+
-      '<button class="btn btn-primary" style="width:100%;margin-top:8px;padding:6px" onclick="event.stopPropagation();mpInstall(\''+a.id+'\')">Install</button>'+
+      '<button class="btn btn-primary" style="width:100%;margin-top:8px;padding:6px" onclick="event.stopPropagation();mpInstall(&quot;'+a.id+'&quot;)">Install</button>'+
     '</div>';
   }).join('');
 }

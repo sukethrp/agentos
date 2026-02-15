@@ -44,7 +44,10 @@ def authenticate(api_key: str) -> Optional[User]:
 
 
 def get_current_user(x_api_key: str = Header(..., alias="X-API-Key")) -> User:
-    """FastAPI dependency to authenticate the current user via X-API-Key header."""
+    """FastAPI dependency to authenticate the current user via X-API-Key header.
+
+    Raises 401 if the key is missing or invalid.
+    """
     user = authenticate(x_api_key)
     if not user:
         raise HTTPException(
@@ -52,6 +55,13 @@ def get_current_user(x_api_key: str = Header(..., alias="X-API-Key")) -> User:
             detail="Invalid or missing API key",
         )
     return user
+
+
+def get_optional_user(x_api_key: Optional[str] = Header(None, alias="X-API-Key")) -> Optional[User]:
+    """FastAPI dependency that authenticates if a key is provided, but allows anonymous access."""
+    if not x_api_key:
+        return None
+    return authenticate(x_api_key)
 
 
 def get_user_by_email(email: str) -> Optional[User]:
