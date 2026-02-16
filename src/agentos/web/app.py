@@ -1011,6 +1011,82 @@ color:{'#333' if theme=='light' else '#eee'};display:flex;align-items:center;jus
     return HTMLResponse(page)
 
 
+# ── Simulation API ──
+
+import threading as _sim_threading
+from agentos.simulation import SimulatedWorld, WorldConfig, TrafficPattern, SimulationReport, ALL_PERSONAS
+
+_sim_world: SimulatedWorld | None = None
+_sim_report: SimulationReport | None = None
+_sim_thread: _sim_threading.Thread | None = None
+
+
+class _SimRunBody(BaseModel):
+    total: int = 50
+    concurrency: int = 5
+    pattern: str = "burst"
+    system_prompt: str = "You are a helpful customer support assistant."
+    pass_threshold: float = 6.0
+
+
+@app.post("/api/simulation/run")
+def simulation_run(body: _SimRunBody) -> dict:
+    global _sim_world, _sim_report, _sim_thread
+    if _sim_world and _sim_world.running:
+        return {"status": "already_running"}
+
+    from agentos.core.agent import Agent
+    agent = Agent(
+        name="sim-agent",
+        model="gpt-4o-mini",
+        system_prompt=body.system_prompt,
+        tools=list(get_builtin_tools().values()),
+    )
+    cfg = WorldConfig(
+        total_interactions=min(body.total, 200),
+        concurrency=min(body.concurrency, 20),
+        traffic_pattern=TrafficPattern(body.pattern),
+        requests_per_second=3.0,
+        use_llm_judge=False,
+        pass_threshold=body.pass_threshold,
+        quiet=True,
+    )
+    _sim_world = SimulatedWorld(agent, cfg)
+    _sim_report = None
+
+    def _run():
+        global _sim_report
+        _sim_report = _sim_world.run()  # type: ignore[union-attr]
+
+    _sim_thread = _sim_threading.Thread(target=_run, daemon=True)
+    _sim_thread.start()
+    return {"status": "started", "total": cfg.total_interactions}
+
+
+@app.get("/api/simulation/status")
+def simulation_status() -> dict:
+    if not _sim_world:
+        return {"running": False, "progress": 0, "completed": 0, "total": 0}
+    return {
+        "running": _sim_world.running,
+        "progress": _sim_world.progress,
+        "completed": _sim_world._progress,
+        "total": _sim_world.config.total_interactions,
+    }
+
+
+@app.get("/api/simulation/report")
+def simulation_report() -> dict:
+    if _sim_report:
+        return _sim_report.to_dict()
+    return {"total_interactions": 0}
+
+
+@app.get("/api/simulation/personas")
+def simulation_personas() -> list:
+    return [p.to_dict() for p in ALL_PERSONAS]
+
+
 # ── Agent Mesh API ──
 
 from agentos.mesh.protocol import MeshMessage as _MeshMsg, MeshIdentity as _MeshId
@@ -1367,6 +1443,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="nav-item" onclick="showPanel('marketplace',this)">🏪 Marketplace</div>
 <div class="nav-item" onclick="showPanel('embed',this)">🔌 Embed SDK</div>
 <div class="nav-item" onclick="showPanel('mesh',this)">🔗 Agent Mesh</div>
+<div class="nav-item" onclick="showPanel('simulation',this)">🌐 Simulation</div>
 </div>
 <div class="main">
 
@@ -1807,6 +1884,97 @@ for a in agents:
 <div class="card" style="margin-top:16px">
 <h2>📋 Message Log</h2>
 <div id="mesh-log" style="background:#0a0a14;padding:16px;border-radius:8px;border:1px solid #1e1e3a;max-height:300px;overflow-y:auto;font-family:monospace;font-size:12px;white-space:pre-wrap;color:#e0e0e0">No messages yet.</div>
+</div>
+</div>
+
+<!-- SIMULATION WORLD -->
+<div class="panel" id="panel-simulation">
+<div class="card">
+<h2>🌐 Agent Simulation World</h2>
+<p style="color:#888;margin-bottom:16px">Stress-test your agent with realistic simulated customers. Generate 50-100 concurrent interactions from different personas, then review quality scores and failure analysis.</p>
+
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#6c5ce7" id="sim-stat-total">-</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Total</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#10b981" id="sim-stat-passed">-</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Passed</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#e74c3c" id="sim-stat-failed">-</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Failed</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#fdcb6e" id="sim-stat-quality">-</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Avg Quality</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#00cec9" id="sim-stat-rate">-</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Pass Rate</div>
+</div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<!-- Config -->
+<div class="card">
+<h2>⚙️ Configure Simulation</h2>
+<label>Total Interactions</label>
+<input type="number" id="sim-total" value="50" min="10" max="200">
+<label>Concurrency (threads)</label>
+<input type="number" id="sim-concurrency" value="5" min="1" max="20">
+<label>Traffic Pattern</label>
+<select id="sim-pattern">
+<option value="steady">Steady</option>
+<option value="burst" selected>Burst</option>
+<option value="ramp_up">Ramp Up</option>
+<option value="wave">Wave</option>
+<option value="random">Random</option>
+</select>
+<label>System Prompt</label>
+<textarea id="sim-prompt" rows="3">You are a helpful customer support assistant. Be empathetic, clear, and solution-oriented.</textarea>
+<label>Pass Threshold (1-10)</label>
+<input type="number" id="sim-threshold" value="6" min="1" max="10" step="0.5">
+<div style="display:flex;gap:8px;margin-top:16px">
+<button class="btn btn-primary" style="flex:1" id="sim-run-btn" onclick="simRun()">▶ Run Simulation</button>
+</div>
+<div id="sim-progress-wrap" style="display:none;margin-top:12px">
+<div style="background:#1e1e3a;border-radius:6px;height:8px;overflow:hidden">
+<div id="sim-progress-bar" style="background:linear-gradient(90deg,#6c5ce7,#00cec9);height:100%;width:0%;transition:width 0.3s"></div>
+</div>
+<div style="font-size:12px;color:#888;margin-top:4px" id="sim-progress-text">Starting…</div>
+</div>
+</div>
+
+<!-- Persona Breakdown -->
+<div class="card">
+<h2>👥 Persona Breakdown</h2>
+<div id="sim-persona-list" style="max-height:380px;overflow-y:auto">
+<div style="color:#888;font-size:13px">Run a simulation to see per-persona results.</div>
+</div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+<!-- Score Distribution -->
+<div class="card">
+<h2>📊 Score Distribution</h2>
+<div id="sim-score-dist" style="min-height:120px"><div style="color:#888;font-size:13px">No data yet.</div></div>
+</div>
+
+<!-- Failure Analysis -->
+<div class="card">
+<h2>🔍 Failure Analysis</h2>
+<div id="sim-failures" style="max-height:200px;overflow-y:auto"><div style="color:#888;font-size:13px">No failures yet.</div></div>
+</div>
+</div>
+
+<!-- Worst interactions -->
+<div class="card" style="margin-top:16px">
+<h2>⚠️ Worst Interactions</h2>
+<div id="sim-worst" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">Run a simulation to see results.</div></div>
 </div>
 </div>
 
@@ -2556,6 +2724,132 @@ function embPreview(){
   const theme=document.getElementById('emb-theme').value;
   const color=encodeURIComponent(document.getElementById('emb-color').value);
   window.open('/embed/preview?agent_name='+encodeURIComponent(name)+'&theme='+theme+'&accent_color='+color,'_blank');
+}
+
+// ── Simulation helpers ──
+
+let _simRunning=false;
+let _simPollId=null;
+
+async function simRun(){
+  if(_simRunning){return;}
+  _simRunning=true;
+  const btn=document.getElementById('sim-run-btn');
+  btn.textContent='⏳ Running…';btn.disabled=true;
+  document.getElementById('sim-progress-wrap').style.display='block';
+  document.getElementById('sim-progress-bar').style.width='0%';
+  document.getElementById('sim-progress-text').textContent='Starting simulation…';
+
+  const body={
+    total:parseInt(document.getElementById('sim-total').value)||50,
+    concurrency:parseInt(document.getElementById('sim-concurrency').value)||5,
+    pattern:document.getElementById('sim-pattern').value,
+    system_prompt:document.getElementById('sim-prompt').value.trim(),
+    pass_threshold:parseFloat(document.getElementById('sim-threshold').value)||6,
+  };
+
+  try{
+    const r=await fetch('/api/simulation/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.status==='started'){
+      _simPollId=setInterval(simPollProgress,1500);
+    }else{
+      alert('Failed to start: '+(d.error||'unknown'));
+      simResetBtn();
+    }
+  }catch(e){alert('Error: '+e.message);simResetBtn();}
+}
+
+async function simPollProgress(){
+  try{
+    const r=await fetch('/api/simulation/status');
+    const d=await r.json();
+    const pct=Math.round((d.progress||0)*100);
+    document.getElementById('sim-progress-bar').style.width=pct+'%';
+    document.getElementById('sim-progress-text').textContent=pct+'% complete ('+d.completed+'/'+d.total+')';
+    if(!d.running){
+      clearInterval(_simPollId);
+      await simLoadReport();
+      simResetBtn();
+    }
+  }catch(e){console.error(e)}
+}
+
+async function simLoadReport(){
+  try{
+    const r=await fetch('/api/simulation/report');
+    const d=await r.json();
+    if(!d.total_interactions){return;}
+    // Stats
+    document.getElementById('sim-stat-total').textContent=d.total_interactions;
+    document.getElementById('sim-stat-passed').textContent=d.total_passed;
+    document.getElementById('sim-stat-failed').textContent=d.total_failed+d.total_errors;
+    document.getElementById('sim-stat-quality').textContent=d.avg_quality.toFixed(1);
+    document.getElementById('sim-stat-rate').textContent=d.pass_rate.toFixed(0)+'%';
+
+    // Persona breakdown
+    const pl=document.getElementById('sim-persona-list');
+    pl.innerHTML=(d.per_persona||[]).map(p=>{
+      const barW=Math.max(p.pass_rate,2);
+      const color=p.pass_rate>=80?'#10b981':p.pass_rate>=50?'#fdcb6e':'#e74c3c';
+      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<strong style="color:#6c5ce7">'+p.name+'</strong>'+
+        '<span style="color:'+color+';font-size:13px">'+p.pass_rate.toFixed(0)+'% pass</span></div>'+
+        '<div style="background:#1e1e3a;border-radius:4px;height:6px;margin:6px 0;overflow:hidden">'+
+        '<div style="background:'+color+';height:100%;width:'+barW+'%"></div></div>'+
+        '<div style="font-size:11px;color:#888">quality='+p.avg_quality.toFixed(1)+
+        ' | relevance='+p.avg_relevance.toFixed(1)+' | tone='+p.avg_tone.toFixed(1)+
+        ' | n='+p.total+'</div></div>';
+    }).join('');
+
+    // Score distribution
+    const sd=d.score_distribution||{};
+    const maxBucket=Math.max(...Object.values(sd),1);
+    const sdEl=document.getElementById('sim-score-dist');
+    sdEl.innerHTML=Object.entries(sd).map(([k,v])=>{
+      const pct=Math.round(v/maxBucket*100);
+      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+        '<span style="width:40px;font-size:12px;color:#888;text-align:right">'+k+'</span>'+
+        '<div style="flex:1;background:#1e1e3a;border-radius:4px;height:16px;overflow:hidden">'+
+        '<div style="background:linear-gradient(90deg,#6c5ce7,#00cec9);height:100%;width:'+pct+'%"></div></div>'+
+        '<span style="width:30px;font-size:12px;color:#aaa">'+v+'</span></div>';
+    }).join('');
+
+    // Failures
+    const fr=d.failure_reasons||{};
+    const fEl=document.getElementById('sim-failures');
+    const frEntries=Object.entries(fr);
+    if(!frEntries.length){fEl.innerHTML='<div style="color:#10b981;font-size:13px">No failures!</div>';}
+    else{fEl.innerHTML=frEntries.map(([reason,count])=>
+      '<div style="background:#0a0a14;padding:8px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:4px;font-size:12px">'+
+      '<span style="color:#e74c3c">'+count+'x</span> <span style="color:#ccc">'+reason+'</span></div>'
+    ).join('');}
+
+    // Worst interactions
+    const wEl=document.getElementById('sim-worst');
+    const worst=d.worst_interactions||[];
+    if(!worst.length){wEl.innerHTML='<div style="color:#10b981;font-size:13px">All interactions passed!</div>';}
+    else{wEl.innerHTML=worst.map(w=>{
+      const color=w.overall<4?'#e74c3c':w.overall<6?'#fdcb6e':'#888';
+      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+        '<div style="display:flex;justify-content:space-between">'+
+        '<strong style="color:#6c5ce7">#'+w.id+' — '+w.persona+'</strong>'+
+        '<span style="color:'+color+';font-size:13px">quality='+w.overall.toFixed(1)+'</span></div>'+
+        '<div style="font-size:12px;color:#888;margin-top:4px">Query: '+w.query+'</div>'+
+        (w.failure_reason?'<div style="font-size:11px;color:#e74c3c;margin-top:2px">'+w.failure_reason+'</div>':'')+
+        '</div>';
+    }).join('');}
+
+  }catch(e){console.error(e)}
+}
+
+function simResetBtn(){
+  _simRunning=false;
+  const btn=document.getElementById('sim-run-btn');
+  btn.textContent='▶ Run Simulation';btn.disabled=false;
+  document.getElementById('sim-progress-bar').style.width='100%';
+  document.getElementById('sim-progress-text').textContent='Complete!';
 }
 
 // ── Mesh helpers ──
