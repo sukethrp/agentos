@@ -1011,6 +1011,83 @@ color:{'#333' if theme=='light' else '#eee'};display:flex;align-items:center;jus
     return HTMLResponse(page)
 
 
+# ── Learning API ──
+
+from agentos.learning.feedback import FeedbackEntry as _FBEntry, FeedbackType as _FBType, get_feedback_store as _get_fb
+from agentos.learning.analyzer import FeedbackAnalyzer as _FBAnalyzer
+from agentos.learning.prompt_optimizer import PromptOptimizer as _PromptOpt
+from agentos.learning.few_shot import FewShotBuilder as _FSBuilder
+from agentos.learning.report import build_learning_report as _build_lr
+
+_prompt_optimizer: _PromptOpt | None = None
+_fs_builder: _FSBuilder | None = None
+
+
+class _FeedbackBody(BaseModel):
+    query: str
+    response: str = ""
+    feedback_type: str = "thumbs_up"
+    rating: float = 0
+    correction: str = ""
+    comment: str = ""
+    topic: str = ""
+    agent_name: str = ""
+
+
+@app.post("/api/learning/feedback")
+def learning_feedback(body: _FeedbackBody) -> dict:
+    store = _get_fb()
+    entry = _FBEntry(
+        feedback_type=_FBType(body.feedback_type),
+        query=body.query,
+        response=body.response,
+        rating=body.rating,
+        correction=body.correction,
+        comment=body.comment,
+        topic=body.topic,
+        agent_name=body.agent_name,
+    )
+    store.add(entry)
+    return {"status": "ok", "id": entry.id}
+
+
+@app.get("/api/learning/stats")
+def learning_stats() -> dict:
+    return _get_fb().stats()
+
+
+@app.get("/api/learning/recent")
+def learning_recent() -> list:
+    return [e.model_dump() for e in _get_fb().recent(20)]
+
+
+@app.get("/api/learning/analyze")
+def learning_analyze() -> dict:
+    analyzer = _FBAnalyzer(_get_fb())
+    return analyzer.analyze().to_dict()
+
+
+@app.post("/api/learning/optimize")
+def learning_optimize() -> dict:
+    global _prompt_optimizer
+    _prompt_optimizer = _PromptOpt(_get_fb(), use_llm=False)
+    patches = _prompt_optimizer.optimize()
+    return {"patches": [p.to_dict() for p in patches]}
+
+
+@app.post("/api/learning/few-shot")
+def learning_few_shot() -> dict:
+    global _fs_builder
+    _fs_builder = _FSBuilder(_get_fb(), max_examples=6)
+    examples = _fs_builder.build()
+    return {"examples": [e.to_dict() for e in examples], "stats": _fs_builder.stats()}
+
+
+@app.get("/api/learning/progress")
+def learning_progress() -> dict:
+    return _build_lr(_get_fb(), period="week").to_dict()
+
+
 # ── Simulation API ──
 
 import threading as _sim_threading
@@ -1444,6 +1521,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="nav-item" onclick="showPanel('embed',this)">🔌 Embed SDK</div>
 <div class="nav-item" onclick="showPanel('mesh',this)">🔗 Agent Mesh</div>
 <div class="nav-item" onclick="showPanel('simulation',this)">🌐 Simulation</div>
+<div class="nav-item" onclick="showPanel('learning',this)">🧠 Learning</div>
 </div>
 <div class="main">
 
@@ -1975,6 +2053,106 @@ for a in agents:
 <div class="card" style="margin-top:16px">
 <h2>⚠️ Worst Interactions</h2>
 <div id="sim-worst" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">Run a simulation to see results.</div></div>
+</div>
+</div>
+
+<!-- LEARNING SYSTEM -->
+<div class="panel" id="panel-learning">
+<div class="card">
+<h2>🧠 Agent Learning System</h2>
+<p style="color:#888;margin-bottom:16px">Collect user feedback, analyze failure patterns, auto-optimise prompts, and build few-shot examples — all without fine-tuning.</p>
+
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#6c5ce7" id="lrn-stat-total">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Feedback</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#10b981" id="lrn-stat-pos">0%</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Positive</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#fdcb6e" id="lrn-stat-quality">-</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Avg Quality</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#00cec9" id="lrn-stat-patches">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Patches</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#e17055" id="lrn-stat-examples">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Few-shots</div>
+</div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<!-- Submit Feedback -->
+<div class="card">
+<h2>📝 Submit Feedback</h2>
+<label>Query (what the user asked)</label>
+<input type="text" id="lrn-query" placeholder="How do I get a refund?">
+<label>Agent Response</label>
+<textarea id="lrn-response" rows="2" placeholder="The agent's response…"></textarea>
+<label>Feedback Type</label>
+<select id="lrn-type" onchange="document.getElementById('lrn-extra').style.display=['correction','rating','comment'].includes(this.value)?'block':'none'">
+<option value="thumbs_up">👍 Thumbs Up</option>
+<option value="thumbs_down">👎 Thumbs Down</option>
+<option value="rating">⭐ Star Rating</option>
+<option value="correction">✏️ Correction</option>
+<option value="comment">💬 Comment</option>
+</select>
+<div id="lrn-extra" style="display:none;margin-top:8px">
+<label id="lrn-extra-label">Detail</label>
+<textarea id="lrn-extra-val" rows="2" placeholder="Rating (1-5), correction, or comment…"></textarea>
+</div>
+<button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="lrnSubmit()">Submit Feedback</button>
+</div>
+
+<!-- Topic Analysis -->
+<div class="card">
+<h2>📊 Topic Analysis</h2>
+<p style="color:#888;font-size:13px;margin-bottom:8px">Which topics does the agent handle well (or poorly)?</p>
+<div id="lrn-topics" style="max-height:320px;overflow-y:auto"><div style="color:#888;font-size:13px">Submit feedback or click Analyze to see results.</div></div>
+<button class="btn btn-secondary" style="margin-top:8px;width:100%" onclick="lrnAnalyze()">🔍 Analyze Patterns</button>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+<!-- Prompt Patches -->
+<div class="card">
+<h2>🔧 Prompt Patches</h2>
+<p style="color:#888;font-size:13px;margin-bottom:8px">Auto-generated prompt improvements for weak areas.</p>
+<div id="lrn-patches" style="max-height:320px;overflow-y:auto"><div style="color:#888;font-size:13px">Run analysis to generate patches.</div></div>
+<button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="lrnOptimize()">⚡ Generate Patches</button>
+</div>
+
+<!-- Few-Shot Examples -->
+<div class="card">
+<h2>📚 Few-Shot Examples</h2>
+<p style="color:#888;font-size:13px;margin-bottom:8px">Best interactions auto-selected as in-context examples.</p>
+<div id="lrn-fewshot" style="max-height:320px;overflow-y:auto"><div style="color:#888;font-size:13px">Build examples from positive feedback.</div></div>
+<button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="lrnBuildFewShot()">📖 Build Examples</button>
+</div>
+</div>
+
+<!-- Learning Progress -->
+<div class="card" style="margin-top:16px">
+<h2>📈 Learning Progress</h2>
+<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+<span id="lrn-direction" style="font-size:18px;font-weight:700;color:#888">-</span>
+<span id="lrn-change" style="font-size:14px;color:#888"></span>
+<button class="btn btn-secondary" style="margin-left:auto" onclick="lrnProgress()">Refresh</button>
+</div>
+<div id="lrn-timeline" style="display:flex;gap:8px;align-items:flex-end;height:120px;padding:8px 0;border-bottom:1px solid #1e1e3a">
+<div style="color:#888;font-size:13px">Run analysis to see timeline.</div>
+</div>
+</div>
+
+<!-- Recent Feedback -->
+<div class="card" style="margin-top:16px">
+<h2>🕐 Recent Feedback</h2>
+<div id="lrn-recent" style="max-height:250px;overflow-y:auto"><div style="color:#888;font-size:13px">No feedback yet.</div></div>
 </div>
 </div>
 
@@ -2724,6 +2902,136 @@ function embPreview(){
   const theme=document.getElementById('emb-theme').value;
   const color=encodeURIComponent(document.getElementById('emb-color').value);
   window.open('/embed/preview?agent_name='+encodeURIComponent(name)+'&theme='+theme+'&accent_color='+color,'_blank');
+}
+
+// ── Learning helpers ──
+
+async function lrnRefreshStats(){
+  try{
+    const r=await fetch('/api/learning/stats');
+    const d=await r.json();
+    document.getElementById('lrn-stat-total').textContent=d.total||0;
+    document.getElementById('lrn-stat-pos').textContent=(d.positive_rate||0).toFixed(0)+'%';
+    document.getElementById('lrn-stat-quality').textContent=d.avg_quality?d.avg_quality.toFixed(1):'-';
+  }catch(e){console.error(e)}
+}
+
+async function lrnSubmit(){
+  const query=document.getElementById('lrn-query').value.trim();
+  const response=document.getElementById('lrn-response').value.trim();
+  const type=document.getElementById('lrn-type').value;
+  const extra=document.getElementById('lrn-extra-val').value.trim();
+  if(!query){alert('Query is required');return;}
+  const body={query,response,feedback_type:type};
+  if(type==='rating')body.rating=parseFloat(extra)||3;
+  if(type==='correction')body.correction=extra;
+  if(type==='comment'||type==='thumbs_down')body.comment=extra;
+  try{
+    await fetch('/api/learning/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    document.getElementById('lrn-query').value='';
+    document.getElementById('lrn-response').value='';
+    document.getElementById('lrn-extra-val').value='';
+    lrnRefreshStats();lrnLoadRecent();
+  }catch(e){alert('Error: '+e.message)}
+}
+
+async function lrnAnalyze(){
+  try{
+    const r=await fetch('/api/learning/analyze');
+    const d=await r.json();
+    const el=document.getElementById('lrn-topics');
+    const topics=d.topics||[];
+    if(!topics.length){el.innerHTML='<div style="color:#888">No data.</div>';return;}
+    el.innerHTML=topics.map(t=>{
+      const color=t.failure_rate>40?'#e74c3c':t.failure_rate>20?'#fdcb6e':'#10b981';
+      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+        '<div style="display:flex;justify-content:space-between">'+
+        '<strong style="color:#6c5ce7">'+t.topic+'</strong>'+
+        '<span style="color:'+color+';font-size:13px">'+t.failure_rate.toFixed(0)+'% fail</span></div>'+
+        '<div style="background:#1e1e3a;border-radius:4px;height:6px;margin:6px 0;overflow:hidden">'+
+        '<div style="background:'+color+';height:100%;width:'+Math.max(100-t.failure_rate,5)+'%"></div></div>'+
+        '<div style="font-size:11px;color:#888">quality='+t.avg_quality.toFixed(1)+' | n='+t.total+'</div></div>';
+    }).join('');
+  }catch(e){alert('Error: '+e.message)}
+}
+
+async function lrnOptimize(){
+  try{
+    const r=await fetch('/api/learning/optimize',{method:'POST'});
+    const d=await r.json();
+    const patches=d.patches||[];
+    document.getElementById('lrn-stat-patches').textContent=patches.length;
+    const el=document.getElementById('lrn-patches');
+    if(!patches.length){el.innerHTML='<div style="color:#10b981">No patches needed!</div>';return;}
+    el.innerHTML=patches.map(p=>
+      '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+      '<div style="display:flex;justify-content:space-between">'+
+      '<strong style="color:#6c5ce7">'+p.topic+'</strong>'+
+      '<span style="font-size:11px;color:#888">confidence='+Math.round(p.confidence*100)+'%</span></div>'+
+      '<pre style="font-size:11px;color:#ccc;margin:6px 0 0;white-space:pre-wrap;max-height:100px;overflow-y:auto">'+
+      p.instruction.replace(/</g,'&lt;')+'</pre></div>'
+    ).join('');
+  }catch(e){alert('Error: '+e.message)}
+}
+
+async function lrnBuildFewShot(){
+  try{
+    const r=await fetch('/api/learning/few-shot',{method:'POST'});
+    const d=await r.json();
+    const examples=d.examples||[];
+    document.getElementById('lrn-stat-examples').textContent=examples.length;
+    const el=document.getElementById('lrn-fewshot');
+    if(!examples.length){el.innerHTML='<div style="color:#888">Need more positive feedback.</div>';return;}
+    el.innerHTML=examples.map(e=>
+      '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+      '<div style="font-size:11px;color:#888;margin-bottom:4px">['+e.topic+'] source='+e.source+' quality='+e.quality_score.toFixed(1)+'</div>'+
+      '<div style="font-size:12px;color:#6c5ce7">User: '+e.query+'</div>'+
+      '<div style="font-size:12px;color:#10b981;margin-top:2px">Asst: '+e.response+'</div></div>'
+    ).join('');
+  }catch(e){alert('Error: '+e.message)}
+}
+
+async function lrnProgress(){
+  try{
+    const r=await fetch('/api/learning/progress');
+    const d=await r.json();
+    const dir=d.direction||'stable';
+    const arrows={improving:'📈 Improving',declining:'📉 Declining',stable:'→ Stable'};
+    const colors={improving:'#10b981',declining:'#e74c3c',stable:'#fdcb6e'};
+    document.getElementById('lrn-direction').textContent=arrows[dir]||dir;
+    document.getElementById('lrn-direction').style.color=colors[dir]||'#888';
+    document.getElementById('lrn-change').textContent='Quality: '+(d.current_avg_quality||0).toFixed(1)+
+      ' ('+((d.quality_change||0)>=0?'+':'')+((d.quality_change||0).toFixed(2))+')';
+    // Timeline bars
+    const tl=d.timeline||[];
+    const el=document.getElementById('lrn-timeline');
+    if(!tl.length){el.innerHTML='<div style="color:#888">No data yet.</div>';return;}
+    const maxQ=Math.max(...tl.map(t=>t.avg_quality),1);
+    el.innerHTML=tl.map(t=>{
+      const h=Math.max(Math.round(t.avg_quality/maxQ*100),5);
+      const color=t.avg_quality>=7?'#10b981':t.avg_quality>=5?'#fdcb6e':'#e74c3c';
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end">'+
+        '<div style="font-size:10px;color:#888;margin-bottom:2px">'+t.avg_quality.toFixed(1)+'</div>'+
+        '<div style="width:80%;background:'+color+';border-radius:4px 4px 0 0;height:'+h+'px"></div>'+
+        '<div style="font-size:10px;color:#666;margin-top:4px">'+t.label+'</div></div>';
+    }).join('');
+  }catch(e){console.error(e)}
+}
+
+async function lrnLoadRecent(){
+  try{
+    const r=await fetch('/api/learning/recent');
+    const entries=await r.json();
+    const el=document.getElementById('lrn-recent');
+    if(!entries.length){el.innerHTML='<div style="color:#888">No feedback yet.</div>';return;}
+    el.innerHTML=entries.map(e=>{
+      const icon={thumbs_up:'👍',thumbs_down:'👎',rating:'⭐',correction:'✏️',comment:'💬'}[e.feedback_type]||'📝';
+      return '<div style="background:#0a0a14;padding:8px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:4px;font-size:12px">'+
+        '<span>'+icon+'</span> <strong style="color:#6c5ce7">'+e.query.slice(0,60)+'</strong>'+
+        (e.topic?' <span style="color:#888;font-size:10px">['+e.topic+']</span>':'')+
+        '</div>';
+    }).join('');
+  }catch(e){console.error(e)}
 }
 
 // ── Simulation helpers ──
