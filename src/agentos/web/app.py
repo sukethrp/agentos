@@ -1011,6 +1011,87 @@ color:{'#333' if theme=='light' else '#eee'};display:flex;align-items:center;jus
     return HTMLResponse(page)
 
 
+# ── Agent Mesh API ──
+
+from agentos.mesh.protocol import MeshMessage as _MeshMsg, MeshIdentity as _MeshId
+from agentos.mesh.discovery import get_registry as _get_mesh_registry
+from agentos.mesh.transaction import get_ledger as _get_mesh_ledger
+from agentos.mesh.server import handle_message as _mesh_handle, get_node as _get_mesh_node, init_node as _mesh_init_node
+
+# Initialise a default mesh node on the main web server
+try:
+    _mesh_init_node(
+        mesh_id="platform@agentos.local",
+        display_name="AgentOS Platform",
+        organisation="AgentOS",
+        capabilities=["ping", "negotiate", "transact", "verify"],
+        endpoint_url="http://localhost:8000/api/mesh",
+    )
+except Exception:
+    pass
+
+
+@app.post("/api/mesh/message")
+def mesh_receive_message(msg: _MeshMsg) -> dict:
+    resp = _mesh_handle(msg)
+    return resp.model_dump()
+
+
+class _MeshRegisterBody(BaseModel):
+    mesh_id: str
+    display_name: str = ""
+    public_key: str = ""
+    capabilities: list[str] = []
+    endpoint_url: str = ""
+    organisation: str = ""
+
+
+@app.post("/api/mesh/register")
+def mesh_register_agent(body: _MeshRegisterBody) -> dict:
+    identity = _MeshId(**body.model_dump())
+    _get_mesh_registry().register(identity)
+    return {"status": "registered", "mesh_id": identity.mesh_id}
+
+
+@app.post("/api/mesh/deregister")
+def mesh_deregister_agent(body: dict) -> dict:
+    mesh_id = body.get("mesh_id", "")
+    ok = _get_mesh_registry().deregister(mesh_id)
+    if not ok:
+        return JSONResponse({"error": f"Agent {mesh_id} not found"}, status_code=404)
+    return {"status": "deregistered", "mesh_id": mesh_id}
+
+
+@app.get("/api/mesh/registry")
+def mesh_list_registry() -> list:
+    return _get_mesh_registry().to_list()
+
+
+@app.get("/api/mesh/registry/search")
+def mesh_search_registry(q: str = "", capability: str = "", organisation: str = "") -> list:
+    results = _get_mesh_registry().search(query=q, capability=capability, organisation=organisation)
+    return [a.model_dump() for a in results]
+
+
+@app.get("/api/mesh/transactions")
+def mesh_list_transactions() -> list:
+    return _get_mesh_ledger().list_transactions()
+
+
+@app.get("/api/mesh/verify/{tx_id}")
+def mesh_verify_transaction(tx_id: str) -> dict:
+    return _get_mesh_ledger().verify(tx_id)
+
+
+@app.get("/api/mesh/stats")
+def mesh_stats() -> dict:
+    return {
+        "registry": _get_mesh_registry().stats(),
+        "ledger": _get_mesh_ledger().stats(),
+        "node": _get_mesh_node().identity.model_dump(),
+    }
+
+
 # ── Analytics API ──
 
 def _bucket_key(ts: float, granularity: str) -> str:
@@ -1285,6 +1366,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="nav-item" onclick="showPanel('auth',this)">🔑 Account & Usage</div>
 <div class="nav-item" onclick="showPanel('marketplace',this)">🏪 Marketplace</div>
 <div class="nav-item" onclick="showPanel('embed',this)">🔌 Embed SDK</div>
+<div class="nav-item" onclick="showPanel('mesh',this)">🔗 Agent Mesh</div>
 </div>
 <div class="main">
 
@@ -1630,6 +1712,101 @@ for token in client.stream("Tell me a story"):
 agents = client.list_agents()
 for a in agents:
     print(a["name"], a["downloads"])</pre>
+</div>
+</div>
+
+<!-- AGENT MESH -->
+<div class="panel" id="panel-mesh">
+<div class="card">
+<h2>🔗 Agent-to-Agent Mesh</h2>
+<p style="color:#888;margin-bottom:16px">Discover, authenticate, negotiate, and transact with agents across organisations using the mesh protocol.</p>
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#6c5ce7" id="mesh-stat-agents">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Agents</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#00cec9" id="mesh-stat-orgs">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Organisations</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#fdcb6e" id="mesh-stat-tx">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Transactions</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#10b981" id="mesh-stat-completed">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Completed</div>
+</div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<!-- Registry -->
+<div class="card">
+<h2>📡 Registry</h2>
+<p style="color:#888;margin-bottom:12px;font-size:13px">Agents registered in the mesh network.</p>
+<div style="display:flex;gap:8px;margin-bottom:12px">
+<input type="text" id="mesh-search" placeholder="Search agents…" style="flex:1" oninput="meshSearchRegistry()">
+<button class="btn btn-secondary" onclick="meshRefresh()">Refresh</button>
+</div>
+<div id="mesh-registry-list" style="max-height:280px;overflow-y:auto"></div>
+</div>
+
+<!-- Register -->
+<div class="card">
+<h2>➕ Register Agent</h2>
+<p style="color:#888;margin-bottom:12px;font-size:13px">Add a new agent to the mesh network.</p>
+<label>Mesh ID</label>
+<input type="text" id="mesh-reg-id" placeholder="sales-bot@acme.com">
+<label>Display Name</label>
+<input type="text" id="mesh-reg-name" placeholder="Acme Sales Bot">
+<label>Organisation</label>
+<input type="text" id="mesh-reg-org" placeholder="Acme Corp">
+<label>Capabilities (comma-separated)</label>
+<input type="text" id="mesh-reg-caps" placeholder="negotiate, quote, transact">
+<label>Endpoint URL</label>
+<input type="text" id="mesh-reg-url" placeholder="http://localhost:9100/mesh">
+<button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="meshRegister()">Register</button>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+<!-- Ping / Negotiate -->
+<div class="card">
+<h2>💬 Send Message</h2>
+<p style="color:#888;margin-bottom:12px;font-size:13px">Send a mesh protocol message to another agent.</p>
+<label>Sender Mesh ID</label>
+<input type="text" id="mesh-msg-sender" placeholder="my-bot@myorg.com">
+<label>Recipient Mesh ID</label>
+<input type="text" id="mesh-msg-recipient" placeholder="sales-bot@acme.com">
+<label>Message Type</label>
+<select id="mesh-msg-type">
+<option value="ping">Ping</option>
+<option value="handshake">Handshake</option>
+<option value="negotiate">Negotiate</option>
+</select>
+<div id="mesh-negotiate-fields" style="display:none;margin-top:8px">
+<label>Description</label>
+<input type="text" id="mesh-neg-desc" placeholder="1000 units of Widget-X">
+<label>Price ($)</label>
+<input type="number" id="mesh-neg-price" value="5000">
+</div>
+<button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="meshSendMessage()">Send</button>
+</div>
+
+<!-- Transactions -->
+<div class="card">
+<h2>📜 Transactions</h2>
+<p style="color:#888;margin-bottom:12px;font-size:13px">Ledger of all mesh transactions.</p>
+<div id="mesh-tx-list" style="max-height:300px;overflow-y:auto"></div>
+</div>
+</div>
+
+<!-- Message log -->
+<div class="card" style="margin-top:16px">
+<h2>📋 Message Log</h2>
+<div id="mesh-log" style="background:#0a0a14;padding:16px;border-radius:8px;border:1px solid #1e1e3a;max-height:300px;overflow-y:auto;font-family:monospace;font-size:12px;white-space:pre-wrap;color:#e0e0e0">No messages yet.</div>
 </div>
 </div>
 
@@ -2379,6 +2556,124 @@ function embPreview(){
   const theme=document.getElementById('emb-theme').value;
   const color=encodeURIComponent(document.getElementById('emb-color').value);
   window.open('/embed/preview?agent_name='+encodeURIComponent(name)+'&theme='+theme+'&accent_color='+color,'_blank');
+}
+
+// ── Mesh helpers ──
+
+let _meshLog=[];
+
+document.getElementById('mesh-msg-type').addEventListener('change',function(){
+  document.getElementById('mesh-negotiate-fields').style.display=this.value==='negotiate'?'block':'none';
+});
+
+async function meshRefresh(){
+  try{
+    const r=await fetch('/api/mesh/stats');
+    const d=await r.json();
+    const reg=d.registry||{};
+    const led=d.ledger||{};
+    document.getElementById('mesh-stat-agents').textContent=reg.total_agents||0;
+    document.getElementById('mesh-stat-orgs').textContent=(reg.organisations||[]).length;
+    document.getElementById('mesh-stat-tx').textContent=led.total_transactions||0;
+    document.getElementById('mesh-stat-completed').textContent=led.completed||0;
+    await meshRefreshRegistry();
+    await meshRefreshTx();
+  }catch(e){console.error('mesh refresh',e)}
+}
+
+async function meshRefreshRegistry(){
+  try{
+    const r=await fetch('/api/mesh/registry');
+    const agents=await r.json();
+    const el=document.getElementById('mesh-registry-list');
+    if(!agents.length){el.innerHTML='<div style="color:#888;font-size:13px">No agents registered.</div>';return;}
+    el.innerHTML=agents.map(a=>{
+      const online=a.online?'<span style="color:#10b981">● online</span>':'<span style="color:#888">○ offline</span>';
+      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<strong style="color:#6c5ce7">'+a.mesh_id+'</strong>'+online+'</div>'+
+        '<div style="font-size:12px;color:#888;margin-top:4px">'+a.display_name+' — '+a.organisation+'</div>'+
+        '<div style="font-size:11px;color:#666;margin-top:2px">Capabilities: '+(a.capabilities||[]).join(', ')+'</div>'+
+        '</div>';
+    }).join('');
+  }catch(e){console.error(e)}
+}
+
+function meshSearchRegistry(){
+  const q=document.getElementById('mesh-search').value.toLowerCase();
+  const cards=document.querySelectorAll('#mesh-registry-list > div');
+  cards.forEach(c=>{c.style.display=c.textContent.toLowerCase().includes(q)?'block':'none';});
+}
+
+async function meshRegister(){
+  const body={
+    mesh_id:document.getElementById('mesh-reg-id').value.trim(),
+    display_name:document.getElementById('mesh-reg-name').value.trim(),
+    organisation:document.getElementById('mesh-reg-org').value.trim(),
+    capabilities:(document.getElementById('mesh-reg-caps').value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    endpoint_url:document.getElementById('mesh-reg-url').value.trim(),
+  };
+  if(!body.mesh_id){alert('Mesh ID is required');return;}
+  try{
+    const r=await fetch('/api/mesh/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    meshAppendLog('REGISTER',JSON.stringify(d,null,2));
+    meshRefresh();
+  }catch(e){alert('Error: '+e.message)}
+}
+
+async function meshSendMessage(){
+  const sender=document.getElementById('mesh-msg-sender').value.trim();
+  const recipient=document.getElementById('mesh-msg-recipient').value.trim();
+  const type=document.getElementById('mesh-msg-type').value;
+  if(!sender||!recipient){alert('Sender and recipient required');return;}
+  let payload={};
+  if(type==='negotiate'){
+    payload={
+      proposal_id:Math.random().toString(36).slice(2,12),
+      description:document.getElementById('mesh-neg-desc').value.trim(),
+      terms:{price:parseInt(document.getElementById('mesh-neg-price').value)||0},
+      status:'proposed',round:1,max_rounds:5
+    };
+  }
+  if(type==='handshake'){
+    payload={mesh_id:sender,display_name:sender,capabilities:['negotiate','transact'],organisation:'',endpoint_url:'',public_key:'',metadata:{}};
+  }
+  const msg={type:type,sender:sender,recipient:recipient,payload:payload,timestamp:Date.now()/1000,signature:'',conversation_id:Math.random().toString(36).slice(2,14)};
+  try{
+    const r=await fetch('/api/mesh/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(msg)});
+    const d=await r.json();
+    meshAppendLog('SENT ['+type.toUpperCase()+'] '+sender+' → '+recipient,'');
+    meshAppendLog('RECV ['+d.type.toUpperCase()+'] '+d.sender+' → '+d.recipient,JSON.stringify(d.payload,null,2));
+    meshRefresh();
+  }catch(e){alert('Error: '+e.message)}
+}
+
+async function meshRefreshTx(){
+  try{
+    const r=await fetch('/api/mesh/transactions');
+    const txs=await r.json();
+    const el=document.getElementById('mesh-tx-list');
+    if(!txs.length){el.innerHTML='<div style="color:#888;font-size:13px">No transactions yet.</div>';return;}
+    el.innerHTML=txs.map(t=>{
+      const color=t.status==='completed'?'#10b981':t.status==='failed'?'#e74c3c':'#fdcb6e';
+      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+        '<div style="display:flex;justify-content:space-between"><strong style="color:#6c5ce7">'+t.transaction_id+'</strong>'+
+        '<span style="color:'+color+';font-size:12px">'+t.status.toUpperCase()+'</span></div>'+
+        '<div style="font-size:12px;color:#888;margin-top:4px">'+t.description+'</div>'+
+        '<div style="font-size:11px;color:#666;margin-top:2px">'+t.initiator+' → '+t.counterparty+'</div>'+
+        '</div>';
+    }).join('');
+  }catch(e){console.error(e)}
+}
+
+function meshAppendLog(label,detail){
+  const el=document.getElementById('mesh-log');
+  const ts=new Date().toLocaleTimeString();
+  const line='['+ts+'] '+label+(detail?'\\n'+detail:'');
+  _meshLog.push(line);
+  el.textContent=_meshLog.join('\\n\\n');
+  el.scrollTop=el.scrollHeight;
 }
 
 // ── Marketplace helpers ──
