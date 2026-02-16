@@ -2020,7 +2020,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <span style="font-size:12px;color:#555;cursor:pointer" onclick="document.getElementById('mp-detail').style.display='none'">close</span>
 </div>
 <div id="mp-detail-body"></div>
-<div style="margin-top:16px;border-top:1px solid #1a1a2e;padding-top:12px">
+<div style="margin-top:16px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px">
 <h3 style="font-size:14px;margin-bottom:8px;color:#fff">Leave a Review</h3>
 <div style="display:flex;gap:8px;align-items:end">
 <div style="flex:1"><label>Comment</label><input type="text" id="mp-rev-comment" placeholder="Great agent!"></div>
@@ -2704,6 +2704,10 @@ if(id==='events')refreshEvents();
 if(id==='auth')refreshAuthUsage();
 if(id==='abtest'){}
 if(id==='marketplace')mpRefresh();
+if(id==='mesh')meshRefresh();
+if(id==='learning'){lrnRefreshStats();lrnLoadRecent();}
+if(id==='observability')rcaRefresh();
+if(id==='scheduler')refreshScheduler();
 }
 
 function toggleTool(el){el.classList.toggle('selected')}
@@ -2749,7 +2753,7 @@ const q=input.value.trim();if(!q)return;
 input.value='';
 const msgs=document.getElementById('chat-messages');
 msgs.innerHTML+=`<div style="text-align:right;margin:8px 0"><span style="background:#00d4ff22;color:#00d4ff;padding:8px 14px;border-radius:12px;display:inline-block">${q}</span></div>`;
-msgs.innerHTML+=`<div style="margin:8px 0" id="chat-response"><span style="background:#1a1a2e;padding:8px 14px;border-radius:12px;display:inline-block;max-width:80%;white-space:pre-wrap;line-height:1.5"><span id="chat-streaming"><span class="loading"></span> Thinking...</span><span id="chat-content"></span><span style="font-size:11px;color:#555;display:none" id="chat-stats"></span></span></div>`;
+msgs.innerHTML+=`<div style="margin:8px 0" id="chat-response"><span style="background:rgba(255,255,255,0.04);padding:8px 14px;border-radius:12px;display:inline-block;max-width:80%;white-space:pre-wrap;line-height:1.5"><span id="chat-streaming"><span class="loading"></span> Thinking...</span><span id="chat-content"></span><span style="font-size:11px;color:#555;display:none" id="chat-stats"></span></span></div>`;
 msgs.scrollTop=msgs.scrollHeight;
 const wsProto=location.protocol==='https:'?'wss:':'ws:';
 const wsUrl=`${wsProto}//${location.host}/ws/chat`;
@@ -2909,7 +2913,7 @@ h+=`<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.
 <div style="display:flex;justify-content:space-between;align-items:center">
 <div><strong style="color:#fff">${j.agent_name}</strong> <span style="color:#555;font-size:12px">· ${j.job_id}</span></div>
 <div style="display:flex;gap:6px">
-<button onclick="fetch('/api/scheduler/${j.status==='paused'?'resume':'pause'}/${j.job_id}',{method:'POST'}).then(()=>refreshScheduler())" style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.08);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">${j.status==='paused'?'▶️ Resume':'⏸️ Pause'}</button>
+<button onclick="fetch('/api/scheduler/${j.status==='paused'?'resume':'pause'}/${j.job_id}',{method:'POST'}).then(()=>refreshScheduler())" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">${j.status==='paused'?'▶️ Resume':'⏸️ Pause'}</button>
 <button onclick="if(confirm('Delete this job?'))fetch('/api/scheduler/delete/${j.job_id}',{method:'DELETE'}).then(()=>refreshScheduler())" style="background:#2a1a1a;border:1px solid #4a2a2a;color:#ff6666;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">🗑️ Delete</button>
 </div>
 </div>
@@ -2926,7 +2930,7 @@ h+=`<div style="margin-top:8px;font-size:11px;color:#555">`;
 j.history.slice(-3).reverse().forEach(e=>{
 const t=new Date(e.started_at*1000).toLocaleTimeString();
 const st=e.status==='completed'?'✅':'❌';
-h+=`<div style="padding:3px 0;border-top:1px solid #12121f">${st} ${t} · ${e.result.slice(0,100)}${e.result.length>100?'...':''} · $${e.cost_usd.toFixed(4)} · ${e.duration_ms.toFixed(0)}ms</div>`;
+h+=`<div style="padding:3px 0;border-top:1px solid rgba(255,255,255,0.04)">${st} ${t} · ${e.result.slice(0,100)}${e.result.length>100?'...':''} · $${e.cost_usd.toFixed(4)} · ${e.duration_ms.toFixed(0)}ms</div>`;
 });
 h+=`</div>`;}
 h+=`</div>`;
@@ -2993,7 +2997,7 @@ hh+=`<div style="background:rgba(6,6,14,0.5);border:1px solid rgba(255,255,255,0
 <span style="color:#666;font-size:11px">${t}</span>
 </div>
 <div style="color:#888;font-size:12px;margin-top:4px">${h.listeners_triggered} listener(s) · source: ${h.event.source||'—'}</div>
-${results?'<div style="margin-top:6px;font-size:11px;border-top:1px solid #1a1a2e;padding-top:6px">'+results+'</div>':''}
+${results?'<div style="margin-top:6px;font-size:11px;border-top:1px solid rgba(255,255,255,0.06);padding-top:6px">'+results+'</div>':''}
 </div>`;
 });
 }
@@ -3219,7 +3223,7 @@ async function rcaLoadTraces(){
     el.innerHTML=traces.map(t=>{
       const color=t.success?'#10b981':'#e74c3c';
       const icon=t.success?'✅':'❌';
-      return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;cursor:pointer" onclick="rcaReplay(\''+t.trace_id+'\')">'+
+      return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;cursor:pointer" onclick="rcaReplay(&quot;'+t.trace_id+'&quot;)">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<span>'+icon+' <strong style="color:#6c5ce7">'+t.agent_name+'</strong></span>'+
         '<span style="color:'+color+';font-size:12px">'+(t.success?'OK':'FAIL')+'</span></div>'+
@@ -3749,7 +3753,7 @@ async function mpShowDetail(id){
     let rhtml='';
     (d.reviews||[]).forEach(rv=>{
       const st='★'.repeat(Math.round(rv.rating))+'☆'.repeat(5-Math.round(rv.rating));
-      rhtml+='<div style="padding:8px 0;border-bottom:1px solid #1a1a2e"><span style="color:#f0b429">'+st+'</span> <strong>'+rv.user+'</strong> — '+rv.comment+'</div>';
+      rhtml+='<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06)"><span style="color:#f0b429">'+st+'</span> <strong>'+rv.user+'</strong> — '+rv.comment+'</div>';
     });
     document.getElementById('mp-reviews').innerHTML=rhtml;
     det.style.display='block';
