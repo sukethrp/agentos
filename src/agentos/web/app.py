@@ -1011,6 +1011,93 @@ color:{'#333' if theme=='light' else '#eee'};display:flex;align-items:center;jus
     return HTMLResponse(page)
 
 
+# ── Observability / RCA API ──
+
+from agentos.observability.tracer import get_trace_store as _obs_trace_store, TraceBuilder
+from agentos.observability.diagnostics import diagnose as _obs_diagnose
+from agentos.observability.alerts import AlertEngine as _ObsAlertEngine
+from agentos.observability.replay import build_replay as _obs_build_replay
+
+
+@app.get("/api/observability/stats")
+async def obs_stats():
+    ts = _obs_trace_store()
+    return ts.stats()
+
+
+@app.get("/api/observability/traces")
+async def obs_traces(limit: int = 20, agent: str = ""):
+    ts = _obs_trace_store()
+    traces = ts.list_all(agent_name=agent, limit=limit)
+    return [t.to_dict() for t in traces]
+
+
+@app.get("/api/observability/trace/{trace_id}")
+async def obs_trace_detail(trace_id: str):
+    ts = _obs_trace_store()
+    t = ts.get(trace_id)
+    if not t:
+        return {"error": "Trace not found"}
+    return t.to_dict()
+
+
+@app.get("/api/observability/diagnose/{trace_id}")
+async def obs_diagnose_trace(trace_id: str):
+    ts = _obs_trace_store()
+    t = ts.get(trace_id)
+    if not t:
+        return {"error": "Trace not found"}
+    diag = _obs_diagnose(t)
+    return diag.to_dict()
+
+
+@app.get("/api/observability/alerts")
+async def obs_alerts(agent: str = ""):
+    ts = _obs_trace_store()
+    engine = _ObsAlertEngine(ts)
+    alerts = engine.evaluate(agent_name=agent)
+    return [a.to_dict() for a in alerts]
+
+
+@app.get("/api/observability/replay/{trace_id}")
+async def obs_replay(trace_id: str):
+    ts = _obs_trace_store()
+    t = ts.get(trace_id)
+    if not t:
+        return {"error": "Trace not found"}
+    replay = _obs_build_replay(t, include_messages=True)
+    return replay.to_dict()
+
+
+@app.post("/api/observability/seed-demo")
+async def obs_seed_demo():
+    """Seed example traces for demonstration."""
+    ts = _obs_trace_store()
+    # Healthy trace
+    b = TraceBuilder("demo-agent", "gpt-4o-mini", "You are a helpful assistant with tools.")
+    b.set_query("What's the weather in Tokyo?")
+    b.add_llm_call([{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What's the weather in Tokyo?"}], ["weather"], 150, 0.0003, 450)
+    b.add_tool_call("weather", {"location": "Tokyo"}, '{"temperature": "22C", "condition": "Sunny"}', 120)
+    b.add_llm_call([{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What's the weather in Tokyo?"}, {"role": "tool", "content": '{"temperature": "22C"}'}], ["weather"], 180, 0.0004, 380)
+    b.add_final_answer("It is currently 22C and sunny in Tokyo.")
+    ts.add(b.finish())
+    # Tool error trace
+    b2 = TraceBuilder("demo-agent", "gpt-4o-mini", "You are a helpful assistant with tools.")
+    b2.set_query("What's the weather in Paris?")
+    b2.add_llm_call([{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What's the weather in Paris?"}], ["weather"], 140, 0.0003, 420)
+    b2.add_tool_call("weather", {"location": "Paris"}, "ERROR: API rate limit exceeded", 2100)
+    b2.add_error("Tool returned error — unreliable response")
+    ts.add(b2.finish())
+    # Missing tool trace
+    b3 = TraceBuilder("support-bot", "gpt-4o-mini", "You are a customer support agent.")
+    b3.set_query("Check order #12345")
+    b3.add_llm_call([{"role": "system", "content": "Support agent."}, {"role": "user", "content": "Check order #12345"}], ["search"], 120, 0.0002, 350)
+    b3.add_tool_call("order_lookup", {"order_id": "12345"}, "ERROR: Tool 'order_lookup' not found", 1, not_found=True)
+    b3.add_error("LLM hallucinated tool name 'order_lookup'")
+    ts.add(b3.finish())
+    return {"seeded": 3, "total": ts.stats()["total_traces"]}
+
+
 # ── Learning API ──
 
 from agentos.learning.feedback import FeedbackEntry as _FBEntry, FeedbackType as _FBType, get_feedback_store as _get_fb
@@ -1522,6 +1609,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="nav-item" onclick="showPanel('mesh',this)">🔗 Agent Mesh</div>
 <div class="nav-item" onclick="showPanel('simulation',this)">🌐 Simulation</div>
 <div class="nav-item" onclick="showPanel('learning',this)">🧠 Learning</div>
+<div class="nav-item" onclick="showPanel('observability',this)">🔍 RCA</div>
 </div>
 <div class="main">
 
@@ -2153,6 +2241,62 @@ for a in agents:
 <div class="card" style="margin-top:16px">
 <h2>🕐 Recent Feedback</h2>
 <div id="lrn-recent" style="max-height:250px;overflow-y:auto"><div style="color:#888;font-size:13px">No feedback yet.</div></div>
+</div>
+</div>
+
+<!-- OBSERVABILITY / RCA -->
+<div class="panel" id="panel-observability">
+<div class="card">
+<h2>🔍 Root Cause Analysis</h2>
+<p style="color:#888;margin-bottom:16px">Deep tracing, 5-point diagnostics, smart causal alerts, and step-by-step replay of agent interactions.</p>
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#6c5ce7" id="rca-stat-traces">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Traces</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#10b981" id="rca-stat-success">0%</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Success Rate</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#e74c3c" id="rca-stat-failed">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Failed</div>
+</div>
+<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="font-size:22px;font-weight:700;color:#fdcb6e" id="rca-stat-alerts">0</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Alerts</div>
+</div>
+</div>
+<button class="btn btn-secondary" onclick="rcaRefresh()" style="margin-bottom:8px">🔄 Refresh</button>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<!-- Alerts -->
+<div class="card">
+<h2>🚨 Smart Alerts</h2>
+<p style="color:#888;font-size:13px;margin-bottom:8px">Causal alerts that explain WHY something is wrong.</p>
+<div id="rca-alerts" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">Click Refresh to check for alerts.</div></div>
+</div>
+
+<!-- Recent Traces -->
+<div class="card">
+<h2>📋 Recent Traces</h2>
+<div id="rca-traces" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">No traces yet.</div></div>
+</div>
+</div>
+
+<!-- Replay Viewer -->
+<div class="card" style="margin-top:16px">
+<h2>🔄 Interaction Replay</h2>
+<p style="color:#888;font-size:13px;margin-bottom:8px">Click a failed trace above to replay it step-by-step.</p>
+<div id="rca-replay" style="min-height:80px"><div style="color:#888;font-size:13px">Select a trace to replay.</div></div>
+</div>
+
+<!-- Diagnosis Detail -->
+<div class="card" style="margin-top:16px">
+<h2>🩺 5-Point Diagnosis</h2>
+<div id="rca-diagnosis" style="min-height:60px"><div style="color:#888;font-size:13px">Select a trace to see its diagnosis.</div></div>
 </div>
 </div>
 
@@ -2902,6 +3046,96 @@ function embPreview(){
   const theme=document.getElementById('emb-theme').value;
   const color=encodeURIComponent(document.getElementById('emb-color').value);
   window.open('/embed/preview?agent_name='+encodeURIComponent(name)+'&theme='+theme+'&accent_color='+color,'_blank');
+}
+
+// ── RCA / Observability helpers ──
+
+async function rcaRefresh(){
+  try{
+    const r=await fetch('/api/observability/stats');
+    const d=await r.json();
+    document.getElementById('rca-stat-traces').textContent=d.total_traces||0;
+    document.getElementById('rca-stat-success').textContent=(d.success_rate||0).toFixed(0)+'%';
+    document.getElementById('rca-stat-failed').textContent=d.failed||0;
+    await rcaLoadTraces();
+    await rcaLoadAlerts();
+  }catch(e){console.error(e)}
+}
+
+async function rcaLoadTraces(){
+  try{
+    const r=await fetch('/api/observability/traces?limit=20');
+    const traces=await r.json();
+    const el=document.getElementById('rca-traces');
+    if(!traces.length){el.innerHTML='<div style="color:#888;font-size:13px">No traces.</div>';return;}
+    el.innerHTML=traces.map(t=>{
+      const color=t.success?'#10b981':'#e74c3c';
+      const icon=t.success?'✅':'❌';
+      return '<div style="background:#0a0a14;padding:8px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:4px;cursor:pointer" onclick="rcaReplay(\''+t.trace_id+'\')">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<span>'+icon+' <strong style="color:#6c5ce7">'+t.agent_name+'</strong></span>'+
+        '<span style="color:'+color+';font-size:12px">'+(t.success?'OK':'FAIL')+'</span></div>'+
+        '<div style="font-size:11px;color:#888;margin-top:2px">'+t.user_query.slice(0,60)+'</div>'+
+        '<div style="font-size:10px;color:#555;margin-top:1px">'+t.step_count+' steps | '+t.total_tokens+' tokens | $'+t.total_cost.toFixed(4)+'</div></div>';
+    }).join('');
+  }catch(e){console.error(e)}
+}
+
+async function rcaLoadAlerts(){
+  try{
+    const r=await fetch('/api/observability/alerts');
+    const alerts=await r.json();
+    document.getElementById('rca-stat-alerts').textContent=alerts.length;
+    const el=document.getElementById('rca-alerts');
+    if(!alerts.length){el.innerHTML='<div style="color:#10b981;font-size:13px">No alerts — all clear!</div>';return;}
+    el.innerHTML=alerts.map(a=>{
+      const colors={critical:'#e74c3c',warning:'#fdcb6e',info:'#6c5ce7'};
+      const icons={critical:'🚨',warning:'⚠️',info:'ℹ️'};
+      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid '+(colors[a.level]||'#1e1e3a')+';margin-bottom:6px">'+
+        '<div style="display:flex;justify-content:space-between">'+
+        '<strong style="color:'+(colors[a.level]||'#ccc')+'">'+icons[a.level]+' '+a.title+'</strong>'+
+        '<span style="font-size:10px;color:#888">'+a.level.toUpperCase()+'</span></div>'+
+        '<div style="font-size:12px;color:#ccc;margin-top:4px">'+a.cause+'</div>'+
+        '<div style="font-size:11px;color:#888;margin-top:2px">Impact: '+a.impact+'</div>'+
+        '<div style="font-size:11px;color:#10b981;margin-top:2px">Fix: '+a.recommendation+'</div></div>';
+    }).join('');
+  }catch(e){console.error(e)}
+}
+
+async function rcaReplay(traceId){
+  try{
+    const r=await fetch('/api/observability/replay/'+traceId);
+    const d=await r.json();
+    // Render frames
+    const el=document.getElementById('rca-replay');
+    const frames=d.frames||[];
+    el.innerHTML=frames.map(f=>{
+      const colors={ok:'#1e1e3a',warn:'#fdcb6e33',fail:'#e74c3c33'};
+      const icons={ok:'▶',warn:'⚠️',fail:'❌'};
+      const border=f.is_failure_point?'2px solid #e74c3c':'1px solid #1e1e3a';
+      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:'+border+';margin-bottom:6px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+        '<strong style="color:#6c5ce7">'+(icons[f.severity]||'▶')+' '+f.label+'</strong>'+
+        (f.is_failure_point?'<span style="color:#e74c3c;font-size:11px;font-weight:700">← FAILURE POINT</span>':'')+
+        '</div>'+
+        '<pre style="font-size:11px;color:#aaa;margin:6px 0 0;white-space:pre-wrap;max-height:100px;overflow-y:auto">'+
+        f.detail.replace(/</g,'&lt;')+'</pre></div>';
+    }).join('');
+
+    // Render diagnosis
+    const diag=d.diagnosis;
+    if(diag){
+      const del2=document.getElementById('rca-diagnosis');
+      const sevIcons={pass:'✅',warn:'⚠️',fail:'❌'};
+      del2.innerHTML='<div style="margin-bottom:8px"><strong>Root cause:</strong> <span style="color:#e74c3c">'+diag.root_cause+'</span></div>'+
+        (diag.checks||[]).map(c=>
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+          '<span>'+sevIcons[c.severity]+'</span>'+
+          '<span style="color:#6c5ce7;font-size:13px;width:140px">'+c.check+'</span>'+
+          '<span style="font-size:12px;color:#ccc">'+c.title+'</span></div>'
+        ).join('');
+    }
+  }catch(e){console.error(e)}
 }
 
 // ── Learning helpers ──
