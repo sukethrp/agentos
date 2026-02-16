@@ -1468,126 +1468,274 @@ WEB_UI_HTML = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AgentOS Platform</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#08080f;color:#e0e0e0;min-height:100vh}
-.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;height:100vh}
-.topbar{grid-column:1/-1;background:#0d0d1a;border-bottom:1px solid #1a1a2e;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
-.topbar h1{font-size:18px;color:#00d4ff}
-.topbar .status{color:#00ff88;font-size:13px;display:flex;align-items:center;gap:8px}
-.topbar .status span.small{font-size:11px;color:#888}
-.sidebar{background:#0a0a14;border-right:1px solid #1a1a2e;padding:16px;overflow-y:auto}
-.sidebar h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#555;margin:16px 0 8px}
-.nav-item{padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px;margin-bottom:4px;transition:all 0.2s;display:flex;align-items:center;gap:8px}
-.nav-item:hover{background:#12121f}
-.nav-item.active{background:#00d4ff15;color:#00d4ff}
-.main{padding:24px;overflow-y:auto}
-.panel{display:none}
+:root{
+  --bg-base:#06060e;--bg-card:rgba(13,13,28,0.65);--bg-deeper:rgba(6,6,14,0.8);--bg-input:rgba(8,8,18,0.9);
+  --border:rgba(255,255,255,0.06);--border-hover:rgba(255,255,255,0.12);--border-active:rgba(0,212,255,0.35);
+  --accent:#00d4ff;--accent2:#7c5cfc;--accent3:#00ff88;--accent4:#ff6b6b;--accent5:#ffaa00;
+  --text:#e4e4ef;--text-dim:#888899;--text-faint:#555566;
+  --glass:rgba(255,255,255,0.03);--glass-hover:rgba(255,255,255,0.06);
+  --glow-accent:0 0 30px rgba(0,212,255,0.12);--glow-purple:0 0 30px rgba(124,92,252,0.12);
+  --radius:14px;--radius-sm:10px;--radius-xs:8px;
+  --ease:cubic-bezier(0.4,0,0.2,1);
+}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg-base);color:var(--text);min-height:100vh;overflow:hidden}
+
+/* ── Animated mesh gradient background ── */
+body::before{content:'';position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%,rgba(124,92,252,0.08) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 80%,rgba(0,212,255,0.06) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 50% at 50% 50%,rgba(0,255,136,0.03) 0%,transparent 60%);
+  animation:bgShift 20s ease-in-out infinite alternate;pointer-events:none}
+@keyframes bgShift{
+  0%{filter:hue-rotate(0deg) brightness(1)}
+  50%{filter:hue-rotate(15deg) brightness(1.1)}
+  100%{filter:hue-rotate(-10deg) brightness(0.95)}
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}
+
+/* ── App layout ── */
+.app{display:grid;grid-template-columns:270px 1fr;grid-template-rows:60px 1fr;height:100vh;position:relative;z-index:1}
+
+/* ── Topbar ── */
+.topbar{grid-column:1/-1;background:rgba(10,10,22,0.7);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;z-index:10}
+.topbar h1{font-size:19px;font-weight:800;letter-spacing:-0.5px;
+  background:linear-gradient(135deg,#00d4ff 0%,#7c5cfc 50%,#00ff88 100%);
+  background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:gradientText 6s ease infinite}
+@keyframes gradientText{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.topbar .status{color:var(--accent3);font-size:13px;display:flex;align-items:center;gap:10px;font-weight:500}
+.topbar .status::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--accent3);
+  box-shadow:0 0 8px var(--accent3),0 0 16px rgba(0,255,136,0.3);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.85)}}
+.topbar .status span.small{font-size:11px;color:var(--text-dim)}
+
+/* ── Sidebar ── */
+.sidebar{background:rgba(8,8,18,0.6);backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);border-right:1px solid var(--border);padding:18px 14px;overflow-y:auto;z-index:5}
+.sidebar h3{font-size:10px;text-transform:uppercase;letter-spacing:1.8px;color:var(--text-faint);margin:20px 0 8px 8px;font-weight:600}
+.sidebar h3:first-child{margin-top:4px}
+.nav-item{padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:13.5px;font-weight:500;margin-bottom:3px;
+  transition:all 0.3s var(--ease);display:flex;align-items:center;gap:10px;position:relative;overflow:hidden;color:var(--text-dim)}
+.nav-item::before{content:'';position:absolute;inset:0;border-radius:inherit;opacity:0;transition:opacity 0.3s var(--ease);
+  background:linear-gradient(135deg,rgba(0,212,255,0.06),rgba(124,92,252,0.04))}
+.nav-item:hover{color:var(--text);transform:translateX(3px)}
+.nav-item:hover::before{opacity:1}
+.nav-item.active{color:var(--accent);font-weight:600;
+  background:linear-gradient(135deg,rgba(0,212,255,0.1),rgba(124,92,252,0.06));
+  box-shadow:inset 0 0 0 1px var(--border-active),var(--glow-accent)}
+.nav-item.active::after{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:0 4px 4px 0;
+  background:linear-gradient(180deg,var(--accent),var(--accent2));box-shadow:0 0 12px var(--accent)}
+
+/* ── Main area ── */
+.main{padding:28px;overflow-y:auto;position:relative}
+.panel{display:none;animation:fadeSlide 0.4s var(--ease) both}
 .panel.active{display:block}
-.card{background:#0d0d1a;border:1px solid #1a1a2e;border-radius:12px;padding:24px;margin-bottom:16px}
-.card h2{font-size:20px;margin-bottom:16px;color:#fff}
-label{display:block;font-size:13px;color:#888;margin-bottom:6px;margin-top:16px}
-input,textarea,select{width:100%;padding:10px 14px;background:#08080f;border:1px solid #2a2a4a;border-radius:8px;color:#fff;font-size:14px;font-family:inherit}
-input:focus,textarea:focus,select:focus{outline:none;border-color:#00d4ff}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Cards — glassmorphism ── */
+.card{background:var(--bg-card);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+  border:1px solid var(--border);border-radius:var(--radius);padding:26px;margin-bottom:18px;
+  transition:all 0.35s var(--ease);position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)}
+.card:hover{border-color:var(--border-hover);box-shadow:0 8px 40px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04)}
+.card h2{font-size:20px;font-weight:700;margin-bottom:18px;color:#fff;letter-spacing:-0.3px}
+
+/* ── Form elements ── */
+label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px;margin-top:18px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
+input,textarea,select{width:100%;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-xs);
+  color:#fff;font-size:14px;font-family:inherit;transition:all 0.3s var(--ease);font-weight:400}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,212,255,0.1),0 0 20px rgba(0,212,255,0.06)}
+input::placeholder,textarea::placeholder{color:var(--text-faint);font-weight:300}
 textarea{min-height:80px;resize:vertical}
-.btn{padding:12px 24px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s}
-.btn-primary{background:linear-gradient(135deg,#00d4ff,#0088ff);color:#000}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,212,255,0.3)}
-.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-.btn-secondary{background:#1a1a2e;color:#fff}
-.tools-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.tool-tag{padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid #2a2a4a;background:#08080f;transition:all 0.2s}
-.tool-tag.selected{background:#00d4ff22;border-color:#00d4ff;color:#00d4ff}
-.tool-tag:hover{border-color:#00d4ff}
-.response-box{background:#08080f;border:1px solid #1a1a2e;border-radius:8px;padding:16px;margin-top:16px;min-height:100px;white-space:pre-wrap;line-height:1.6}
-.stats-row{display:flex;gap:12px;margin-top:12px}
-.stat-chip{background:#12121f;padding:6px 12px;border-radius:6px;font-size:12px;color:#888}
-.stat-chip span{color:#00d4ff;font-weight:600}
-.templates-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
-.template-card{background:#0d0d1a;border:1px solid #1a1a2e;border-radius:12px;padding:20px;cursor:pointer;transition:all 0.3s}
-.template-card:hover{border-color:#00d4ff33;transform:translateY(-2px)}
-.template-card .icon{font-size:28px;margin-bottom:8px}
-.template-card h4{color:#fff;margin-bottom:4px}
-.template-card p{color:#666;font-size:13px}
-.template-card .cat{font-size:11px;color:#00d4ff;margin-top:8px}
+select{cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center}
+input[type="range"]{-webkit-appearance:none;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;padding:0}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;cursor:pointer;
+  box-shadow:0 0 10px rgba(0,212,255,0.4),0 2px 6px rgba(0,0,0,0.3)}
+
+/* ── Buttons ── */
+.btn{padding:12px 28px;border-radius:var(--radius-xs);border:none;font-size:14px;font-weight:600;cursor:pointer;
+  transition:all 0.3s var(--ease);position:relative;overflow:hidden;font-family:inherit}
+.btn::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.3s;
+  background:radial-gradient(circle at var(--x,50%) var(--y,50%),rgba(255,255,255,0.15) 0%,transparent 60%)}
+.btn:hover::after{opacity:1}
+.btn-primary{background:linear-gradient(135deg,#00d4ff,#0088ff,#7c5cfc);background-size:200% 200%;color:#fff;
+  box-shadow:0 4px 20px rgba(0,212,255,0.2);animation:btnGrad 4s ease infinite}
+@keyframes btnGrad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,255,0.35),0 0 60px rgba(124,92,252,0.1)}
+.btn-primary:active{transform:translateY(0);box-shadow:0 2px 10px rgba(0,212,255,0.2)}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-secondary{background:var(--glass);border:1px solid var(--border);color:var(--text);backdrop-filter:blur(8px)}
+.btn-secondary:hover{background:var(--glass-hover);border-color:var(--border-hover);transform:translateY(-1px)}
+
+/* ── Tool tags ── */
+.tools-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.tool-tag{padding:7px 16px;border-radius:24px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--glass);
+  transition:all 0.3s var(--ease);font-weight:500;color:var(--text-dim)}
+.tool-tag.selected{background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(124,92,252,0.08));border-color:var(--accent);color:var(--accent);
+  box-shadow:0 0 20px rgba(0,212,255,0.1)}
+.tool-tag:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+
+/* ── Response box ── */
+.response-box{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-xs);padding:18px;margin-top:16px;
+  min-height:100px;white-space:pre-wrap;line-height:1.7;font-size:14px;position:relative}
+.stats-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+.stat-chip{background:var(--glass);border:1px solid var(--border);padding:6px 14px;border-radius:20px;font-size:12px;color:var(--text-dim);font-weight:500}
+.stat-chip span{color:var(--accent);font-weight:700}
+
+/* ── Templates ── */
+.templates-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.template-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;cursor:pointer;
+  transition:all 0.4s var(--ease);position:relative;overflow:hidden}
+.template-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.4s;
+  background:linear-gradient(135deg,rgba(0,212,255,0.06),rgba(124,92,252,0.04))}
+.template-card:hover{border-color:var(--border-active);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.3),var(--glow-accent)}
+.template-card:hover::before{opacity:1}
+.template-card .icon{font-size:30px;margin-bottom:10px;filter:drop-shadow(0 0 8px rgba(0,212,255,0.3))}
+.template-card h4{color:#fff;margin-bottom:4px;font-weight:600}
+.template-card p{color:var(--text-faint);font-size:13px;line-height:1.4}
+.template-card .cat{font-size:11px;color:var(--accent);margin-top:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+
+/* ── Monitor ── */
 .monitor-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
-.monitor-card{background:#0d0d1a;border:1px solid #1a1a2e;border-radius:12px;padding:20px}
-.monitor-card .label{font-size:11px;color:#666;text-transform:uppercase}
-.monitor-card .value{font-size:28px;font-weight:700;margin-top:4px}
-.monitor-card .value.blue{color:#00d4ff}
-.monitor-card .value.green{color:#00ff88}
-.monitor-card .value.yellow{color:#ffaa00}
-.event-row{background:#0a0a14;border:1px solid #12121f;padding:10px 14px;margin-bottom:4px;border-radius:6px;display:grid;grid-template-columns:120px 90px 1fr 80px 70px;gap:10px;font-size:13px;align-items:center}
-.event-type{padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600;text-align:center}
-.event-type.llm_call{background:#00d4ff22;color:#00d4ff}
-.event-type.tool_call{background:#ffaa0022;color:#ffaa00}
-.loading{display:inline-block;width:16px;height:16px;border:2px solid #333;border-top-color:#00d4ff;border-radius:50%;animation:spin 0.8s linear infinite}
+.monitor-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;
+  backdrop-filter:blur(12px);transition:all 0.3s var(--ease);position:relative;overflow:hidden}
+.monitor-card::after{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:0 var(--radius) 0 40px;opacity:0.04;
+  background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.monitor-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.2)}
+.monitor-card .label{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.monitor-card .value{font-size:30px;font-weight:800;margin-top:6px;letter-spacing:-1px}
+.monitor-card .value.blue{color:var(--accent);text-shadow:0 0 30px rgba(0,212,255,0.2)}
+.monitor-card .value.green{color:var(--accent3);text-shadow:0 0 30px rgba(0,255,136,0.2)}
+.monitor-card .value.yellow{color:var(--accent5);text-shadow:0 0 30px rgba(255,170,0,0.2)}
+
+/* ── Event rows ── */
+.event-row{background:var(--glass);border:1px solid var(--border);padding:11px 16px;margin-bottom:4px;border-radius:var(--radius-xs);
+  display:grid;grid-template-columns:120px 90px 1fr 80px 70px;gap:10px;font-size:13px;align-items:center;
+  transition:all 0.2s var(--ease)}
+.event-row:hover{background:var(--glass-hover);border-color:var(--border-hover)}
+.event-type{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;text-align:center}
+.event-type.llm_call{background:rgba(0,212,255,0.1);color:var(--accent);border:1px solid rgba(0,212,255,0.2)}
+.event-type.tool_call{background:rgba(255,170,0,0.1);color:var(--accent5);border:1px solid rgba(255,170,0,0.2)}
+
+/* ── Loading ── */
+.loading{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.1);border-top-color:var(--accent);
+  border-radius:50%;animation:spin 0.7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* ── Analytics charts (pure CSS) ── */
+
+/* ── Analytics ── */
 .an-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
 .an-summary .monitor-card .value{font-size:24px}
-.an-chart-wrap{position:relative;height:220px;background:#08080f;border:1px solid #1a1a2e;border-radius:10px;padding:16px 16px 32px 48px;margin-bottom:20px;overflow:hidden}
-.an-chart-wrap .y-axis{position:absolute;left:0;top:16px;bottom:32px;width:44px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding-right:6px;font-size:10px;color:#555}
-.an-chart-wrap .x-axis{position:absolute;left:48px;right:16px;bottom:4px;display:flex;justify-content:space-between;font-size:10px;color:#555;overflow:hidden}
+.an-chart-wrap{position:relative;height:220px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 16px 32px 48px;margin-bottom:20px;overflow:hidden}
+.an-chart-wrap .y-axis{position:absolute;left:0;top:16px;bottom:32px;width:44px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;padding-right:6px;font-size:10px;color:var(--text-faint)}
+.an-chart-wrap .x-axis{position:absolute;left:48px;right:16px;bottom:4px;display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);overflow:hidden}
 .an-line-area{position:absolute;left:48px;top:16px;right:16px;bottom:32px}
 .an-line-area svg{width:100%;height:100%;overflow:visible}
-.an-line-area svg polyline{fill:none;stroke:#00d4ff;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.an-line-area svg polyline{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;
+  filter:drop-shadow(0 0 6px rgba(0,212,255,0.4))}
 .an-line-area svg polygon{fill:url(#costGrad);opacity:0.25}
-.an-line-area svg circle{fill:#00d4ff;r:3}
+.an-line-area svg circle{fill:var(--accent);r:3;filter:drop-shadow(0 0 4px rgba(0,212,255,0.6))}
 .an-bar-wrap{display:flex;align-items:flex-end;gap:10px;height:160px;padding:0 4px}
 .an-bar{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0}
-.an-bar .bar{width:100%;max-width:56px;border-radius:6px 6px 0 0;transition:height 0.4s ease;position:relative}
-.an-bar .bar:hover{opacity:0.85}
-.an-bar .bar-label{font-size:10px;color:#888;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center}
-.an-bar .bar-value{font-size:11px;color:#fff;font-weight:600;margin-bottom:4px}
+.an-bar .bar{width:100%;max-width:56px;border-radius:8px 8px 0 0;transition:height 0.6s var(--ease);position:relative}
+.an-bar .bar:hover{filter:brightness(1.2);transform:scaleY(1.02);transform-origin:bottom}
+.an-bar .bar-label{font-size:10px;color:var(--text-dim);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center}
+.an-bar .bar-value{font-size:11px;color:#fff;font-weight:700;margin-bottom:4px}
 .an-table{width:100%;border-collapse:separate;border-spacing:0}
-.an-table th{text-align:left;font-size:11px;text-transform:uppercase;color:#555;letter-spacing:0.5px;padding:8px 12px;border-bottom:1px solid #1a1a2e}
-.an-table td{padding:10px 12px;font-size:13px;border-bottom:1px solid #0d0d1a}
-.an-table tr:hover td{background:#0a0a14}
-.an-rank{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:12px;font-weight:700}
-.an-rank.gold{background:#ffaa0033;color:#ffaa00}
-.an-rank.silver{background:#88888833;color:#aaa}
-.an-rank.bronze{background:#cc774433;color:#cc7744}
-.an-rank.normal{background:#1a1a2e;color:#666}
-.an-quality-bar{height:6px;border-radius:3px;background:#1a1a2e;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px}
+.an-table th{text-align:left;font-size:10px;text-transform:uppercase;color:var(--text-faint);letter-spacing:0.8px;padding:10px 14px;border-bottom:1px solid var(--border);font-weight:600}
+.an-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border)}
+.an-table tr{transition:background 0.2s}
+.an-table tr:hover td{background:var(--glass)}
+.an-rank{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:12px;font-weight:800}
+.an-rank.gold{background:rgba(255,170,0,0.15);color:var(--accent5);box-shadow:0 0 12px rgba(255,170,0,0.2)}
+.an-rank.silver{background:rgba(180,180,180,0.12);color:#bbb}
+.an-rank.bronze{background:rgba(204,119,68,0.12);color:#cc7744}
+.an-rank.normal{background:var(--glass);color:var(--text-faint)}
+.an-quality-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.05);overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px}
 .an-quality-bar .fill{height:100%;border-radius:3px}
 .an-tabs{display:flex;gap:4px;margin-bottom:16px}
-.an-tab{padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid #2a2a4a;background:#08080f;color:#888;transition:all 0.2s}
-.an-tab.active{background:#00d4ff15;border-color:#00d4ff;color:#00d4ff}
+.an-tab{padding:7px 16px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--glass);color:var(--text-dim);
+  transition:all 0.3s var(--ease);font-weight:500}
+.an-tab.active{background:linear-gradient(135deg,rgba(0,212,255,0.1),rgba(124,92,252,0.06));border-color:var(--accent);color:var(--accent);
+  box-shadow:0 0 15px rgba(0,212,255,0.08)}
+
 /* ── Multi-modal upload ── */
-.mm-upload-zone{border:2px dashed #2a2a4a;border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.3s;background:#08080f;margin-bottom:16px}
-.mm-upload-zone:hover,.mm-upload-zone.dragover{border-color:#00d4ff;background:#00d4ff08}
-.mm-upload-zone .icon{font-size:40px;margin-bottom:8px}
-.mm-upload-zone p{color:#888;font-size:14px}
-.mm-upload-zone .sub{color:#555;font-size:12px;margin-top:4px}
-.mm-preview{display:none;margin-bottom:16px;background:#0a0a14;border:1px solid #1a1a2e;border-radius:10px;padding:16px}
-.mm-preview img{max-width:100%;max-height:300px;border-radius:8px;margin-bottom:8px}
-.mm-preview .file-info{font-size:13px;color:#888}
-.mm-result{display:none;background:#08080f;border:1px solid #1a1a2e;border-radius:8px;padding:16px;margin-top:16px;white-space:pre-wrap;line-height:1.6;font-size:14px}
+.mm-upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:44px 20px;text-align:center;cursor:pointer;
+  transition:all 0.4s var(--ease);background:var(--glass);margin-bottom:16px;position:relative;overflow:hidden}
+.mm-upload-zone::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.4s;
+  background:linear-gradient(135deg,rgba(0,212,255,0.04),rgba(124,92,252,0.03))}
+.mm-upload-zone:hover,.mm-upload-zone.dragover{border-color:var(--accent);box-shadow:0 0 40px rgba(0,212,255,0.08)}
+.mm-upload-zone:hover::before,.mm-upload-zone.dragover::before{opacity:1}
+.mm-upload-zone .icon{font-size:42px;margin-bottom:10px;filter:drop-shadow(0 0 12px rgba(0,212,255,0.2))}
+.mm-upload-zone p{color:var(--text-dim);font-size:14px;font-weight:500}
+.mm-upload-zone .sub{color:var(--text-faint);font-size:12px;margin-top:4px}
+.mm-preview{display:none;margin-bottom:16px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px}
+.mm-preview img{max-width:100%;max-height:300px;border-radius:var(--radius-xs);margin-bottom:8px}
+.mm-preview .file-info{font-size:13px;color:var(--text-dim)}
+.mm-result{display:none;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-xs);padding:18px;margin-top:16px;white-space:pre-wrap;line-height:1.7;font-size:14px}
+
 /* ── Branching ── */
 .br-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-.br-chip{padding:5px 12px;border-radius:16px;font-size:12px;cursor:pointer;border:1px solid #2a2a4a;background:#08080f;transition:all 0.2s;white-space:nowrap}
-.br-chip:hover{border-color:#00d4ff}
-.br-chip.active{background:#00d4ff18;border-color:#00d4ff;color:#00d4ff;font-weight:600}
+.br-chip{padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--glass);
+  transition:all 0.3s var(--ease);white-space:nowrap;font-weight:500;color:var(--text-dim)}
+.br-chip:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.br-chip.active{background:linear-gradient(135deg,rgba(0,212,255,0.1),rgba(124,92,252,0.06));border-color:var(--accent);color:var(--accent);font-weight:600;
+  box-shadow:0 0 15px rgba(0,212,255,0.08)}
 .br-chip .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
-.br-msg{padding:8px 14px;border-radius:10px;display:inline-block;max-width:80%;white-space:pre-wrap;line-height:1.5;font-size:14px}
-.br-msg.user{background:#00d4ff18;color:#00d4ff;margin-left:auto}
-.br-msg.assistant{background:#1a1a2e;color:#e0e0e0}
-.br-msg.system{background:#1a0a2e;color:#aa88ff;font-size:12px;font-style:italic}
+.br-msg{padding:10px 16px;border-radius:var(--radius-sm);display:inline-block;max-width:80%;white-space:pre-wrap;line-height:1.6;font-size:14px;
+  transition:all 0.2s var(--ease)}
+.br-msg.user{background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(124,92,252,0.08));color:var(--accent);margin-left:auto;
+  border:1px solid rgba(0,212,255,0.15)}
+.br-msg.assistant{background:var(--glass);color:var(--text);border:1px solid var(--border)}
+.br-msg.system{background:rgba(124,92,252,0.08);color:#bb99ff;font-size:12px;font-style:italic;border:1px solid rgba(124,92,252,0.12)}
 .br-row{display:flex;margin:6px 0}
 .br-row.right{justify-content:flex-end}
-.br-idx{font-size:10px;color:#444;width:22px;flex-shrink:0;padding-top:10px;text-align:right;margin-right:6px}
-.br-fork-btn{font-size:10px;color:#555;cursor:pointer;margin-left:4px;opacity:0;transition:opacity 0.2s}
+.br-idx{font-size:10px;color:var(--text-faint);width:22px;flex-shrink:0;padding-top:10px;text-align:right;margin-right:6px}
+.br-fork-btn{font-size:10px;color:var(--text-faint);cursor:pointer;margin-left:4px;opacity:0;transition:all 0.2s var(--ease)}
 .br-row:hover .br-fork-btn{opacity:1}
-.br-fork-btn:hover{color:#00d4ff}
-.br-compare-col{flex:1;min-width:0;padding:8px;background:#08080f;border-radius:8px;border:1px solid #1a1a2e;max-height:400px;overflow-y:auto}
-.br-compare-col h4{font-size:13px;margin-bottom:8px;color:#fff}
+.br-fork-btn:hover{color:var(--accent)}
+.br-compare-col{flex:1;min-width:0;padding:10px;background:var(--glass);border-radius:var(--radius-xs);border:1px solid var(--border);max-height:400px;overflow-y:auto}
+.br-compare-col h4{font-size:13px;margin-bottom:8px;color:#fff;font-weight:600}
+
+/* ── Particle canvas ── */
+#particles-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.6}
+
+/* ── Floating orbs (ambient decoration) ── */
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(80px);opacity:0.4;animation:orbFloat 25s ease-in-out infinite alternate}
+.orb-1{width:400px;height:400px;background:radial-gradient(circle,rgba(0,212,255,0.15),transparent 70%);top:-100px;left:-100px;animation-duration:30s}
+.orb-2{width:350px;height:350px;background:radial-gradient(circle,rgba(124,92,252,0.12),transparent 70%);bottom:-100px;right:-50px;animation-duration:25s;animation-delay:-10s}
+.orb-3{width:300px;height:300px;background:radial-gradient(circle,rgba(0,255,136,0.08),transparent 70%);top:40%;left:50%;animation-duration:35s;animation-delay:-18s}
+@keyframes orbFloat{
+  0%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(30px,-40px) scale(1.1)}
+  66%{transform:translate(-20px,30px) scale(0.95)}
+  100%{transform:translate(15px,-15px) scale(1.05)}
+}
+
+/* ── Shimmer effect for empty states ── */
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.shimmer{background:linear-gradient(90deg,transparent 25%,rgba(255,255,255,0.03) 50%,transparent 75%);background-size:200% 100%;animation:shimmer 2s infinite}
 </style>
 </head>
 <body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<canvas id="particles-canvas"></canvas>
 <div class="app">
 <div class="topbar">
-<h1>🤖 AgentOS Platform</h1>
-<div class="status">● Online <span class="small" id="user-status">Not logged in</span></div>
+<h1>&#x2728; AgentOS Platform</h1>
+<div class="status">Online <span class="small" id="user-status">Not logged in</span></div>
 </div>
 <div class="sidebar">
 <h3>Build</h3>
@@ -1900,7 +2048,7 @@ textarea{min-height:80px;resize:vertical}
 <select id="emb-pos"><option value="bottom-right">Bottom-right</option><option value="bottom-left">Bottom-left</option></select>
 <label>Accent Colour</label>
 <div style="display:flex;gap:8px;align-items:center">
-<input type="color" id="emb-color" value="#6c5ce7" style="width:44px;height:36px;padding:2px;border-radius:4px;border:1px solid #1e1e3a;background:#0a0a14;cursor:pointer">
+<input type="color" id="emb-color" value="#6c5ce7" style="width:44px;height:36px;padding:2px;border-radius:4px;border:1px solid rgba(255,255,255,0.06);background:rgba(6,6,14,0.6);cursor:pointer">
 <input type="text" id="emb-color-hex" value="#6c5ce7" style="flex:1" oninput="document.getElementById('emb-color').value=this.value">
 </div>
 </div>
@@ -1928,7 +2076,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="card" id="emb-output" style="display:none">
 <h2>📋 Embed Code</h2>
 <p style="color:#888;margin-bottom:8px">Copy this snippet and paste it into any HTML page, just before <code>&lt;/body&gt;</code>:</p>
-<pre id="emb-snippet" style="background:#0a0a14;padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;border:1px solid #1e1e3a;color:#10b981;max-height:260px;overflow-y:auto"></pre>
+<pre id="emb-snippet" style="background:rgba(6,6,14,0.6);padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;border:1px solid rgba(255,255,255,0.06);color:#10b981;max-height:260px;overflow-y:auto"></pre>
 <button class="btn btn-secondary" style="margin-top:8px" onclick="embCopy()">📋 Copy to Clipboard</button>
 <span id="emb-copy-status" style="margin-left:8px;font-size:13px;color:#888"></span>
 </div>
@@ -1936,7 +2084,7 @@ textarea{min-height:80px;resize:vertical}
 <div class="card">
 <h2>🐍 Python SDK</h2>
 <p style="color:#888;margin-bottom:8px">Use the Python SDK to integrate AgentOS into any backend:</p>
-<pre style="background:#0a0a14;padding:16px;border-radius:8px;font-size:13px;overflow-x:auto;white-space:pre-wrap;border:1px solid #1e1e3a;color:#e0e0e0">from agentos.embed import AgentOSClient
+<pre style="background:rgba(6,6,14,0.6);padding:16px;border-radius:8px;font-size:13px;overflow-x:auto;white-space:pre-wrap;border:1px solid rgba(255,255,255,0.06);color:#e0e0e0">from agentos.embed import AgentOSClient
 
 client = AgentOSClient(
     base_url="http://localhost:8000",
@@ -1965,19 +2113,19 @@ for a in agents:
 <p style="color:#888;margin-bottom:16px">Discover, authenticate, negotiate, and transact with agents across organisations using the mesh protocol.</p>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#6c5ce7" id="mesh-stat-agents">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Agents</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#00cec9" id="mesh-stat-orgs">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Organisations</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#fdcb6e" id="mesh-stat-tx">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Transactions</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#10b981" id="mesh-stat-completed">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Completed</div>
 </div>
@@ -2049,7 +2197,7 @@ for a in agents:
 <!-- Message log -->
 <div class="card" style="margin-top:16px">
 <h2>📋 Message Log</h2>
-<div id="mesh-log" style="background:#0a0a14;padding:16px;border-radius:8px;border:1px solid #1e1e3a;max-height:300px;overflow-y:auto;font-family:monospace;font-size:12px;white-space:pre-wrap;color:#e0e0e0">No messages yet.</div>
+<div id="mesh-log" style="background:rgba(6,6,14,0.6);padding:16px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);max-height:300px;overflow-y:auto;font-family:monospace;font-size:12px;white-space:pre-wrap;color:#e0e0e0">No messages yet.</div>
 </div>
 </div>
 
@@ -2060,23 +2208,23 @@ for a in agents:
 <p style="color:#888;margin-bottom:16px">Stress-test your agent with realistic simulated customers. Generate 50-100 concurrent interactions from different personas, then review quality scores and failure analysis.</p>
 
 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#6c5ce7" id="sim-stat-total">-</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Total</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#10b981" id="sim-stat-passed">-</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Passed</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#e74c3c" id="sim-stat-failed">-</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Failed</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#fdcb6e" id="sim-stat-quality">-</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Avg Quality</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#00cec9" id="sim-stat-rate">-</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Pass Rate</div>
 </div>
@@ -2151,23 +2299,23 @@ for a in agents:
 <p style="color:#888;margin-bottom:16px">Collect user feedback, analyze failure patterns, auto-optimise prompts, and build few-shot examples — all without fine-tuning.</p>
 
 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#6c5ce7" id="lrn-stat-total">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Feedback</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#10b981" id="lrn-stat-pos">0%</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Positive</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#fdcb6e" id="lrn-stat-quality">-</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Avg Quality</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#00cec9" id="lrn-stat-patches">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Patches</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#e17055" id="lrn-stat-examples">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Few-shots</div>
 </div>
@@ -2251,19 +2399,19 @@ for a in agents:
 <p style="color:#888;margin-bottom:16px">Deep tracing, 5-point diagnostics, smart causal alerts, and step-by-step replay of agent interactions.</p>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#6c5ce7" id="rca-stat-traces">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Traces</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#10b981" id="rca-stat-success">0%</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Success Rate</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#e74c3c" id="rca-stat-failed">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Failed</div>
 </div>
-<div style="background:#0a0a14;padding:14px;border-radius:8px;text-align:center;border:1px solid #1e1e3a">
+<div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#fdcb6e" id="rca-stat-alerts">0</div>
 <div style="font-size:11px;color:#888;margin-top:2px">Alerts</div>
 </div>
@@ -2381,14 +2529,14 @@ for a in agents:
 <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="document.getElementById('ev-name').value='custom.test'">custom.test</button>
 </div>
 <label>Webhook URL</label>
-<div style="background:#08080f;border:1px solid #2a2a4a;border-radius:8px;padding:10px 14px;font-size:13px;color:#888;margin-top:4px;word-break:break-all">
+<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:13px;color:#888;margin-top:4px;word-break:break-all">
 POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
 <br><span style="font-size:11px">Send JSON body to fire events from external services</span>
 </div>
 </div>
 </div>
 <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="emitEvent()">⚡ Emit Event</button>
-<div id="ev-result" style="display:none;margin-top:12px;background:#08080f;border:1px solid #1a1a2e;border-radius:8px;padding:12px;font-size:13px"></div>
+<div id="ev-result" style="display:none;margin-top:12px;background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;font-size:13px"></div>
 </div>
 <div class="card">
 <h2>Registered Listeners</h2>
@@ -2757,11 +2905,11 @@ const status=j.status==='running'?'🟢 Running':j.status==='pending'?'🔵 Pend
 const next=j.next_run?new Date(j.next_run*1000).toLocaleTimeString():'—';
 const last=j.last_run?new Date(j.last_run*1000).toLocaleTimeString():'never';
 const sched=j.interval_seconds>0?(j.interval_seconds<60?j.interval_seconds+'s':j.interval_seconds<3600?Math.round(j.interval_seconds/60)+'m':Math.round(j.interval_seconds/3600)+'h'):j.cron_expression;
-h+=`<div style="background:#0a0a14;border:1px solid #1a1a2e;border-radius:8px;padding:14px;margin-bottom:8px">
+h+=`<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:14px;margin-bottom:8px">
 <div style="display:flex;justify-content:space-between;align-items:center">
 <div><strong style="color:#fff">${j.agent_name}</strong> <span style="color:#555;font-size:12px">· ${j.job_id}</span></div>
 <div style="display:flex;gap:6px">
-<button onclick="fetch('/api/scheduler/${j.status==='paused'?'resume':'pause'}/${j.job_id}',{method:'POST'}).then(()=>refreshScheduler())" style="background:#1a1a2e;border:1px solid #2a2a4a;color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">${j.status==='paused'?'▶️ Resume':'⏸️ Pause'}</button>
+<button onclick="fetch('/api/scheduler/${j.status==='paused'?'resume':'pause'}/${j.job_id}',{method:'POST'}).then(()=>refreshScheduler())" style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.08);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">${j.status==='paused'?'▶️ Resume':'⏸️ Pause'}</button>
 <button onclick="if(confirm('Delete this job?'))fetch('/api/scheduler/delete/${j.job_id}',{method:'DELETE'}).then(()=>refreshScheduler())" style="background:#2a1a1a;border:1px solid #4a2a2a;color:#ff6666;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">🗑️ Delete</button>
 </div>
 </div>
@@ -2820,7 +2968,7 @@ lh+=`<div style="margin-bottom:12px;display:flex;gap:12px">
 </div>`;
 ld.listeners.forEach(l=>{
 const last=l.last_triggered?new Date(l.last_triggered*1000).toLocaleTimeString():'never';
-lh+=`<div style="background:#0a0a14;border:1px solid #1a1a2e;border-radius:8px;padding:12px;margin-bottom:6px;display:grid;grid-template-columns:1fr 1fr 80px 80px;gap:10px;font-size:13px;align-items:center">
+lh+=`<div style="background:rgba(6,6,14,0.5);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;margin-bottom:6px;display:grid;grid-template-columns:1fr 1fr 80px 80px;gap:10px;font-size:13px;align-items:center">
 <div><span style="color:#00d4ff;font-weight:600">${l.event_pattern}</span></div>
 <div><strong style="color:#fff">${l.agent_name}</strong> <span style="color:#555;font-size:11px">· ${l.listener_id}</span></div>
 <div style="text-align:right;color:#00ff88">${l.execution_count} runs</div>
@@ -2839,7 +2987,7 @@ hh='<p style="color:#555">No events emitted yet.</p>';
 hd.history.reverse().forEach(h=>{
 const t=new Date(h.event.timestamp*1000).toLocaleTimeString();
 const results=h.results.map(r=>`<span style="color:${r.status==='completed'?'#00ff88':'#ff4444'}">${r.agent_name}: ${(r.result||r.error||'').slice(0,80)}</span>`).join('<br>');
-hh+=`<div style="background:#0a0a14;border:1px solid #12121f;border-radius:6px;padding:10px 14px;margin-bottom:4px;font-size:13px">
+hh+=`<div style="background:rgba(6,6,14,0.5);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;margin-bottom:4px;font-size:13px">
 <div style="display:flex;justify-content:space-between;align-items:center">
 <span style="color:#00d4ff;font-weight:600">${h.event.name}</span>
 <span style="color:#666;font-size:11px">${t}</span>
@@ -3071,7 +3219,7 @@ async function rcaLoadTraces(){
     el.innerHTML=traces.map(t=>{
       const color=t.success?'#10b981':'#e74c3c';
       const icon=t.success?'✅':'❌';
-      return '<div style="background:#0a0a14;padding:8px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:4px;cursor:pointer" onclick="rcaReplay(\''+t.trace_id+'\')">'+
+      return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;cursor:pointer" onclick="rcaReplay(\''+t.trace_id+'\')">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<span>'+icon+' <strong style="color:#6c5ce7">'+t.agent_name+'</strong></span>'+
         '<span style="color:'+color+';font-size:12px">'+(t.success?'OK':'FAIL')+'</span></div>'+
@@ -3091,7 +3239,7 @@ async function rcaLoadAlerts(){
     el.innerHTML=alerts.map(a=>{
       const colors={critical:'#e74c3c',warning:'#fdcb6e',info:'#6c5ce7'};
       const icons={critical:'🚨',warning:'⚠️',info:'ℹ️'};
-      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid '+(colors[a.level]||'#1e1e3a')+';margin-bottom:6px">'+
+      return '<div style="background:rgba(6,6,14,0.6);padding:10px;border-radius:6px;border:1px solid '+(colors[a.level]||'#1e1e3a')+';margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between">'+
         '<strong style="color:'+(colors[a.level]||'#ccc')+'">'+icons[a.level]+' '+a.title+'</strong>'+
         '<span style="font-size:10px;color:#888">'+a.level.toUpperCase()+'</span></div>'+
@@ -3113,7 +3261,7 @@ async function rcaReplay(traceId){
       const colors={ok:'#1e1e3a',warn:'#fdcb6e33',fail:'#e74c3c33'};
       const icons={ok:'▶',warn:'⚠️',fail:'❌'};
       const border=f.is_failure_point?'2px solid #e74c3c':'1px solid #1e1e3a';
-      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:'+border+';margin-bottom:6px">'+
+      return '<div style="background:rgba(6,6,14,0.6);padding:10px;border-radius:6px;border:'+border+';margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<strong style="color:#6c5ce7">'+(icons[f.severity]||'▶')+' '+f.label+'</strong>'+
         (f.is_failure_point?'<span style="color:#e74c3c;font-size:11px;font-weight:700">← FAILURE POINT</span>':'')+
@@ -3178,7 +3326,7 @@ async function lrnAnalyze(){
     if(!topics.length){el.innerHTML='<div style="color:#888">No data.</div>';return;}
     el.innerHTML=topics.map(t=>{
       const color=t.failure_rate>40?'#e74c3c':t.failure_rate>20?'#fdcb6e':'#10b981';
-      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+      return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between">'+
         '<strong style="color:#6c5ce7">'+t.topic+'</strong>'+
         '<span style="color:'+color+';font-size:13px">'+t.failure_rate.toFixed(0)+'% fail</span></div>'+
@@ -3198,7 +3346,7 @@ async function lrnOptimize(){
     const el=document.getElementById('lrn-patches');
     if(!patches.length){el.innerHTML='<div style="color:#10b981">No patches needed!</div>';return;}
     el.innerHTML=patches.map(p=>
-      '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+      '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
       '<div style="display:flex;justify-content:space-between">'+
       '<strong style="color:#6c5ce7">'+p.topic+'</strong>'+
       '<span style="font-size:11px;color:#888">confidence='+Math.round(p.confidence*100)+'%</span></div>'+
@@ -3217,7 +3365,7 @@ async function lrnBuildFewShot(){
     const el=document.getElementById('lrn-fewshot');
     if(!examples.length){el.innerHTML='<div style="color:#888">Need more positive feedback.</div>';return;}
     el.innerHTML=examples.map(e=>
-      '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+      '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
       '<div style="font-size:11px;color:#888;margin-bottom:4px">['+e.topic+'] source='+e.source+' quality='+e.quality_score.toFixed(1)+'</div>'+
       '<div style="font-size:12px;color:#6c5ce7">User: '+e.query+'</div>'+
       '<div style="font-size:12px;color:#10b981;margin-top:2px">Asst: '+e.response+'</div></div>'
@@ -3260,7 +3408,7 @@ async function lrnLoadRecent(){
     if(!entries.length){el.innerHTML='<div style="color:#888">No feedback yet.</div>';return;}
     el.innerHTML=entries.map(e=>{
       const icon={thumbs_up:'👍',thumbs_down:'👎',rating:'⭐',correction:'✏️',comment:'💬'}[e.feedback_type]||'📝';
-      return '<div style="background:#0a0a14;padding:8px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:4px;font-size:12px">'+
+      return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;font-size:12px">'+
         '<span>'+icon+'</span> <strong style="color:#6c5ce7">'+e.query.slice(0,60)+'</strong>'+
         (e.topic?' <span style="color:#888;font-size:10px">['+e.topic+']</span>':'')+
         '</div>';
@@ -3334,7 +3482,7 @@ async function simLoadReport(){
     pl.innerHTML=(d.per_persona||[]).map(p=>{
       const barW=Math.max(p.pass_rate,2);
       const color=p.pass_rate>=80?'#10b981':p.pass_rate>=50?'#fdcb6e':'#e74c3c';
-      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+      return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<strong style="color:#6c5ce7">'+p.name+'</strong>'+
         '<span style="color:'+color+';font-size:13px">'+p.pass_rate.toFixed(0)+'% pass</span></div>'+
@@ -3364,7 +3512,7 @@ async function simLoadReport(){
     const frEntries=Object.entries(fr);
     if(!frEntries.length){fEl.innerHTML='<div style="color:#10b981;font-size:13px">No failures!</div>';}
     else{fEl.innerHTML=frEntries.map(([reason,count])=>
-      '<div style="background:#0a0a14;padding:8px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:4px;font-size:12px">'+
+      '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;font-size:12px">'+
       '<span style="color:#e74c3c">'+count+'x</span> <span style="color:#ccc">'+reason+'</span></div>'
     ).join('');}
 
@@ -3374,7 +3522,7 @@ async function simLoadReport(){
     if(!worst.length){wEl.innerHTML='<div style="color:#10b981;font-size:13px">All interactions passed!</div>';}
     else{wEl.innerHTML=worst.map(w=>{
       const color=w.overall<4?'#e74c3c':w.overall<6?'#fdcb6e':'#888';
-      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+      return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between">'+
         '<strong style="color:#6c5ce7">#'+w.id+' — '+w.persona+'</strong>'+
         '<span style="color:'+color+';font-size:13px">quality='+w.overall.toFixed(1)+'</span></div>'+
@@ -3425,7 +3573,7 @@ async function meshRefreshRegistry(){
     if(!agents.length){el.innerHTML='<div style="color:#888;font-size:13px">No agents registered.</div>';return;}
     el.innerHTML=agents.map(a=>{
       const online=a.online?'<span style="color:#10b981">● online</span>':'<span style="color:#888">○ offline</span>';
-      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+      return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<strong style="color:#6c5ce7">'+a.mesh_id+'</strong>'+online+'</div>'+
         '<div style="font-size:12px;color:#888;margin-top:4px">'+a.display_name+' — '+a.organisation+'</div>'+
@@ -3493,7 +3641,7 @@ async function meshRefreshTx(){
     if(!txs.length){el.innerHTML='<div style="color:#888;font-size:13px">No transactions yet.</div>';return;}
     el.innerHTML=txs.map(t=>{
       const color=t.status==='completed'?'#10b981':t.status==='failed'?'#e74c3c':'#fdcb6e';
-      return '<div style="background:#0a0a14;padding:10px;border-radius:6px;border:1px solid #1e1e3a;margin-bottom:6px">'+
+      return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between"><strong style="color:#6c5ce7">'+t.transaction_id+'</strong>'+
         '<span style="color:'+color+';font-size:12px">'+t.status.toUpperCase()+'</span></div>'+
         '<div style="font-size:12px;color:#888;margin-top:4px">'+t.description+'</div>'+
@@ -3595,7 +3743,7 @@ async function mpShowDetail(id){
     html+='<div><span style="color:#888">Tags:</span> '+(d.tags||[]).join(', ')+'</div>';
     html+='</div>';
     html+='<p>'+d.description+'</p>';
-    html+='<div style="margin-top:12px"><strong>Config:</strong><pre style="background:#0a0a14;padding:8px;border-radius:4px;font-size:12px;max-height:200px;overflow:auto">'+JSON.stringify(d.config||{},null,2)+'</pre></div>';
+    html+='<div style="margin-top:12px"><strong>Config:</strong><pre style="background:rgba(6,6,14,0.6);padding:8px;border-radius:4px;font-size:12px;max-height:200px;overflow:auto">'+JSON.stringify(d.config||{},null,2)+'</pre></div>';
     document.getElementById('mp-detail-body').innerHTML=html;
     // reviews
     let rhtml='';
@@ -4171,7 +4319,7 @@ h+=`<div style="margin-top:12px;font-size:13px">
 <h3 style="font-size:14px;margin-bottom:6px">Per-query breakdown</h3>`;
 rep.per_query.forEach((r,i)=>{
 const icon=r.winner==='agent_a'?'A':r.winner==='agent_b'?'B':'=';
-h+=`<div style="background:#0a0a14;border:1px solid #1a1a2e;border-radius:8px;padding:10px 12px;margin-bottom:4px">
+h+=`<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;margin-bottom:4px">
 <div style="display:flex;justify-content:space-between;font-size:13px">
 <span><strong>Q${i+1}</strong> ${r.query}</span>
 <span style="color:#00d4ff">Winner: ${icon}</span>
@@ -4200,6 +4348,60 @@ setUserStatus('user');
 refreshAuthUsage();
 }
 })();
+
+// ── Particle background ──
+(function initParticles(){
+const canvas=document.getElementById('particles-canvas');
+if(!canvas)return;
+const ctx=canvas.getContext('2d');
+let w,h,particles=[];
+function resize(){w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight}
+window.addEventListener('resize',resize);resize();
+const COLORS=['rgba(0,212,255,','rgba(124,92,252,','rgba(0,255,136,'];
+for(let i=0;i<60;i++){
+particles.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,
+  r:Math.random()*2+0.5,color:COLORS[Math.floor(Math.random()*3)],alpha:Math.random()*0.5+0.1});
+}
+function draw(){
+ctx.clearRect(0,0,w,h);
+particles.forEach(p=>{
+  p.x+=p.vx;p.y+=p.vy;
+  if(p.x<0)p.x=w;if(p.x>w)p.x=0;if(p.y<0)p.y=h;if(p.y>h)p.y=0;
+  ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+  ctx.fillStyle=p.color+p.alpha+')';ctx.fill();
+});
+// Draw connections
+for(let i=0;i<particles.length;i++){
+  for(let j=i+1;j<particles.length;j++){
+    const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<120){
+      ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);
+      ctx.strokeStyle='rgba(0,212,255,'+(0.06*(1-dist/120))+')';ctx.lineWidth=0.5;ctx.stroke();
+    }
+  }
+}
+requestAnimationFrame(draw);
+}
+draw();
+})();
+
+// ── Button ripple effect ──
+document.addEventListener('click',function(e){
+const btn=e.target.closest('.btn');
+if(!btn)return;
+const rect=btn.getBoundingClientRect();
+btn.style.setProperty('--x',((e.clientX-rect.left)/rect.width*100)+'%');
+btn.style.setProperty('--y',((e.clientY-rect.top)/rect.height*100)+'%');
+});
+
+// ── Panel transition re-trigger ──
+const _origShowPanel=showPanel;
+showPanel=function(name,el){
+_origShowPanel(name,el);
+const panel=document.getElementById('panel-'+name);
+if(panel){panel.style.animation='none';panel.offsetHeight;panel.style.animation='fadeSlide 0.4s cubic-bezier(0.4,0,0.2,1) both';}
+};
 
 </script>
 </body>
