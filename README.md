@@ -7,7 +7,7 @@ Build, Test, Deploy, Monitor, and Govern AI agents — from prototype to product
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/agentos-platform.svg)](https://pypi.org/project/agentos-platform/)
-[![Version](https://img.shields.io/badge/version-0.3.0-green.svg)](#)
+[![Version](https://img.shields.io/badge/version-0.3.1-green.svg)](#)
 
 ---
 
@@ -24,7 +24,8 @@ AgentOS solves this.
 | Agents with no safety controls | **Governance Engine** — budgets, permissions, kill switch, audit trails |
 | Complex frameworks, 100+ lines of setup | **10 lines of code** — define a production-ready agent |
 | Vendor lock-in to one LLM provider | **Any LLM** — OpenAI, Claude, Ollama, or any provider |
-| No way to share or reuse agents | **Marketplace** — publish, discover, and install agent templates |
+| No way to share or reuse agents | **Marketplace** — publish packages, install via CLI, scope API keys |
+| Multi-agent orchestration | **Teams** — WorkflowDAG, PlannerAgent, parallel execution, org budget caps |
 | Can't embed agents in your product | **Embed SDK** — white-label chat widget in one script tag |
 
 ---
@@ -44,6 +45,9 @@ git clone https://github.com/sukethrp/agentos.git
 cd agentos
 pip install -e ".[dev]"
 ```
+
+Optional extras:
+- `pip install -e ".[rag]"` — ChromaDB, Pinecone, pgvector for RAG vector stores
 
 ### Define a Governed Agent (10 lines)
 
@@ -107,29 +111,40 @@ python examples/run_web_builder.py
 
 ### Agent SDK
 - Define agents in 10 lines of code
-- `@tool` decorator turns any function into an agent tool
+- `@tool` decorator turns any function into an agent tool (supports `timeout_seconds`, `max_retries`)
+- **Parallel tool execution**: multiple tool calls per turn run via `asyncio.gather` with `asyncio.wait_for`
+- **TTLCache**: tool result caching by `hash(tool_name+args)` (maxsize=256, ttl=300s)
+- **ToolExecutionContext**: `agent_id`, `session_id`, `budget_remaining` passed to tools
+- **Retry**: failed tool calls retried up to `max_retries` with 2^n exponential backoff
 - Auto-detects parameters from function signatures
 - Multi-model support (OpenAI, Claude, Ollama)
 - Full cost and token tracking per query
 
-### WebSocket Streaming
+### WebSocket Streaming & Monitor
 - Real-time token-by-token streaming like ChatGPT
 - `Agent.run(query, stream=True)` returns a generator
-- WebSocket endpoint at `/ws/chat`
+- WebSocket endpoints: `/ws/chat` (streaming), `/ws/monitor` (tool/team events)
+- Tool events: `{agent_id, tool_name, result, latency_ms}` broadcast to monitor clients
+- Team events: `{team_id, node_id, status, output}` for workflow execution
 - Streaming stats (first-token latency, cost, token count)
 
 ### RAG Pipeline
 - Ingest PDF, text, and markdown documents
-- Configurable chunking (size, overlap, sentence boundaries)
+- **Vector stores**: ChromaDB, Pinecone, pgvector (select via `rag_config.vector_store`)
+- **Chunk strategies**: fixed, sentence, semantic (CLI: `agentos rag ingest --source ./docs --collection name --chunk-strategy sentence`)
+- **HybridRetriever**: dense embedding + BM25 with Reciprocal Rank Fusion
+- **CrossEncoderReranker**: sentence-transformers `ms-marco-MiniLM-L-6-v2`
 - OpenAI `text-embedding-3-small` with batching and caching
-- In-memory vector store with cosine similarity
-- Exposed as `rag_search` tool for any agent
+- Exposed as `rag_search(query, collection, top_k)` tool for any agent
 
 ### Simulation Sandbox
+- **EvaluationScenario**: load from YAML (`scenario_id`, `input`, `expected_output`, `rubric`, `tags`)
+- **LLMJudgeScorer**: async scoring with Claude Sonnet (0–1 scale, structured JSON)
+- **SimulationRunner.run_batch**: parallel execution with `asyncio.Semaphore`, SQLite storage
+- **ComparisonReport**: per-scenario delta scores between runs
+- `GET /sandbox/runs/{run_id}/report` for run results
 - Define test scenarios with expected behaviors
-- LLM-as-judge automatically scores responses (0-10)
-- Batch test 100+ scenarios in parallel
-- Tracks relevance, quality, and safety scores
+- LLM-as-judge automatically scores responses
 - Compare agent versions side-by-side
 
 ### Live Monitoring & Analytics Dashboard
@@ -141,6 +156,7 @@ python examples/run_web_builder.py
 
 ### Governance Engine
 - **Budget controls**: Per-action, hourly, daily, and total limits
+- **Org monthly caps**: Token and cost caps per organization; raises `BudgetExceededError` when exceeded
 - **Permissions**: Allow/block specific tools, require human approval
 - **Kill switch**: Instantly halt any agent
 - **Audit trail**: Immutable log of every decision for compliance
@@ -165,9 +181,11 @@ python examples/run_web_builder.py
 
 ### User Authentication & Usage Tracking
 - API key-based authentication
+- **Organizations**: `Organization`, `OrgMembership`, `Role` (OWNER, ADMIN, DEVELOPER, VIEWER) with permission matrix
+- **API key scopes**: Restrict keys to specific `agent_id` or `tool_name`; enforced via middleware
+- **UsageTrackerAsync**: SQLite-backed `record(api_key, tokens, cost)` and `get_usage(api_key, month)`
+- Org routers: `POST /auth/orgs`, `GET /auth/orgs/{org_id}/members`, `POST /auth/orgs/{org_id}/members`, `DELETE /auth/orgs/{org_id}/members/{user_id}`
 - Per-user usage tracking (queries, tokens, cost)
-- Usage summaries by period (day, week, month)
-- JSON file storage (no database needed)
 
 ### A/B Testing
 - Clone agents and compare performance
@@ -175,12 +193,15 @@ python examples/run_web_builder.py
 - Per-query breakdown with confidence intervals
 - Integrated with agent versioning system
 
-### Workflow System
+### Workflow System & Multi-Agent Teams
+- **WorkflowDAG**: YAML-defined DAG with networkx (nodes: agent_id, type; edges: source, target, condition_expr)
+- **PlannerAgent**: LLM plans subtasks `[{task, agent_id, depends_on}]` validated against registered agents
+- **TeamRunner**: topological execution, parallel nodes via `asyncio.gather`, condition_expr eval with `outputs` dict
+- **ResultAggregator**: LLM synthesis of subtask outputs into structured response
+- Shared token budget via GovernanceEngine
 - Multi-step agent pipelines with fluent API
 - Conditional branching based on step results
 - Parallel step execution
-- Error handling with retry and fallback
-- Full audit trail with event emission
 
 ### Multi-modal Support
 - Image analysis via OpenAI Vision API (GPT-4o)
@@ -195,11 +216,14 @@ python examples/run_web_builder.py
 - Full branch tree management via API
 
 ### Agent Marketplace
+- **Package-based**: `PackageManifest` (name, version, entry_point, inputs, outputs, pricing_model)
+- **MarketplaceRegistry**: JSON persistence at `~/.agentos/marketplace.json`
+- **CLI**: `agentos marketplace publish --manifest agentos-package.yaml`, `agentos marketplace install <name>`
+- `GET /marketplace/search?tags=&capability=` for filtered package list
 - Publish agent templates for the community
 - Search by name, category, tags
-- Install agents with one click (bumps download counter)
+- Install agents with one click (wires entry_point into tool registry)
 - Rating and review system
-- Trending and top-rated listings
 
 ### Embeddable Chat Widget & SDK
 - White-label chat widget for any website
@@ -226,6 +250,7 @@ python examples/run_web_builder.py
 
 **Sections:**
 - **Agent Builder** — configure and run agents visually
+- **Visual Builder** — ReactFlow canvas with AgentNode, ToolNode, RAGNode, TeamNode, ConditionNode, OutputNode; config sidebar, edge condition_expr labels; Save (POST /workflows/), Run (POST /workflows/{id}/run) with live node status via /ws/monitor
 - **Templates** — browse and deploy pre-built agents
 - **Chat** — real-time streaming conversation
 - **Branching** — fork and explore conversation paths
@@ -252,6 +277,16 @@ python examples/run_web_builder.py
 
 # Simulation sandbox testing
 python examples/test_sandbox.py
+
+# RAG ingestion (CLI)
+agentos rag ingest --source ./docs --collection my_docs --chunk-strategy sentence
+
+# Marketplace publish/install
+agentos marketplace publish --manifest agentos-package.yaml
+agentos marketplace install my-package
+
+# Visual Builder (React frontend)
+cd frontend && npm install && npm run dev
 
 # Live monitoring dashboard
 python examples/run_with_monitor.py
@@ -356,7 +391,7 @@ agentos/
 │   ├── core/              # Agent, Tool, Types, Memory, Versioning, A/B Testing
 │   │   ├── agent.py       #   Agent with tool calling loop + streaming
 │   │   ├── tool.py        #   @tool decorator and Tool class
-│   │   ├── types.py       #   Pydantic models (Message, ToolCall, AgentEvent)
+│   │   ├── types.py       #   Pydantic models (Message, ToolCall, AgentEvent, ToolExecutionContext)
 │   │   ├── memory.py      #   Agent memory and fact extraction
 │   │   ├── streaming.py   #   StreamingAgent wrapper
 │   │   ├── ab_testing.py  #   Agent cloning and A/B testing
@@ -365,21 +400,23 @@ agentos/
 │   │   ├── multimodal.py  #   Image/PDF processing utilities
 │   │   └── storage.py     #   Persistent key-value storage
 │   ├── providers/         # LLM provider integrations
-│   ├── sandbox/           # Simulation testing with LLM judge
+│   ├── sandbox/           # Simulation testing (EvaluationScenario, LLMJudgeScorer, SimulationRunner, ComparisonReport)
 │   ├── monitor/           # Real-time event store + dashboard
 │   ├── governance/        # Budget, Permissions, Kill Switch, Audit
-│   ├── rag/               # RAG pipeline (chunker, embeddings, vector store)
+│   ├── rag/               # RAG pipeline (Chroma/Pinecone/pgvector, HybridRetriever, CrossEncoderReranker, IngestionPipeline)
 │   ├── scheduler/         # Agent scheduling (intervals + cron)
 │   ├── events/            # Event bus + triggers
 │   ├── plugins/           # Plugin system (manager + base class)
-│   ├── auth/              # Authentication + usage tracking
+│   ├── auth/              # Auth + orgs (Organization, Role, OrgMembership, ApiKey scopes, UsageTrackerAsync)
 │   ├── workflows/         # Multi-step workflow engine
-│   ├── marketplace/       # Agent marketplace (publish, search, install)
+│   ├── teams/             # WorkflowDAG, PlannerAgent, TeamRunner, ResultAggregator
+│   ├── marketplace/       # PackageManifest, MarketplaceRegistry (publish, search, install)
 │   ├── embed/             # Embeddable widget + Python SDK
 │   ├── templates/         # Pre-built agent templates
-│   ├── tools/             # Built-in tools (calculator, weather, vision, docs)
+│   ├── tools/             # Built-in tools (calculator, weather, vision, docs, rag_search)
 │   └── web/
 │       └── app.py         # FastAPI web platform (UI + API)
+├── frontend/              # React + ReactFlow Visual Builder (src/pages/VisualBuilder.tsx)
 ├── plugins/               # User plugins directory
 ├── examples/              # 20+ runnable demos
 ├── tests/                 # Unit tests
@@ -418,11 +455,17 @@ GitHub Actions workflows are included:
 - [x] Multi-modal support (vision + document analysis)
 - [x] Conversation branching (what-if exploration)
 - [x] Agent Marketplace (publish, discover, install)
+- [x] Package-based marketplace (manifest, registry, CLI)
+- [x] Multi-agent teams (WorkflowDAG, PlannerAgent, TeamRunner)
+- [x] RAG: Chroma/Pinecone/pgvector, HybridRetriever, CrossEncoderReranker
+- [x] Auth: Organizations, roles, API key scopes, UsageTrackerAsync SQLite
+- [x] Visual Builder (ReactFlow workflow editor)
+- [x] /ws/monitor for tool and team events
 - [x] Embeddable chat widget + SDK
 - [x] Docker deployment
 - [x] GitHub Actions CI/CD
-- [ ] Anthropic Claude provider (direct)
-- [ ] Ollama local model provider
+- [x] Anthropic Claude provider (direct)
+- [x] Ollama local model provider
 - [ ] Agent-to-Agent mesh protocol
 - [ ] Kubernetes deployment
 - [ ] SOC2/HIPAA compliance templates
