@@ -1,0 +1,17 @@
+name: agent
+image:
+  registry: ghcr.io
+  repository: agentos/agent
+  tag: latest
+replicas: 1
+resources:
+  cpu: 100m
+  memory: 128Mi
+env: {}
+service:
+  port: 8000
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilization: 70

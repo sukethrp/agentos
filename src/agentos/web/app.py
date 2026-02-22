@@ -1332,6 +1332,10 @@ def mesh_stats() -> dict:
     }
 
 
+from agentos.api.routers.mesh import router as mesh_health_router
+app.include_router(mesh_health_router, prefix="/api")
+
+
 # ── Analytics API ──
 
 def _bucket_key(ts: float, granularity: str) -> str:

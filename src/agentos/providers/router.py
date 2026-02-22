@@ -17,7 +17,7 @@ from agentos.core.tool import Tool
 
 # Provider registry
 OPENAI_MODELS = {"gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo", "o1-mini", "o3-mini"}
-ANTHROPIC_MODELS = {"claude-sonnet", "claude-haiku", "claude-opus", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251001"}
+ANTHROPIC_MODELS = {"claude-sonnet", "claude-haiku", "claude-opus", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251001", "claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"}
 
 
 def detect_provider(model: str) -> str:
@@ -68,13 +68,25 @@ def call_model_stream(
     max_tokens: int = 1024,
     agent_name: str = "agent",
 ) -> Generator[str | tuple[str, Message, AgentEvent], None, None]:
-    """Stream LLM response. Routes to provider's streaming implementation. Only OpenAI supported for now."""
     provider = detect_provider(model)
 
     if provider == "openai":
         from agentos.providers.openai_provider import call_llm_stream
         yield from call_llm_stream(
             messages, tools, model=model, temperature=temperature,
+            max_tokens=max_tokens, agent_name=agent_name,
+        )
+    elif provider == "anthropic":
+        from agentos.providers.anthropic_provider import call_anthropic_stream
+        yield from call_anthropic_stream(
+            messages, tools, model=model, temperature=temperature,
+            max_tokens=max_tokens, agent_name=agent_name,
+        )
+    elif provider == "ollama":
+        from agentos.providers.ollama_provider import call_ollama_stream
+        actual_model = model.replace("ollama:", "")
+        yield from call_ollama_stream(
+            messages, tools, model=actual_model, temperature=temperature,
             max_tokens=max_tokens, agent_name=agent_name,
         )
     else:

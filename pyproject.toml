@@ -32,6 +32,9 @@ dependencies = [
     "fastapi>=0.100.0",
     "uvicorn>=0.23.0",
     "python-multipart>=0.0.6",
+    "typer>=0.9.0",
+    "kubernetes-asyncio>=28.0.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +43,9 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
     "ruff>=0.1.0",
+]
+redis = [
+    "redis>=5.0.0",
 ]
 
 [project.urls]

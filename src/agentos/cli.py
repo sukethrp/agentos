@@ -100,6 +100,55 @@ def cmd_info(args):
     print("=" * 60)
 
 
+def deploy_app(argv: list[str] | None = None):
+    import typer
+    app = typer.Typer()
+    @app.callback(invoke_without_command=True)
+    def _main(ctx: typer.Context):
+        if ctx.invoked_subcommand is None:
+            typer.echo("Use: agentos deploy k8s --config <file>")
+    @app.command("k8s")
+    def k8s_cmd(config: str = typer.Option(..., "--config", help="Path to agent config YAML")):
+        import asyncio
+        import yaml
+        from pathlib import Path
+        from agentos.deploy.k8s_deployer import (
+            deploy_agent,
+            KubernetesConfig,
+            AgentDeployConfig,
+        )
+        from agentos.core.types import AgentConfig
+        path = Path(config)
+        if not path.exists():
+            typer.echo(f"Error: Config file not found: {config}", err=True)
+            raise typer.Exit(1)
+        with open(path) as f:
+            data = yaml.safe_load(f) or {}
+        if "name" in data and ("resources" in data or "replicas" in data or "env_vars" in data):
+            agent_cfg = AgentDeployConfig(
+                name=data.get("name", "agent"),
+                resources=data.get("resources", {"cpu": "100m", "memory": "128Mi"}),
+                replicas=data.get("replicas", 1),
+                env_vars=data.get("env_vars", data.get("env", {})),
+            )
+        else:
+            agent_cfg = AgentConfig(**{k: v for k, v in data.items() if k in AgentConfig.model_fields})
+        k8s_cfg = KubernetesConfig(
+            kubeconfig_path=data.get("kubeconfig_path"),
+            namespace=data.get("namespace", "default"),
+            image_registry=data.get("image_registry", "ghcr.io"),
+            image_tag=data.get("image_tag", "latest"),
+        )
+        result = asyncio.run(deploy_agent(agent_cfg, k8s_cfg))
+        typer.echo(f"Deployed: {result}")
+    orig_argv = sys.argv
+    try:
+        sys.argv = ["deploy"] + (argv if argv else ["--help"])
+        app()
+    finally:
+        sys.argv = orig_argv
+
+
 def cmd_test(args):
     """Run sandbox tests on an agent."""
     from agentos.core.agent import Agent
@@ -157,12 +206,16 @@ def main():
     p_info = sub.add_parser("info", help="Show AgentOS information")
     p_info.set_defaults(func=cmd_info)
 
-    args = parser.parse_args()
+    p_deploy = sub.add_parser("deploy", help="Deploy agents")
 
+    raw = sys.argv[1:]
+    if raw and raw[0] == "deploy":
+        deploy_app(raw[1:])
+        return
+    args = parser.parse_args()
     if args.command is None:
         parser.print_help()
         return
-
     args.func(args)
 
 

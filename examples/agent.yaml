@@ -1,0 +1,10 @@
+name: my-agent
+model: gpt-4o-mini
+system_prompt: You are a helpful assistant.
+replicas: 1
+resources:
+  cpu: 100m
+  memory: 128Mi
+env_vars:
+  OPENAI_API_KEY: ""
+namespace: default
