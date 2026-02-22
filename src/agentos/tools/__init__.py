@@ -22,6 +22,7 @@ from agentos.tools.http_tool import (
 )
 from agentos.tools.vision_tool import vision_tool
 from agentos.tools.document_tool import document_reader_tool, document_qa_tool
+from agentos.tools.rag_search_tool import rag_search_tool
 
 
 def get_builtin_tools() -> dict[str, Tool]:
@@ -29,7 +30,7 @@ def get_builtin_tools() -> dict[str, Tool]:
 
     Used by web/app.py and cli.py to avoid redefining tools inline.
     """
-    return {
+    tools = {
         "calculator": calculator_tool(),
         "weather": weather_tool(),
         "web_search": web_search_tool(),
@@ -37,7 +38,14 @@ def get_builtin_tools() -> dict[str, Tool]:
         "analyze_image": vision_tool(),
         "read_document": document_reader_tool(),
         "analyze_document": document_qa_tool(),
+        "rag_search": rag_search_tool(),
     }
+    try:
+        from agentos.marketplace.registry import _installed_tools
+        tools.update(_installed_tools)
+    except Exception:
+        pass
+    return tools
 
 
 __all__ = [
@@ -50,4 +58,5 @@ __all__ = [
     "vision_tool",
     "document_reader_tool",
     "document_qa_tool",
+    "rag_search_tool",
 ]

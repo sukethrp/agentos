@@ -41,6 +41,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from agentos.auth.middleware import ScopeMiddleware
+from agentos.auth.routers import router as auth_router
+app.add_middleware(ScopeMiddleware)
+app.include_router(auth_router)
 
 # Global scheduler instance
 _scheduler = AgentScheduler(max_concurrent=3)
@@ -182,6 +186,18 @@ async def ws_chat(websocket: WebSocket):
             await websocket.send_json({"type": "error", "message": str(e)})
         except Exception:
             pass
+
+
+@app.websocket("/ws/monitor")
+async def ws_monitor(websocket: WebSocket):
+    from agentos.monitor.ws_manager import get_monitor_manager
+    mgr = get_monitor_manager()
+    await mgr.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        mgr.disconnect(websocket)
 
 
 # ── API Endpoints ──
@@ -904,6 +920,51 @@ def marketplace_delete(agent_id: str):
     return JSONResponse({"status": "error", "message": "Agent not found"}, 404)
 
 
+@app.get("/marketplace/search")
+def marketplace_package_search(tags: str = "", capability: str = ""):
+    from agentos.marketplace.registry import MarketplaceRegistry
+    reg = MarketplaceRegistry()
+    return {"packages": reg.search(tags=tags, capability=capability)}
+
+
+_workflows_store: dict[str, dict] = {}
+
+
+class WorkflowCreate(BaseModel):
+    name: str
+    dag: str
+
+
+@app.post("/workflows/")
+def workflows_create(req: WorkflowCreate):
+    wid = str(_uuid.uuid4())
+    _workflows_store[wid] = {"id": wid, "name": req.name, "dag": req.dag}
+    return {"id": wid, "name": req.name}
+
+
+@app.post("/workflows/{workflow_id}/run")
+def workflows_run(workflow_id: str):
+    if workflow_id not in _workflows_store:
+        return JSONResponse({"error": "workflow not found"}, status_code=404)
+    import asyncio
+    from agentos.teams.dag import WorkflowDAG
+    from agentos.teams.runner import TeamRunner
+    from agentos.core.agent import Agent
+    import yaml
+    w = _workflows_store[workflow_id]
+    try:
+        data = yaml.safe_load(w["dag"])
+        nodes = data.get("nodes", [])
+        edges = data.get("edges", [])
+        dag = WorkflowDAG(nodes=nodes, edges=edges)
+        agents = {n.get("agent_id", "agent"): Agent(name=n.get("agent_id", "agent")) for n in nodes}
+        runner = TeamRunner(workflow_id, agents)
+        asyncio.run(runner.execute(dag, ""))
+    except Exception as e:
+        pass
+    return {"status": "started", "workflow_id": workflow_id}
+
+
 # ── Embed / Widget API ──
 
 
@@ -1251,6 +1312,15 @@ def simulation_personas() -> list:
     return [p.to_dict() for p in ALL_PERSONAS]
 
 
+@app.get("/sandbox/runs/{run_id}/report")
+def sandbox_run_report(run_id: str):
+    from agentos.sandbox.simulation_runner import get_run_report
+    report = get_run_report(run_id)
+    if report is None:
+        return JSONResponse({"error": "run not found"}, status_code=404)
+    return report
+
+
 # ── Agent Mesh API ──
 
 from agentos.mesh.protocol import MeshMessage as _MeshMsg, MeshIdentity as _MeshId
@@ -1333,7 +1403,9 @@ def mesh_stats() -> dict:
 
 
 from agentos.api.routers.mesh import router as mesh_health_router
+from agentos.api.routers.compliance import router as compliance_router
 app.include_router(mesh_health_router, prefix="/api")
+app.include_router(compliance_router, prefix="/api")
 
 
 # ── Analytics API ──

@@ -28,9 +28,16 @@ htmlcov/
 # Runtime data (auth, usage)
 src/agentos/auth/users.json
 src/agentos/auth/usage.json
+src/agentos/auth/org_data.json
+src/agentos/auth/usage.db
+src/agentos/sandbox/sim_results.db
 
 # Marketplace data
 agent_data/
 
 # Logs
 *.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

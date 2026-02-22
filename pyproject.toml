@@ -35,6 +35,10 @@ dependencies = [
     "typer>=0.9.0",
     "kubernetes-asyncio>=28.0.0",
     "pyyaml>=6.0",
+    "cachetools>=5.0.0",
+    "networkx>=3.0",
+    "rank_bm25>=0.2.2",
+    "sentence-transformers>=2.2.0",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +50,12 @@ dev = [
 ]
 redis = [
     "redis>=5.0.0",
+]
+rag = [
+    "chromadb>=0.4.0",
+    "pinecone-client>=2.2.0",
+    "pgvector>=0.2.0",
+    "psycopg[binary]>=3.0",
 ]
 
 [project.urls]

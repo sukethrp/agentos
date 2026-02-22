@@ -6,6 +6,9 @@ import math
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from agentos.rag.base_store import BaseVectorStore
+from agentos.rag.types import SearchResult
+
 
 @dataclass
 class Document:
@@ -17,7 +20,7 @@ class Document:
     doc_id: str = ""
 
 
-class VectorStore:
+class VectorStore(BaseVectorStore):
     """Simple in-memory vector store using cosine similarity."""
 
     def __init__(self):
@@ -114,17 +117,6 @@ class VectorStore:
                 metadata=item.get("metadata", {}),
                 doc_id=item.get("doc_id", ""),
             )
-
-
-@dataclass
-class SearchResult:
-    """A single search hit."""
-
-    text: str
-    score: float
-    metadata: dict
-    doc_id: str = ""
-    index: int = 0
 
 
 # ── Math ──

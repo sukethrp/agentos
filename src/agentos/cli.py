@@ -100,6 +100,35 @@ def cmd_info(args):
     print("=" * 60)
 
 
+def marketplace_app(argv: list[str] | None = None):
+    import typer
+    app = typer.Typer()
+    @app.command("publish")
+    def publish_cmd(manifest: str = typer.Option(..., "--manifest", "-m", help="Path to agentos-package.yaml")):
+        from agentos.marketplace.registry import publish
+        try:
+            m = publish(manifest)
+            typer.echo(f"Published {m.name}@{m.version}")
+        except Exception as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1)
+    @app.command("install")
+    def install_cmd(name: str = typer.Argument(..., help="Package name"), version: str = typer.Option(None, "--version", "-v", help="Version (default: latest)")):
+        from agentos.marketplace.registry import install
+        pkg = install(name, version)
+        if pkg:
+            typer.echo(f"Installed {pkg.get('name')}@{pkg.get('version')}")
+        else:
+            typer.echo(f"Package not found: {name}", err=True)
+            raise typer.Exit(1)
+    orig = sys.argv
+    try:
+        sys.argv = ["marketplace"] + (argv or ["--help"])
+        app()
+    finally:
+        sys.argv = orig
+
+
 def deploy_app(argv: list[str] | None = None):
     import typer
     app = typer.Typer()
@@ -147,6 +176,16 @@ def deploy_app(argv: list[str] | None = None):
         app()
     finally:
         sys.argv = orig_argv
+
+
+def cmd_rag_ingest(args):
+    from agentos.rag.ingestion import IngestionPipeline
+    pipeline = IngestionPipeline(
+        collection_name=args.collection,
+        chunk_strategy=args.chunk_strategy,
+    )
+    n = pipeline.ingest_path(args.source)
+    print(f"Ingested {n} chunks into collection '{args.collection}'")
 
 
 def cmd_test(args):
@@ -206,11 +245,22 @@ def main():
     p_info = sub.add_parser("info", help="Show AgentOS information")
     p_info.set_defaults(func=cmd_info)
 
+    p_rag = sub.add_parser("rag", help="RAG commands")
+    p_rag_sub = p_rag.add_subparsers(dest="rag_cmd")
+    p_ingest = p_rag_sub.add_parser("ingest", help="Ingest documents into RAG collection")
+    p_ingest.add_argument("--source", "-s", required=True, help="Source path (file or directory)")
+    p_ingest.add_argument("--collection", "-c", default="default", help="Collection name")
+    p_ingest.add_argument("--chunk-strategy", choices=["fixed", "sentence", "semantic"], default="sentence", help="Chunking strategy")
+    p_ingest.set_defaults(func=cmd_rag_ingest)
+
     p_deploy = sub.add_parser("deploy", help="Deploy agents")
 
     raw = sys.argv[1:]
     if raw and raw[0] == "deploy":
         deploy_app(raw[1:])
+        return
+    if raw and raw[0] == "marketplace":
+        marketplace_app(raw[1:])
         return
     args = parser.parse_args()
     if args.command is None:

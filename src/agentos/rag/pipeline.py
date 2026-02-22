@@ -6,7 +6,8 @@ from pathlib import Path
 
 from agentos.rag.chunker import DocumentChunker, Chunk
 from agentos.rag.embeddings import EmbeddingEngine
-from agentos.rag.vector_store import VectorStore, SearchResult
+from agentos.rag.vector_store import VectorStore
+from agentos.rag.types import SearchResult
 
 
 @dataclass

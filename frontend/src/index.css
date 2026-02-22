@@ -1,0 +1,3 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; background: #0f0f12; color: #e4e4e7; }
+#root { width: 100vw; height: 100vh; }

@@ -62,6 +62,12 @@ class ToolResult(BaseModel):
     latency_ms: float = 0.0
 
 
+class ToolExecutionContext(BaseModel):
+    agent_id: str = ""
+    session_id: str = ""
+    budget_remaining: float = 0.0
+
+
 class Message(BaseModel):
     role: Role
     content: str | None = None

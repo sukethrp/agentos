@@ -26,14 +26,15 @@ def generate_api_key() -> str:
     return f"agt_{raw}{digest}"
 
 
-def create_user(email: str, name: str, is_admin: bool = False) -> User:
-    """Create a new user and generate an API key.
-
-    Raises:
-        ValueError if a user with this email already exists.
-    """
+def create_user(email: str, name: str, is_admin: bool = False, org_id: str | None = None, scopes: list[str] | None = None) -> User:
     api_key = generate_api_key()
-    return default_store.create_user(email=email, name=name, api_key=api_key, is_admin=is_admin)
+    user = default_store.create_user(email=email, name=name, api_key=api_key, is_admin=is_admin)
+    try:
+        from agentos.auth.org_store import register_api_key
+        register_api_key(api_key, user.id, org_id=org_id, scopes=scopes)
+    except Exception:
+        pass
+    return user
 
 
 def authenticate(api_key: str) -> Optional[User]:

@@ -22,7 +22,12 @@ As an agent tool:
 from agentos.rag.pipeline import RAGPipeline, RetrievalResult
 from agentos.rag.chunker import DocumentChunker, Chunk
 from agentos.rag.embeddings import EmbeddingEngine
-from agentos.rag.vector_store import VectorStore, SearchResult, Document
+from agentos.rag.vector_store import VectorStore, Document
+from agentos.rag.types import SearchResult
+from agentos.rag.config import rag_config
+from agentos.rag.ingestion import IngestionPipeline
+from agentos.rag.retriever import HybridRetriever
+from agentos.rag.reranker import CrossEncoderReranker
 
 __all__ = [
     "RAGPipeline",
@@ -33,4 +38,8 @@ __all__ = [
     "VectorStore",
     "SearchResult",
     "Document",
+    "rag_config",
+    "IngestionPipeline",
+    "HybridRetriever",
+    "CrossEncoderReranker",
 ]
