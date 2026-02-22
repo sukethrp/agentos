@@ -466,9 +466,9 @@ GitHub Actions workflows are included:
 - [x] GitHub Actions CI/CD
 - [x] Anthropic Claude provider (direct)
 - [x] Ollama local model provider
-- [ ] Agent-to-Agent mesh protocol
-- [ ] Kubernetes deployment
-- [ ] SOC2/HIPAA compliance templates
+- [x] Agent-to-Agent mesh protocol
+- [x] Kubernetes deployment
+- [x] SOC2/HIPAA compliance templates
 
 ---
 
