@@ -4,16 +4,22 @@ from agentos.core.agent import Agent
 from agentos.core.tool import tool
 
 
-@tool(description="Analyze code for bugs, security issues, and best practices. Pass the code as a string.")
+@tool(
+    description="Analyze code for bugs, security issues, and best practices. Pass the code as a string."
+)
 def code_analyzer(code: str) -> str:
     issues = []
     code_lower = code.lower()
 
     # Security checks
     if "eval(" in code_lower:
-        issues.append("🔴 SECURITY: Use of eval() detected — potential code injection risk")
+        issues.append(
+            "🔴 SECURITY: Use of eval() detected — potential code injection risk"
+        )
     if "exec(" in code_lower:
-        issues.append("🔴 SECURITY: Use of exec() detected — potential code execution risk")
+        issues.append(
+            "🔴 SECURITY: Use of exec() detected — potential code execution risk"
+        )
     if "password" in code_lower and ("=" in code_lower):
         issues.append("🔴 SECURITY: Hardcoded password detected")
     if "api_key" in code_lower and ("=" in code_lower):
@@ -34,8 +40,10 @@ def code_analyzer(code: str) -> str:
     # Code quality
     lines = code.strip().split("\n")
     if len(lines) > 50:
-        issues.append(f"🟡 QUALITY: Function is {len(lines)} lines — consider breaking into smaller functions")
-    long_lines = [i+1 for i, l in enumerate(lines) if len(l) > 120]
+        issues.append(
+            f"🟡 QUALITY: Function is {len(lines)} lines — consider breaking into smaller functions"
+        )
+    long_lines = [i + 1 for i, line in enumerate(lines) if len(line) > 120]
     if long_lines:
         issues.append(f"🟡 QUALITY: Lines exceeding 120 chars: {long_lines[:5]}")
 

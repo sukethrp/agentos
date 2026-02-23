@@ -1,11 +1,8 @@
-import re
-
 from agentos.core.types import (
     Role,
     ToolParam,
     ToolSpec,
     ToolCall,
-    ToolResult,
     Message,
     AgentConfig,
     AgentEvent,
@@ -50,7 +47,9 @@ def test_message_toolcall_agent_event_creation():
     assert cfg.name == "test-agent"
     assert cfg.max_tokens > 0
 
-    evt = AgentEvent(agent_name="test-agent", event_type="llm_call", tokens_used=10, cost_usd=0.001)
+    evt = AgentEvent(
+        agent_name="test-agent", event_type="llm_call", tokens_used=10, cost_usd=0.001
+    )
     assert evt.agent_name == "test-agent"
     assert evt.event_type == "llm_call"
     assert evt.tokens_used == 10

@@ -19,7 +19,6 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 
 
 class StepType(str, Enum):
@@ -44,7 +43,7 @@ class TraceStep:
     available_tools: list[str] = field(default_factory=list)
 
     # What it decided
-    decision: str = ""               # "call tool X" | "final answer" | "error"
+    decision: str = ""  # "call tool X" | "final answer" | "error"
     tool_name: str = ""
     tool_arguments: dict = field(default_factory=dict)
     tool_result: str = ""
@@ -179,10 +178,13 @@ class Trace:
 
 # ── Trace builder (used by the agent or a wrapper) ──────────────────────────
 
+
 class TraceBuilder:
     """Incrementally build a Trace during an agent run."""
 
-    def __init__(self, agent_name: str = "", model: str = "", system_prompt: str = "") -> None:
+    def __init__(
+        self, agent_name: str = "", model: str = "", system_prompt: str = ""
+    ) -> None:
         self._trace = Trace(
             agent_name=agent_name,
             model=model,
@@ -279,6 +281,7 @@ class TraceBuilder:
 
 # ── Trace store ──────────────────────────────────────────────────────────────
 
+
 class TraceStore:
     """In-memory store for traces."""
 
@@ -289,7 +292,7 @@ class TraceStore:
     def add(self, trace: Trace) -> None:
         self._traces.append(trace)
         if len(self._traces) > self.max_traces:
-            self._traces = self._traces[-self.max_traces:]
+            self._traces = self._traces[-self.max_traces :]
 
     def get(self, trace_id: str) -> Trace | None:
         for t in reversed(self._traces):
@@ -304,7 +307,11 @@ class TraceStore:
         return sorted(result, key=lambda t: -t.started_at)[:limit]
 
     def failed(self, limit: int = 20) -> list[Trace]:
-        return [t for t in sorted(self._traces, key=lambda t: -t.started_at) if not t.success][:limit]
+        return [
+            t
+            for t in sorted(self._traces, key=lambda t: -t.started_at)
+            if not t.success
+        ][:limit]
 
     def stats(self) -> dict:
         total = len(self._traces)

@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from agentos.observability.tracer import Trace, TraceStep, StepType
+from agentos.observability.tracer import Trace, StepType
 
 
 class Severity(str, Enum):
@@ -57,7 +57,7 @@ class Diagnosis:
     trace_id: str = ""
     agent_name: str = ""
     user_query: str = ""
-    root_cause: str = ""              # one-line verdict
+    root_cause: str = ""  # one-line verdict
     root_cause_step: int | None = None  # step index of the failure point
     overall_severity: Severity = Severity.PASS
     checks: list[CheckResult] = field(default_factory=list)
@@ -97,6 +97,7 @@ class Diagnosis:
 
 # ── Individual checks ────────────────────────────────────────────────────────
 
+
 def _check_context(trace: Trace) -> CheckResult:
     """1. Did the LLM receive the right context?"""
     cr = CheckResult(check_name="context_quality")
@@ -104,7 +105,9 @@ def _check_context(trace: Trace) -> CheckResult:
     if not trace.system_prompt:
         cr.severity = Severity.WARN
         cr.title = "Empty system prompt"
-        cr.explanation = "The agent ran without a system prompt — this often degrades quality."
+        cr.explanation = (
+            "The agent ran without a system prompt — this often degrades quality."
+        )
         cr.evidence = {"system_prompt_length": 0}
         return cr
 
@@ -216,7 +219,11 @@ def _check_tool_execution(trace: Trace) -> CheckResult:
         cr.step_index = worst.step_index
         cr.evidence = {
             "errored_tools": [
-                {"tool": s.tool_name, "error": s.tool_result[:120], "step": s.step_index}
+                {
+                    "tool": s.tool_name,
+                    "error": s.tool_result[:120],
+                    "step": s.step_index,
+                }
                 for s in error_steps
             ]
         }
@@ -244,7 +251,9 @@ def _check_interpretation(trace: Trace) -> CheckResult:
     """4. Did the LLM interpret the tool result correctly?"""
     cr = CheckResult(check_name="interpretation")
 
-    tool_steps = [s for s in trace.steps if s.step_type == StepType.TOOL_CALL and s.tool_result]
+    tool_steps = [
+        s for s in trace.steps if s.step_type == StepType.TOOL_CALL and s.tool_result
+    ]
     final_steps = [s for s in trace.steps if s.step_type == StepType.FINAL_ANSWER]
     if not tool_steps or not final_steps:
         cr.title = "No tool+answer pair to check"
@@ -311,7 +320,9 @@ def _check_faithfulness(trace: Trace) -> CheckResult:
         "I'm not sure",
         "I apologize, but",
     ]
-    hedging_count = sum(1 for m in hallucination_markers if m.lower() in response.lower())
+    hedging_count = sum(
+        1 for m in hallucination_markers if m.lower() in response.lower()
+    )
 
     # Check response quality
     if not response.strip():

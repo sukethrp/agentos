@@ -33,8 +33,8 @@ class Persona:
     description: str = ""
     traits: list[str] = field(default_factory=list)
     templates: list[str] = field(default_factory=list)
-    difficulty: float = 0.5           # 0.0 = trivial, 1.0 = very hard
-    expected_quality: float = 7.0     # minimum acceptable score (1-10)
+    difficulty: float = 0.5  # 0.0 = trivial, 1.0 = very hard
+    expected_quality: float = 7.0  # minimum acceptable score (1-10)
 
     def generate_query(self, context: dict[str, Any] | None = None) -> str:
         """Pick a random template and fill it with optional context vars."""

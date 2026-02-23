@@ -29,15 +29,17 @@ def _tools_to_anthropic_schema(tools: list[Tool]) -> list[dict]:
             props[p.name] = {"type": p.type, "description": p.description}
             if p.required:
                 req.append(p.name)
-        schemas.append({
-            "name": t.name,
-            "description": t.description,
-            "input_schema": {
-                "type": "object",
-                "properties": props,
-                "required": req,
-            },
-        })
+        schemas.append(
+            {
+                "name": t.name,
+                "description": t.description,
+                "input_schema": {
+                    "type": "object",
+                    "properties": props,
+                    "required": req,
+                },
+            }
+        )
     return schemas
 
 
@@ -49,7 +51,9 @@ def _convert_messages(messages: list[dict]) -> tuple[str, list[dict]]:
         if role == "system":
             system = msg.get("content", "")
         elif role == "user":
-            anthropic_messages.append({"role": "user", "content": msg.get("content", "")})
+            anthropic_messages.append(
+                {"role": "user", "content": msg.get("content", "")}
+            )
         elif role == "assistant":
             content_blocks = []
             if msg.get("content"):
@@ -63,23 +67,31 @@ def _convert_messages(messages: list[dict]) -> tuple[str, list[dict]]:
                             args = json.loads(args.replace("'", '"'))
                         except json.JSONDecodeError:
                             args = {}
-                    content_blocks.append({
-                        "type": "tool_use",
-                        "id": tc.get("id", ""),
-                        "name": fn.get("name", ""),
-                        "input": args,
-                    })
+                    content_blocks.append(
+                        {
+                            "type": "tool_use",
+                            "id": tc.get("id", ""),
+                            "name": fn.get("name", ""),
+                            "input": args,
+                        }
+                    )
             if content_blocks:
-                anthropic_messages.append({"role": "assistant", "content": content_blocks})
+                anthropic_messages.append(
+                    {"role": "assistant", "content": content_blocks}
+                )
         elif role == "tool":
-            anthropic_messages.append({
-                "role": "user",
-                "content": [{
-                    "type": "tool_result",
-                    "tool_use_id": msg.get("tool_call_id", ""),
-                    "content": msg.get("content", ""),
-                }],
-            })
+            anthropic_messages.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": msg.get("tool_call_id", ""),
+                            "content": msg.get("content", ""),
+                        }
+                    ],
+                }
+            )
     return system, anthropic_messages
 
 
@@ -111,7 +123,7 @@ async def _with_retry(coro_factory, max_retries: int = 5):
             if retry_after is not None:
                 wait = float(retry_after)
             else:
-                wait = min(base_delay * (2 ** attempt), 60.0)
+                wait = min(base_delay * (2**attempt), 60.0)
             await asyncio.sleep(wait)
     raise last_error
 
@@ -163,7 +175,10 @@ class AnthropicProvider(BaseProvider):
 
         content_text, parsed_tool_calls = _parse_content_blocks(response.content)
         prices = PRICING.get(actual_model, {"input": 3.00, "output": 15.00})
-        cost = (response.usage.input_tokens * prices["input"] + response.usage.output_tokens * prices["output"]) / 1_000_000
+        cost = (
+            response.usage.input_tokens * prices["input"]
+            + response.usage.output_tokens * prices["output"]
+        ) / 1_000_000
 
         msg = Message(
             role=Role.ASSISTANT,
@@ -231,7 +246,9 @@ class AnthropicProvider(BaseProvider):
                 usage = getattr(final, "usage", None)
                 input_tokens = usage.input_tokens if usage else 0
                 output_tokens = usage.output_tokens if usage else 0
-                cost = (input_tokens * prices["input"] + output_tokens * prices["output"]) / 1_000_000
+                cost = (
+                    input_tokens * prices["input"] + output_tokens * prices["output"]
+                ) / 1_000_000
                 msg = Message(
                     role=Role.ASSISTANT,
                     content=content_text or None,
@@ -267,7 +284,11 @@ class AnthropicProvider(BaseProvider):
                 if attempt == 4:
                     raise
                 retry_after = getattr(e, "retry_after", None)
-                wait = float(retry_after) if retry_after is not None else min(1.0 * (2 ** attempt), 60.0)
+                wait = (
+                    float(retry_after)
+                    if retry_after is not None
+                    else min(1.0 * (2**attempt), 60.0)
+                )
                 await asyncio.sleep(wait)
         if last_error:
             raise last_error
@@ -282,7 +303,11 @@ def call_anthropic(
     agent_name: str = "agent",
 ) -> tuple[Message, AgentEvent]:
     provider = AnthropicProvider()
-    return asyncio.run(provider.chat_completion(messages, tools, model, temperature, max_tokens, agent_name))
+    return asyncio.run(
+        provider.chat_completion(
+            messages, tools, model, temperature, max_tokens, agent_name
+        )
+    )
 
 
 def call_anthropic_stream(
@@ -296,9 +321,12 @@ def call_anthropic_stream(
     async def _collect():
         provider = AnthropicProvider()
         chunks = []
-        async for c in provider.stream(messages, tools, model, temperature, max_tokens, agent_name):
+        async for c in provider.stream(
+            messages, tools, model, temperature, max_tokens, agent_name
+        ):
             chunks.append(c)
         return chunks
+
     chunks = asyncio.run(_collect())
     for c in chunks:
         yield c

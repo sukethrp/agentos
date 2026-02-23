@@ -18,11 +18,10 @@ from __future__ import annotations
 
 import random
 from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 from agentos.learning.analyzer import detect_topic
-from agentos.learning.feedback import FeedbackEntry, FeedbackStore, FeedbackType
+from agentos.learning.feedback import FeedbackStore, FeedbackType
 
 
 @dataclass
@@ -32,7 +31,7 @@ class FewShotExample:
     topic: str = ""
     query: str = ""
     response: str = ""
-    source: str = ""           # "positive_feedback" | "correction" | "manual"
+    source: str = ""  # "positive_feedback" | "correction" | "manual"
     quality_score: float = 0.0
 
     def to_messages(self) -> list[dict]:
@@ -62,6 +61,7 @@ class FewShotBuilder:
         max_response_length: int = 500,
     ) -> None:
         from agentos.learning.feedback import get_feedback_store
+
         self.store = store or get_feedback_store()
         self.max_examples = max_examples
         self.max_per_topic = max_per_topic
@@ -77,13 +77,15 @@ class FewShotBuilder:
         # 1. Corrections are gold-standard — they show the *right* answer
         for entry in self.store.corrections():
             if entry.correction.strip():
-                candidates.append(FewShotExample(
-                    topic=entry.topic or detect_topic(entry.query),
-                    query=entry.query,
-                    response=entry.correction,
-                    source="correction",
-                    quality_score=9.5,
-                ))
+                candidates.append(
+                    FewShotExample(
+                        topic=entry.topic or detect_topic(entry.query),
+                        query=entry.query,
+                        response=entry.correction,
+                        source="correction",
+                        quality_score=9.5,
+                    )
+                )
 
         # 2. Highly-rated positive interactions
         for entry in self.store.positive():
@@ -93,13 +95,15 @@ class FewShotBuilder:
                 resp = entry.response.strip()
                 if not resp or len(resp) > self.max_response_length * 2:
                     continue
-                candidates.append(FewShotExample(
-                    topic=entry.topic or detect_topic(entry.query),
-                    query=entry.query,
-                    response=resp,
-                    source="positive_feedback",
-                    quality_score=entry.quality_score,
-                ))
+                candidates.append(
+                    FewShotExample(
+                        topic=entry.topic or detect_topic(entry.query),
+                        query=entry.query,
+                        response=resp,
+                        source="positive_feedback",
+                        quality_score=entry.quality_score,
+                    )
+                )
 
         if not candidates:
             self._examples = []
@@ -119,7 +123,9 @@ class FewShotBuilder:
         # 5. Trim long responses
         for ex in selected:
             if len(ex.response) > self.max_response_length:
-                ex.response = ex.response[: self.max_response_length].rsplit(" ", 1)[0] + "…"
+                ex.response = (
+                    ex.response[: self.max_response_length].rsplit(" ", 1)[0] + "…"
+                )
 
         self._examples = selected
         return selected
@@ -181,7 +187,9 @@ class FewShotBuilder:
         return "\n".join(lines)
 
     def inject_into_messages(
-        self, system_prompt: str, user_input: str,
+        self,
+        system_prompt: str,
+        user_input: str,
     ) -> list[dict]:
         """Build a message list with few-shot examples after the system prompt."""
         messages = [{"role": "system", "content": system_prompt}]
@@ -203,7 +211,11 @@ class FewShotBuilder:
             "topics_covered": dict(topics),
             "sources": dict(sources),
             "avg_quality": (
-                round(sum(e.quality_score for e in self._examples) / len(self._examples), 1)
-                if self._examples else 0
+                round(
+                    sum(e.quality_score for e in self._examples) / len(self._examples),
+                    1,
+                )
+                if self._examples
+                else 0
             ),
         }

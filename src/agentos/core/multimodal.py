@@ -7,11 +7,8 @@ like PyPDF2 or Pillow are required.
 from __future__ import annotations
 
 import base64
-import io
 import mimetypes
-import os
 import re
-import struct
 import zlib
 from pathlib import Path
 from typing import Any
@@ -56,6 +53,7 @@ def is_url(path_or_url: str) -> bool:
 # PDF text extraction (pure-Python, no external libs)
 # ---------------------------------------------------------------------------
 
+
 def extract_text_from_pdf(file_path: str) -> str:
     """Extract readable text from a PDF using only Python built-ins.
 
@@ -73,7 +71,6 @@ def extract_text_from_pdf(file_path: str) -> str:
     # Collect all stream…endstream blocks
     text_parts: list[str] = []
     stream_re = re.compile(rb"stream\r?\n(.*?)endstream", re.DOTALL)
-    flate_re = re.compile(rb"/FlateDecode")
 
     for match in stream_re.finditer(data):
         raw = match.group(1)
@@ -176,13 +173,16 @@ def read_document(file_path: str, max_chars: int = 50_000) -> str:
 
     content = path.read_text(encoding="utf-8", errors="replace")
     if len(content) > max_chars:
-        content = content[:max_chars] + f"\n\n... [truncated at {max_chars:,} characters]"
+        content = (
+            content[:max_chars] + f"\n\n... [truncated at {max_chars:,} characters]"
+        )
     return content
 
 
 # ---------------------------------------------------------------------------
 # OpenAI Vision API helper
 # ---------------------------------------------------------------------------
+
 
 def analyze_image(
     image_path_or_url: str,

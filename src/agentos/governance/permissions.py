@@ -62,5 +62,7 @@ class PermissionGuard:
             "require_approval": list(self.require_approval),
             "action_count": self.action_count,
             "blocked_count": self.blocked_count,
-            "pending_approvals": len([a for a in self.approval_queue if a["status"] == "pending"]),
+            "pending_approvals": len(
+                [a for a in self.approval_queue if a["status"] == "pending"]
+            ),
         }

@@ -95,4 +95,3 @@ class Workflow:
     def build(self) -> "Workflow":
         """Finalize the workflow (currently a no-op, returns self)."""
         return self
-

@@ -102,7 +102,9 @@ class AgentScheduler:
             tools=tools or [],
             system_prompt=system_prompt,
         )
-        return self.schedule(agent, query, interval=interval, cron=cron, max_executions=max_executions)
+        return self.schedule(
+            agent, query, interval=interval, cron=cron, max_executions=max_executions
+        )
 
     # ── Control ──
 
@@ -175,7 +177,8 @@ class AgentScheduler:
     @property
     def active_jobs(self) -> int:
         return sum(
-            1 for j in self._jobs.values()
+            1
+            for j in self._jobs.values()
             if j.status in (JobStatus.PENDING, JobStatus.RUNNING)
         )
 
@@ -251,7 +254,7 @@ class AgentScheduler:
                         pass
 
             except Exception as e:
-                sys.stdout = old_stdout if 'old_stdout' in dir() else sys.__stdout__
+                sys.stdout = old_stdout if "old_stdout" in dir() else sys.__stdout__
                 job.record_execution("", error=str(e))
                 job.status = JobStatus.PENDING
                 job.update_next_run()

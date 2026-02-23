@@ -63,11 +63,13 @@ class DocumentChunker:
         result = []
         for i, chunk_text in enumerate(chunks):
             if len(chunk_text.strip()) >= self.min_chunk_size:
-                result.append(Chunk(
-                    text=chunk_text.strip(),
-                    metadata={**metadata, "chunk_index": i},
-                    index=i,
-                ))
+                result.append(
+                    Chunk(
+                        text=chunk_text.strip(),
+                        metadata={**metadata, "chunk_index": i},
+                        index=i,
+                    )
+                )
         return result
 
     # ── Internal ──
@@ -146,6 +148,7 @@ class DocumentChunker:
         # Try PyPDF2 first
         try:
             from PyPDF2 import PdfReader
+
             reader = PdfReader(str(path))
             pages = [page.extract_text() or "" for page in reader.pages]
             return "\n\n".join(pages)
@@ -155,6 +158,7 @@ class DocumentChunker:
         # Try pymupdf (fitz)
         try:
             import fitz  # type: ignore[import-untyped]
+
             doc = fitz.open(str(path))
             pages = [page.get_text() for page in doc]
             doc.close()

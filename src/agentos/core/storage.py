@@ -29,7 +29,9 @@ from typing import Any
 class AgentStorage:
     """Persistent key-value storage for agents."""
 
-    def __init__(self, agent_name: str, backend: str = "json", path: str = "./agent_data"):
+    def __init__(
+        self, agent_name: str, backend: str = "json", path: str = "./agent_data"
+    ):
         self.agent_name = agent_name
         self.backend = backend
         self.path = path
@@ -42,7 +44,9 @@ class AgentStorage:
         elif backend == "memory":
             pass
         else:
-            raise ValueError(f"Unknown backend: {backend}. Use 'json', 'sqlite', or 'memory'.")
+            raise ValueError(
+                f"Unknown backend: {backend}. Use 'json', 'sqlite', or 'memory'."
+            )
 
     # ── JSON Backend ──
 
@@ -95,7 +99,12 @@ class AgentStorage:
             conn = sqlite3.connect(self._sqlite_path())
             conn.execute(
                 "INSERT OR REPLACE INTO store (key, value, type, updated_at) VALUES (?, ?, ?, ?)",
-                (key, json.dumps(value, default=str), type(value).__name__, time.time()),
+                (
+                    key,
+                    json.dumps(value, default=str),
+                    type(value).__name__,
+                    time.time(),
+                ),
             )
             conn.commit()
             conn.close()
@@ -202,10 +211,10 @@ class AgentStorage:
 
     def print_status(self):
         s = self.stats()
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"💾 Storage: {s['agent']} ({s['backend']})")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"   Keys stored: {s['total_keys']}")
-        if s['keys']:
+        if s["keys"]:
             print(f"   Keys: {', '.join(s['keys'][:10])}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")

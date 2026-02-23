@@ -74,7 +74,9 @@ class BasePlugin:
         tool_name = getattr(tool, "name", None) or getattr(tool, "__name__", str(tool))
         ctx.add_tool(tool_name, tool)
 
-    def register_provider(self, ctx: PluginContext, name: str, provider_fn: Callable) -> None:
+    def register_provider(
+        self, ctx: PluginContext, name: str, provider_fn: Callable
+    ) -> None:
         """Convenience: register a model provider on the context."""
         ctx.add_provider(name, provider_fn)
 

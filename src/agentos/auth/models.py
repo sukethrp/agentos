@@ -87,7 +87,9 @@ class UserStore:
                 return u
         return None
 
-    def create_user(self, email: str, name: str, api_key: str, is_admin: bool = False) -> User:
+    def create_user(
+        self, email: str, name: str, api_key: str, is_admin: bool = False
+    ) -> User:
         """Create a new user. Raises ValueError if email already exists."""
         if self.get_by_email(email):
             raise ValueError(f"User with email {email} already exists")
@@ -132,4 +134,3 @@ def default_user_store_path() -> str:
 
 # Module-level default store
 default_store = UserStore(path=default_user_store_path())
-

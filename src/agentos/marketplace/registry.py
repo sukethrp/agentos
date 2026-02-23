@@ -1,6 +1,5 @@
 from __future__ import annotations
 import json
-import os
 import shutil
 from pathlib import Path
 from agentos.marketplace.manifest import PackageManifest
@@ -45,6 +44,7 @@ class MarketplaceRegistry:
         matches = [v for k, v in self._packages.items() if v.get("name") == name]
         if not matches:
             return None
+
         def _ver_key(x):
             v = x.get("version", "0")
             parts = []
@@ -54,13 +54,16 @@ class MarketplaceRegistry:
                 except ValueError:
                     parts.append(0)
             return tuple(parts)
+
         return max(matches, key=_ver_key)
 
     def search(self, tags: str = "", capability: str = "") -> list[dict]:
         results = list(self._packages.values())
         if tags:
             tag_set = {t.strip().lower() for t in tags.split(",") if t.strip()}
-            results = [p for p in results if tag_set & {t.lower() for t in p.get("tags", [])}]
+            results = [
+                p for p in results if tag_set & {t.lower() for t in p.get("tags", [])}
+            ]
         if capability:
             cap = capability.lower()
             results = [p for p in results if cap in (p.get("capability") or "").lower()]
@@ -74,6 +77,7 @@ def publish(manifest_path: str) -> PackageManifest:
     raw = path.read_text()
     if path.suffix.lower() in (".yaml", ".yml"):
         import yaml
+
         data = yaml.safe_load(raw)
     else:
         data = json.loads(raw)
@@ -113,6 +117,7 @@ def publish(manifest_path: str) -> PackageManifest:
 def install(name: str, version: str | None = None) -> dict | None:
     import sys
     import importlib
+
     registry = MarketplaceRegistry()
     pkg = registry.get(name, version)
     if not pkg:
@@ -132,6 +137,7 @@ def install(name: str, version: str | None = None) -> dict | None:
         obj = getattr(mod, attr)
         from agentos.marketplace.registry import _installed_tools
         from agentos.core.tool import Tool
+
         resolved = obj() if callable(obj) else obj
         tool_name = resolved.name if isinstance(resolved, Tool) else name
         _installed_tools[tool_name] = resolved

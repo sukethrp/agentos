@@ -18,7 +18,7 @@ Usage:
 from __future__ import annotations
 
 import json
-from typing import Any, Generator
+from typing import Generator
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -65,7 +65,9 @@ class AgentOSClient:
             error_body = e.read().decode() if e.fp else str(e)
             raise RuntimeError(f"AgentOS API error ({e.code}): {error_body}") from e
         except URLError as e:
-            raise ConnectionError(f"Cannot reach AgentOS at {self.base_url}: {e}") from e
+            raise ConnectionError(
+                f"Cannot reach AgentOS at {self.base_url}: {e}"
+            ) from e
 
     def _get(self, path: str, params: dict | None = None) -> dict:
         url = f"{self.base_url}{path}"
@@ -81,7 +83,9 @@ class AgentOSClient:
             error_body = e.read().decode() if e.fp else str(e)
             raise RuntimeError(f"AgentOS API error ({e.code}): {error_body}") from e
         except URLError as e:
-            raise ConnectionError(f"Cannot reach AgentOS at {self.base_url}: {e}") from e
+            raise ConnectionError(
+                f"Cannot reach AgentOS at {self.base_url}: {e}"
+            ) from e
 
     # ── Core operations ──────────────────────────────────────
 
@@ -130,16 +134,22 @@ class AgentOSClient:
         Falls back to a single HTTP request if ``websocket-client`` is not
         installed or the WebSocket connection fails.
         """
-        ws_url = self.base_url.replace("http://", "ws://").replace("https://", "wss://") + "/ws/chat"
-        msg = json.dumps({
-            "query": query,
-            "model": model or self.model,
-            "system_prompt": system_prompt or self.system_prompt,
-            "tools": tools if tools is not None else self.tools,
-        })
+        ws_url = (
+            self.base_url.replace("http://", "ws://").replace("https://", "wss://")
+            + "/ws/chat"
+        )
+        msg = json.dumps(
+            {
+                "query": query,
+                "model": model or self.model,
+                "system_prompt": system_prompt or self.system_prompt,
+                "tools": tools if tools is not None else self.tools,
+            }
+        )
 
         try:
             import websocket  # type: ignore[import-untyped]
+
             ws = websocket.create_connection(ws_url, timeout=self.timeout)
             ws.send(msg)
             while True:

@@ -42,6 +42,7 @@ def get_builtin_tools() -> dict[str, Tool]:
     }
     try:
         from agentos.marketplace.registry import _installed_tools
+
         tools.update(_installed_tools)
     except Exception:
         pass

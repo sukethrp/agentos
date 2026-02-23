@@ -31,14 +31,18 @@ Respond ONLY with this exact JSON format, nothing else:
 """
 
 
-def judge_response(scenario: Scenario, agent_response: str, tools_used: list[str]) -> dict:
+def judge_response(
+    scenario: Scenario, agent_response: str, tools_used: list[str]
+) -> dict:
     """Use LLM-as-judge to evaluate an agent's response."""
     client = OpenAI()
 
     prompt = JUDGE_PROMPT.format(
         user_message=scenario.user_message,
         expected_behavior=scenario.expected_behavior,
-        forbidden_actions=", ".join(scenario.forbidden_actions) if scenario.forbidden_actions else "None",
+        forbidden_actions=", ".join(scenario.forbidden_actions)
+        if scenario.forbidden_actions
+        else "None",
         agent_response=agent_response,
         tools_used=", ".join(tools_used) if tools_used else "None",
     )
@@ -63,7 +67,12 @@ def judge_response(scenario: Scenario, agent_response: str, tools_used: list[str
             "reasoning": scores.get("reasoning", ""),
         }
     except (json.JSONDecodeError, KeyError):
-        return {"relevance": 5, "quality": 5, "safety": 5, "reasoning": f"Judge parse error: {text[:100]}"}
+        return {
+            "relevance": 5,
+            "quality": 5,
+            "safety": 5,
+            "reasoning": f"Judge parse error: {text[:100]}",
+        }
 
 
 class Sandbox:
@@ -86,7 +95,9 @@ class Sandbox:
         start = time.time()
         try:
             # Suppress agent's own printing during sandbox
-            import io, sys
+            import io
+            import sys
+
             old_stdout = sys.stdout
             sys.stdout = io.StringIO()
 
@@ -119,7 +130,9 @@ class Sandbox:
             passed = score_ok and cost_ok and latency_ok
 
             icon = "✅" if passed else "❌"
-            print(f"   {icon} Score: {overall:.1f}/10 | Cost: ${cost:.4f} | Time: {latency:.0f}ms")
+            print(
+                f"   {icon} Score: {overall:.1f}/10 | Cost: ${cost:.4f} | Time: {latency:.0f}ms"
+            )
 
             return ScenarioResult(
                 scenario_name=scenario.name,
@@ -140,7 +153,8 @@ class Sandbox:
 
         except Exception as e:
             import sys as _sys
-            _sys.stdout = old_stdout if 'old_stdout' in dir() else _sys.stdout
+
+            _sys.stdout = old_stdout if "old_stdout" in dir() else _sys.stdout
             print(f"   ❌ ERROR: {e}")
             return ScenarioResult(
                 scenario_name=scenario.name,
@@ -151,12 +165,12 @@ class Sandbox:
 
     def run(self, scenarios: list[Scenario]) -> SandboxReport:
         """Run agent against all scenarios and generate report."""
-        print(f"\n{'='*60}")
-        print(f"🧪 AgentOS Simulation Sandbox")
+        print(f"\n{'=' * 60}")
+        print("🧪 AgentOS Simulation Sandbox")
         print(f"   Agent: {self.agent.config.name}")
         print(f"   Scenarios: {len(scenarios)}")
         print(f"   Pass threshold: {self.pass_threshold}/10")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         results = []
         for scenario in scenarios:
@@ -175,9 +189,21 @@ class Sandbox:
             passed=passed,
             failed=failed,
             pass_rate=round((passed / total) * 100, 1) if total > 0 else 0,
-            avg_quality=round(sum(r.quality_score for r in scored_results) / len(scored_results), 1) if scored_results else 0,
-            avg_relevance=round(sum(r.relevance_score for r in scored_results) / len(scored_results), 1) if scored_results else 0,
-            avg_safety=round(sum(r.safety_score for r in scored_results) / len(scored_results), 1) if scored_results else 0,
+            avg_quality=round(
+                sum(r.quality_score for r in scored_results) / len(scored_results), 1
+            )
+            if scored_results
+            else 0,
+            avg_relevance=round(
+                sum(r.relevance_score for r in scored_results) / len(scored_results), 1
+            )
+            if scored_results
+            else 0,
+            avg_safety=round(
+                sum(r.safety_score for r in scored_results) / len(scored_results), 1
+            )
+            if scored_results
+            else 0,
             total_cost=round(sum(r.cost_usd for r in results), 4),
             total_latency_ms=round(sum(r.latency_ms for r in results), 0),
             results=results,

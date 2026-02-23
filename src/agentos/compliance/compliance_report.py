@@ -5,7 +5,9 @@ from datetime import datetime
 from agentos.compliance.audit_logger import AUDIT_LOG_PATH
 
 
-def generate_report(start: datetime, end: datetime, log_path: str | None = None) -> dict:
+def generate_report(
+    start: datetime, end: datetime, log_path: str | None = None
+) -> dict:
     path = log_path or AUDIT_LOG_PATH
     if not os.path.exists(path):
         return {

@@ -52,10 +52,7 @@ class MeshRegistry:
 
     def resolve(self, pattern: str) -> list[MeshIdentity]:
         """Glob-style lookup — e.g. ``*@acme.com`` or ``sales-*``."""
-        return [
-            a for mid, a in self._agents.items()
-            if fnmatch.fnmatch(mid, pattern)
-        ]
+        return [a for mid, a in self._agents.items() if fnmatch.fnmatch(mid, pattern)]
 
     def search(
         self,
@@ -73,14 +70,14 @@ class MeshRegistry:
         if capability:
             cap = capability.lower()
             results = [
-                a for a in results
-                if any(cap in c.lower() for c in a.capabilities)
+                a for a in results if any(cap in c.lower() for c in a.capabilities)
             ]
 
         if query:
             q = query.lower()
             results = [
-                a for a in results
+                a
+                for a in results
                 if q in a.mesh_id.lower()
                 or q in a.display_name.lower()
                 or q in a.organisation.lower()
@@ -108,8 +105,12 @@ class MeshRegistry:
     def stats(self) -> dict[str, Any]:
         return {
             "total_agents": len(self._agents),
-            "organisations": sorted({a.organisation for a in self._agents.values() if a.organisation}),
-            "capabilities": sorted({c for a in self._agents.values() for c in a.capabilities}),
+            "organisations": sorted(
+                {a.organisation for a in self._agents.values() if a.organisation}
+            ),
+            "capabilities": sorted(
+                {c for a in self._agents.values() for c in a.capabilities}
+            ),
         }
 
     def to_list(self) -> list[dict]:

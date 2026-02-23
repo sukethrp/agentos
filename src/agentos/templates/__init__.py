@@ -50,17 +50,17 @@ TEMPLATES = {
 
 def list_templates():
     """Print all available agent templates."""
-    print(f"\n{'='*60}")
-    print(f"📦 AgentOS Template Library")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("📦 AgentOS Template Library")
+    print(f"{'=' * 60}")
     for tid, info in TEMPLATES.items():
         print(f"\n   [{tid}]")
         print(f"   {info['name']}")
         print(f"   {info['description']}")
         print(f"   Category: {info['category']} | Tools: {', '.join(info['tools'])}")
-    print(f"\n{'='*60}")
-    print(f"   Usage: agent = load_template('customer-support')")
-    print(f"{'='*60}")
+    print(f"\n{'=' * 60}")
+    print("   Usage: agent = load_template('customer-support')")
+    print(f"{'=' * 60}")
 
 
 def load_template(template_id: str, model: str = "gpt-4o-mini", **kwargs):

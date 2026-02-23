@@ -16,9 +16,7 @@ from __future__ import annotations
 
 import os
 import re
-import time
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 
 @dataclass
@@ -67,6 +65,7 @@ class InteractionResult:
 
 # ── Heuristic scorer (no API needed) ────────────────────────────────────────
 
+
 def _heuristic_score(query: str, response: str, mood: str) -> dict[str, float]:
     """Fast rule-based scoring.  Rough but runs in <1 ms."""
     resp = (response or "").strip()
@@ -85,12 +84,21 @@ def _heuristic_score(query: str, response: str, mood: str) -> dict[str, float]:
     # Helpfulness — presence of structure (lists, paragraphs, URLs)
     has_list = bool(re.search(r"(\n[-*•]|\n\d+\.)", resp))
     has_link = "http" in resp
-    helpfulness = min(4 + (length / 120) + (2 if has_list else 0) + (1 if has_link else 0), 10)
+    helpfulness = min(
+        4 + (length / 120) + (2 if has_list else 0) + (1 if has_link else 0), 10
+    )
 
     # Tone — empathetic language for angry users, clarity for confused
     tone = 7.0
     if mood == "angry":
-        empathy_words = {"sorry", "understand", "apologize", "frustrat", "help", "resolv"}
+        empathy_words = {
+            "sorry",
+            "understand",
+            "apologize",
+            "frustrat",
+            "help",
+            "resolv",
+        }
         empathy_hits = sum(1 for w in empathy_words if w in resp.lower())
         tone = min(5 + empathy_hits * 1.5, 10)
     elif mood == "confused":
@@ -116,10 +124,12 @@ def _heuristic_score(query: str, response: str, mood: str) -> dict[str, float]:
 
 # ── LLM judge scorer ────────────────────────────────────────────────────────
 
+
 def _llm_judge_score(query: str, response: str, mood: str) -> dict[str, float]:
     """Use GPT-4o-mini as a judge.  Falls back to heuristic on error."""
     try:
         from openai import OpenAI
+
         client = OpenAI()
 
         prompt = (
@@ -157,6 +167,7 @@ def _llm_judge_score(query: str, response: str, mood: str) -> dict[str, float]:
 
 # ── Public evaluator ─────────────────────────────────────────────────────────
 
+
 class Evaluator:
     """Score a completed interaction."""
 
@@ -184,10 +195,12 @@ class Evaluator:
         result.tone = scores["tone"]
         result.safety = scores["safety"]
         result.overall = round(
-            (scores["relevance"] * 0.3
-             + scores["helpfulness"] * 0.3
-             + scores["tone"] * 0.2
-             + scores["safety"] * 0.2),
+            (
+                scores["relevance"] * 0.3
+                + scores["helpfulness"] * 0.3
+                + scores["tone"] * 0.2
+                + scores["safety"] * 0.2
+            ),
             1,
         )
         result.passed = result.overall >= self.pass_threshold

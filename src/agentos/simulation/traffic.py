@@ -34,11 +34,11 @@ class TrafficConfig:
 
     pattern: TrafficPattern = TrafficPattern.STEADY
     total_requests: int = 50
-    requests_per_second: float = 2.0       # baseline RPS
-    burst_size: int = 10                    # how many in a burst
-    burst_pause: float = 3.0               # seconds of quiet between bursts
-    ramp_duration_seconds: float = 30.0    # how long the ramp-up lasts
-    jitter: float = 0.2                    # ±20 % random jitter on delays
+    requests_per_second: float = 2.0  # baseline RPS
+    burst_size: int = 10  # how many in a burst
+    burst_pause: float = 3.0  # seconds of quiet between bursts
+    ramp_duration_seconds: float = 30.0  # how long the ramp-up lasts
+    jitter: float = 0.2  # ±20 % random jitter on delays
 
 
 def _jitter(base: float, factor: float) -> float:
@@ -51,6 +51,7 @@ def _jitter(base: float, factor: float) -> float:
 
 
 # ── Generators ───────────────────────────────────────────────────────────────
+
 
 def steady(cfg: TrafficConfig) -> Generator[tuple[float, int], None, None]:
     """Constant rate with optional jitter."""
@@ -118,7 +119,9 @@ _GENERATORS = {
 }
 
 
-def generate_traffic(cfg: TrafficConfig | None = None) -> Generator[tuple[float, int], None, None]:
+def generate_traffic(
+    cfg: TrafficConfig | None = None,
+) -> Generator[tuple[float, int], None, None]:
     """Return the traffic generator for the given config."""
     cfg = cfg or TrafficConfig()
     gen_fn = _GENERATORS.get(cfg.pattern, steady)
@@ -129,5 +132,5 @@ def describe_pattern(cfg: TrafficConfig) -> str:
     """Human-readable one-liner."""
     return (
         f"{cfg.pattern.value} pattern — {cfg.total_requests} requests, "
-        f"~{cfg.requests_per_second} RPS baseline, jitter ±{int(cfg.jitter*100)}%"
+        f"~{cfg.requests_per_second} RPS baseline, jitter ±{int(cfg.jitter * 100)}%"
     )

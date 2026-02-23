@@ -74,30 +74,40 @@ class ABTestReport(BaseModel):
     per_query: List[ABTestPerQueryResult] = Field(default_factory=list)
 
     def print_report(self) -> None:
-        print(f"\n{'='*60}")
-        print(f"🧪 AgentOS A/B Test Report")
-        print(f"{'='*60}")
+        print(f"\n{'=' * 60}")
+        print("🧪 AgentOS A/B Test Report")
+        print(f"{'=' * 60}")
         print(f"   Agent A: {self.agent_a_name}")
         print(f"   Agent B: {self.agent_b_name}")
-        print(f"   Winner:  {self.winner}  (confidence: {self.confidence*100:.1f}%)")
-        print(f"{'-'*60}")
+        print(f"   Winner:  {self.winner}  (confidence: {self.confidence * 100:.1f}%)")
+        print(f"{'-' * 60}")
 
         a = self.scores.get("agent_a")
         b = self.scores.get("agent_b")
         if a and b:
-            print(f"   Avg overall (A vs B): {a.avg_overall:.2f} vs {b.avg_overall:.2f}")
+            print(
+                f"   Avg overall (A vs B): {a.avg_overall:.2f} vs {b.avg_overall:.2f}"
+            )
             print(f"   Pass rate   (A vs B): {a.pass_rate:.1f}% vs {b.pass_rate:.1f}%")
-            print(f"   Win rate    (A vs B): {a.win_rate*100:.1f}% vs {b.win_rate*100:.1f}%")
-            print(f"   Total cost  (A vs B): ${a.total_cost:.4f} vs ${b.total_cost:.4f}")
-            print(f"   Total time  (A vs B): {a.total_latency_ms:.0f}ms vs {b.total_latency_ms:.0f}ms")
+            print(
+                f"   Win rate    (A vs B): {a.win_rate * 100:.1f}% vs {b.win_rate * 100:.1f}%"
+            )
+            print(
+                f"   Total cost  (A vs B): ${a.total_cost:.4f} vs ${b.total_cost:.4f}"
+            )
+            print(
+                f"   Total time  (A vs B): {a.total_latency_ms:.0f}ms vs {b.total_latency_ms:.0f}ms"
+            )
 
-        print(f"\n   Per-query breakdown:")
-        print(f"   {'─'*56}")
+        print("\n   Per-query breakdown:")
+        print(f"   {'─' * 56}")
         for r in self.per_query:
-            icon = "A" if r.winner == "agent_a" else "B" if r.winner == "agent_b" else "="
+            icon = (
+                "A" if r.winner == "agent_a" else "B" if r.winner == "agent_b" else "="
+            )
             print(f"   [{icon}] Q{r.run_index}: {r.query[:60]}")
             print(f"      Scores → A: {r.score_a:.1f} | B: {r.score_b:.1f}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
 
 class ABTest:
@@ -126,7 +136,7 @@ class ABTest:
             for i, q in enumerate(queries):
                 scenarios.append(
                     Scenario(
-                        name=f"Q{i+1}-run{run_idx+1}",
+                        name=f"Q{i + 1}-run{run_idx + 1}",
                         user_message=q,
                         expected_behavior="Provide a correct, concise, and safe answer to the user's question.",
                     )
@@ -247,4 +257,3 @@ class ABTest:
             scores=scores,
             per_query=per_query,
         )
-

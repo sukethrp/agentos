@@ -21,7 +21,7 @@ Usage:
 from __future__ import annotations
 import time
 import json
-from typing import Any, Iterable
+from typing import Iterable
 
 from pydantic import BaseModel, Field
 
@@ -33,7 +33,9 @@ from agentos.tools import get_builtin_tools
 class AgentVersion(BaseModel):
     tag: str
     timestamp: float = Field(default_factory=time.time)
-    time_readable: str = Field(default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S"))
+    time_readable: str = Field(
+        default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S")
+    )
     notes: str = ""
     config: dict = Field(default_factory=dict)
     system_prompt: str = ""
@@ -53,7 +55,9 @@ class AgentVersionControl:
         self.history: list[str] = []
         self.current_tag: str | None = None
 
-    def save_version(self, agent, tag: str, notes: str = "", test_results: dict | None = None):
+    def save_version(
+        self, agent, tag: str, notes: str = "", test_results: dict | None = None
+    ):
         """Save current agent state as a version."""
         version = AgentVersion(
             tag=tag,
@@ -75,18 +79,22 @@ class AgentVersionControl:
         return self.versions.get(tag)
 
     def list_versions(self):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"📋 Version History: {self.agent_name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         for tag in self.history:
             v = self.versions[tag]
             current = " ← current" if tag == self.current_tag else ""
             print(f"   [{v.tag}] {v.time_readable} — {v.notes}{current}")
-            print(f"      Model: {v.model} | Tools: {', '.join(v.tools)} | Temp: {v.temperature}")
+            print(
+                f"      Model: {v.model} | Tools: {', '.join(v.tools)} | Temp: {v.temperature}"
+            )
             if v.test_results:
-                print(f"      Tests: {v.test_results.get('pass_rate', 'N/A')}% pass rate")
+                print(
+                    f"      Tests: {v.test_results.get('pass_rate', 'N/A')}% pass rate"
+                )
             print()
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
     def compare(self, tag_a: str, tag_b: str):
         """Compare two versions side by side."""
@@ -96,15 +104,17 @@ class AgentVersionControl:
             print(f"❌ Version not found: {tag_a if not a else tag_b}")
             return
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"🔄 Comparing: [{tag_a}] vs [{tag_b}]")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         diffs = []
         if a.model != b.model:
             diffs.append(f"   Model:       {a.model} → {b.model}")
         if a.system_prompt != b.system_prompt:
-            diffs.append(f"   Prompt:      Changed ({len(a.system_prompt)} → {len(b.system_prompt)} chars)")
+            diffs.append(
+                f"   Prompt:      Changed ({len(a.system_prompt)} → {len(b.system_prompt)} chars)"
+            )
         if a.tools != b.tools:
             added = set(b.tools) - set(a.tools)
             removed = set(a.tools) - set(b.tools)
@@ -136,7 +146,7 @@ class AgentVersionControl:
                 print(d)
         else:
             print("\n   No differences found.")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
     def rollback(self, tag: str) -> dict | None:
         """Get config from a previous version for rollback."""
@@ -216,7 +226,9 @@ class AgentVersionControl:
         a.test_results.setdefault("ab_tests", {})[tag_b] = summary_a
         b.test_results.setdefault("ab_tests", {})[tag_a] = summary_b
 
-        print(f"\n🧪 A/B test [{tag_a}] vs [{tag_b}] → winner: {report.winner} (conf {report.confidence*100:.1f}%)")
+        print(
+            f"\n🧪 A/B test [{tag_a}] vs [{tag_b}] → winner: {report.winner} (conf {report.confidence * 100:.1f}%)"
+        )
 
         return report
 

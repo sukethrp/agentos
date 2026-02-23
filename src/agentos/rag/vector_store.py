@@ -28,7 +28,13 @@ class VectorStore(BaseVectorStore):
 
     # ── CRUD ──
 
-    def add(self, text: str, embedding: list[float], metadata: dict | None = None, doc_id: str = "") -> int:
+    def add(
+        self,
+        text: str,
+        embedding: list[float],
+        metadata: dict | None = None,
+        doc_id: str = "",
+    ) -> int:
         """Add a single document. Returns its index."""
         doc = Document(
             text=text,
@@ -54,7 +60,9 @@ class VectorStore(BaseVectorStore):
             indices.append(self.add(text, emb, meta, did))
         return indices
 
-    def search(self, query_embedding: list[float], top_k: int = 5, threshold: float = 0.0) -> list[SearchResult]:
+    def search(
+        self, query_embedding: list[float], top_k: int = 5, threshold: float = 0.0
+    ) -> list[SearchResult]:
         """Find the top-K most similar documents by cosine similarity."""
         if not self._documents:
             return []
@@ -120,6 +128,7 @@ class VectorStore(BaseVectorStore):
 
 
 # ── Math ──
+
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
     """Compute cosine similarity between two vectors."""

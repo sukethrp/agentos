@@ -18,26 +18,20 @@ Endpoints:
 
 from __future__ import annotations
 
-import time
-from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from agentos.mesh.auth import (
     derive_shared_secret,
     generate_keypair,
     sign_message,
-    solve_challenge,
-    verify_signature,
 )
 from agentos.mesh.discovery import MeshRegistry, get_registry
 from agentos.mesh.protocol import (
     MeshIdentity,
     MeshMessage,
     MessageType,
-    NegotiationProposal,
     NegotiationResponse,
     NegotiationStatus,
     make_error,
@@ -57,6 +51,7 @@ from agentos.mesh.transaction import (
 
 
 # ── Node state ───────────────────────────────────────────────────────────────
+
 
 class MeshNode:
     """Represents **this** server's identity and state."""
@@ -122,6 +117,7 @@ def init_node(
 
 # ── Negotiation handler (auto-accept demo logic) ────────────────────────────
 
+
 def _auto_negotiate(node: MeshNode, msg: MeshMessage) -> MeshMessage:
     """Simple auto-negotiation strategy: accept if price ≤ budget."""
     proposal = msg.payload
@@ -159,7 +155,13 @@ def _auto_negotiate(node: MeshNode, msg: MeshMessage) -> MeshMessage:
 
 # ── Message router ───────────────────────────────────────────────────────────
 
-def handle_message(msg: MeshMessage, node: MeshNode | None = None, registry: MeshRegistry | None = None, ledger: TransactionLedger | None = None) -> MeshMessage:
+
+def handle_message(
+    msg: MeshMessage,
+    node: MeshNode | None = None,
+    registry: MeshRegistry | None = None,
+    ledger: TransactionLedger | None = None,
+) -> MeshMessage:
     """Route an incoming message and produce a response."""
     node = node or get_node()
     registry = registry or get_registry()
@@ -266,7 +268,9 @@ async def search_registry(
     capability: str = "",
     organisation: str = "",
 ) -> list[dict]:
-    results = get_registry().search(query=q, capability=capability, organisation=organisation)
+    results = get_registry().search(
+        query=q, capability=capability, organisation=organisation
+    )
     return [a.model_dump() for a in results]
 
 
@@ -290,6 +294,7 @@ async def mesh_stats() -> dict:
 
 
 # ── Standalone runner ────────────────────────────────────────────────────────
+
 
 def run_mesh_server(
     mesh_id: str = "node@localhost",

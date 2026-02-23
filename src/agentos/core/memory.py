@@ -6,27 +6,25 @@ Two types:
 
 Usage:
     memory = Memory(max_conversations=50, enable_knowledge=True)
-    
+
     # Conversation memory (automatic)
     memory.add_message({"role": "user", "content": "My name is Suketh"})
     memory.add_message({"role": "assistant", "content": "Nice to meet you!"})
-    
+
     # Knowledge memory (extracted facts)
     memory.store_fact("user_name", "Suketh")
     memory.store_fact("user_company", "AgentOS")
-    
+
     # Retrieve
     messages = memory.get_messages()
     name = memory.get_fact("user_name")  # "Suketh"
-    
+
     # Get context for the agent
     context = memory.get_context()  # Injects known facts into system prompt
 """
 
 from __future__ import annotations
 import time
-import json
-from typing import Any
 from pydantic import BaseModel, Field
 
 
@@ -73,7 +71,7 @@ class Memory:
         # Trim if over limit (keep system prompt + recent messages)
         if len(self.messages) > self.max_messages:
             system_msgs = [m for m in self.messages if m.get("role") == "system"]
-            recent = self.messages[-(self.max_messages - len(system_msgs)):]
+            recent = self.messages[-(self.max_messages - len(system_msgs)) :]
             self.messages = system_msgs + recent
 
     def add_exchange(self, user_msg: str, assistant_msg: str):
@@ -107,7 +105,9 @@ class Memory:
 
     # ── Knowledge Memory ──
 
-    def store_fact(self, key: str, value: str, category: str = "general", source: str = "agent"):
+    def store_fact(
+        self, key: str, value: str, category: str = "general", source: str = "agent"
+    ):
         """Store a persistent fact."""
         if len(self.facts) >= self.max_facts and key not in self.facts:
             # Remove oldest fact
@@ -207,7 +207,9 @@ class Memory:
                 idx = user_lower.index(trigger) + len(trigger)
                 name = user_msg[idx:].strip().split()[0].strip(".,!?")
                 if name and len(name) > 1:
-                    self.store_fact("user_name", name, category="personal", source="extracted")
+                    self.store_fact(
+                        "user_name", name, category="personal", source="extracted"
+                    )
 
         # Extract location
         location_triggers = ["i live in", "i'm from", "i'm based in", "located in"]
@@ -216,7 +218,12 @@ class Memory:
                 idx = user_lower.index(trigger) + len(trigger)
                 location = user_msg[idx:].strip().split(".")[0].strip()
                 if location:
-                    self.store_fact("user_location", location, category="personal", source="extracted")
+                    self.store_fact(
+                        "user_location",
+                        location,
+                        category="personal",
+                        source="extracted",
+                    )
 
         # Extract company
         company_triggers = ["i work at", "i work for", "my company is", "i'm at"]
@@ -225,7 +232,9 @@ class Memory:
                 idx = user_lower.index(trigger) + len(trigger)
                 company = user_msg[idx:].strip().split(".")[0].strip()
                 if company:
-                    self.store_fact("user_company", company, category="work", source="extracted")
+                    self.store_fact(
+                        "user_company", company, category="work", source="extracted"
+                    )
 
         # Extract preferences
         pref_triggers = ["i like", "i love", "i prefer", "my favorite"]
@@ -235,7 +244,12 @@ class Memory:
                 pref = user_msg[idx:].strip().split(".")[0].strip()
                 if pref:
                     key = f"preference_{len([k for k in self.facts if k.startswith('preference')])}"
-                    self.store_fact(key, f"{trigger} {pref}", category="preferences", source="extracted")
+                    self.store_fact(
+                        key,
+                        f"{trigger} {pref}",
+                        category="preferences",
+                        source="extracted",
+                    )
 
     # ── Stats ──
 
@@ -250,16 +264,18 @@ class Memory:
 
     def print_memory(self):
         stats = self.get_stats()
-        print(f"\n{'='*60}")
-        print(f"🧠 Agent Memory")
-        print(f"{'='*60}")
+        print(f"\n{'=' * 60}")
+        print("🧠 Agent Memory")
+        print(f"{'=' * 60}")
         print(f"   Messages:     {stats['total_messages']}")
         print(f"   Exchanges:    {stats['conversation_count']}")
         print(f"   Facts stored: {stats['total_facts']}")
-        print(f"   Categories:   {', '.join(stats['categories']) if stats['categories'] else 'none'}")
+        print(
+            f"   Categories:   {', '.join(stats['categories']) if stats['categories'] else 'none'}"
+        )
 
         if self.facts:
-            print(f"\n   📚 Stored Knowledge:")
+            print("\n   📚 Stored Knowledge:")
             for key, entry in self.facts.items():
                 print(f"      [{entry.category}] {key}: {entry.value}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")

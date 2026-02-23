@@ -10,9 +10,7 @@ from __future__ import annotations
 
 import statistics
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any
 
 from agentos.learning.feedback import FeedbackEntry, FeedbackStore
 
@@ -106,7 +104,11 @@ class LearningReport:
         }
 
     def summary_text(self) -> str:
-        arrow = "↑" if self.direction == "improving" else ("↓" if self.direction == "declining" else "→")
+        arrow = (
+            "↑"
+            if self.direction == "improving"
+            else ("↓" if self.direction == "declining" else "→")
+        )
         lines = [
             "=" * 60,
             "  LEARNING PROGRESS REPORT",
@@ -134,7 +136,10 @@ class LearningReport:
 
 # ── Builder ──────────────────────────────────────────────────────────────────
 
-def _snapshot(label: str, start: float, end: float, entries: list[FeedbackEntry]) -> PeriodSnapshot:
+
+def _snapshot(
+    label: str, start: float, end: float, entries: list[FeedbackEntry]
+) -> PeriodSnapshot:
     bucket = [e for e in entries if start <= e.timestamp < end]
     ps = PeriodSnapshot(label=label, start=start, end=end)
     ps.total = len(bucket)
@@ -204,7 +209,8 @@ def build_learning_report(
         {"label": s.label, "avg_quality": round(s.avg_quality, 2)} for s in snapshots
     ]
     report.positive_rate_chart = [
-        {"label": s.label, "positive_rate": round(s.positive_rate, 1)} for s in snapshots
+        {"label": s.label, "positive_rate": round(s.positive_rate, 1)}
+        for s in snapshots
     ]
 
     # Per-topic trends
@@ -243,8 +249,14 @@ def build_learning_report(
         report.topic_trends.append(tt)
 
     report.topic_trends.sort(key=lambda t: -t.overall_avg)
-    report.improving_topics = [t.topic for t in report.topic_trends if t.direction == "improving"]
-    report.declining_topics = [t.topic for t in report.topic_trends if t.direction == "declining"]
-    report.stable_topics = [t.topic for t in report.topic_trends if t.direction == "stable"]
+    report.improving_topics = [
+        t.topic for t in report.topic_trends if t.direction == "improving"
+    ]
+    report.declining_topics = [
+        t.topic for t in report.topic_trends if t.direction == "declining"
+    ]
+    report.stable_topics = [
+        t.topic for t in report.topic_trends if t.direction == "stable"
+    ]
 
     return report

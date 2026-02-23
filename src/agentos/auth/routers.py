@@ -1,8 +1,14 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from agentos.auth.org_models import Organization, OrgMembership, Role
-from agentos.auth.org_store import create_org, get_org, list_org_members, add_org_member, remove_org_member
+from agentos.auth.org_models import Role
+from agentos.auth.org_store import (
+    create_org,
+    get_org,
+    list_org_members,
+    add_org_member,
+    remove_org_member,
+)
 from agentos.auth.auth import get_current_user
 from agentos.auth.models import User
 
@@ -41,7 +47,9 @@ def get_org_members(org_id: str, current_user: User = Depends(get_current_user))
 
 
 @router.post("/auth/orgs/{org_id}/members")
-def post_org_member(org_id: str, req: AddMemberRequest, current_user: User = Depends(get_current_user)):
+def post_org_member(
+    org_id: str, req: AddMemberRequest, current_user: User = Depends(get_current_user)
+):
     org = get_org(org_id)
     if not org:
         raise HTTPException(status_code=404, detail="Org not found")
@@ -54,7 +62,9 @@ def post_org_member(org_id: str, req: AddMemberRequest, current_user: User = Dep
 
 
 @router.delete("/auth/orgs/{org_id}/members/{user_id}")
-def delete_org_member(org_id: str, user_id: str, current_user: User = Depends(get_current_user)):
+def delete_org_member(
+    org_id: str, user_id: str, current_user: User = Depends(get_current_user)
+):
     org = get_org(org_id)
     if not org:
         raise HTTPException(status_code=404, detail="Org not found")

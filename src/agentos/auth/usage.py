@@ -151,4 +151,3 @@ def default_usage_path() -> str:
 
 # Module-level default tracker
 usage_tracker = UsageTracker(path=default_usage_path())
-

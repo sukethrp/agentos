@@ -1,17 +1,28 @@
-name: agent
+replicaCount: 1
+
 image:
-  registry: ghcr.io
-  repository: agentos/agent
+  repository: agentos
   tag: latest
-replicas: 1
-resources:
-  cpu: 100m
-  memory: 128Mi
-env: {}
+  pullPolicy: IfNotPresent
+
 service:
+  type: ClusterIP
   port: 8000
-hpa:
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
   enabled: true
   minReplicas: 1
   maxReplicas: 10
-  targetCPUUtilization: 70
+  targetCPUUtilizationPercentage: 70
+
+env: {}
+
+namespace: default

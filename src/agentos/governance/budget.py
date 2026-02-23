@@ -48,19 +48,31 @@ class BudgetGuard:
 
         if cost > self.max_per_action:
             self.blocked_count += 1
-            return False, f"Action cost ${cost:.4f} exceeds per-action limit ${self.max_per_action:.4f}"
+            return (
+                False,
+                f"Action cost ${cost:.4f} exceeds per-action limit ${self.max_per_action:.4f}",
+            )
 
         if self.hourly_spent + cost > self.max_per_hour:
             self.blocked_count += 1
-            return False, f"Hourly spend ${self.hourly_spent + cost:.4f} would exceed limit ${self.max_per_hour:.4f}"
+            return (
+                False,
+                f"Hourly spend ${self.hourly_spent + cost:.4f} would exceed limit ${self.max_per_hour:.4f}",
+            )
 
         if self.daily_spent + cost > self.max_per_day:
             self.blocked_count += 1
-            return False, f"Daily spend ${self.daily_spent + cost:.4f} would exceed limit ${self.max_per_day:.4f}"
+            return (
+                False,
+                f"Daily spend ${self.daily_spent + cost:.4f} would exceed limit ${self.max_per_day:.4f}",
+            )
 
         if self.total_spent + cost > self.max_total:
             self.blocked_count += 1
-            return False, f"Total spend ${self.total_spent + cost:.4f} would exceed limit ${self.max_total:.4f}"
+            return (
+                False,
+                f"Total spend ${self.total_spent + cost:.4f} would exceed limit ${self.max_total:.4f}",
+            )
 
         return True, "OK"
 

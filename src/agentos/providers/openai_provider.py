@@ -76,11 +76,13 @@ def call_llm_stream(
                     args = json.loads(acc["arguments"]) if acc["arguments"] else {}
                 except json.JSONDecodeError:
                     args = {}
-                parsed_tool_calls.append(ToolCall(
-                    id=acc["id"] or f"call_{idx}",
-                    name=acc["name"],
-                    arguments=args,
-                ))
+                parsed_tool_calls.append(
+                    ToolCall(
+                        id=acc["id"] or f"call_{idx}",
+                        name=acc["name"],
+                        arguments=args,
+                    )
+                )
 
     prices = PRICING.get(model, {"input": 0.15, "output": 0.60})
     completion_tokens = max(1, len(full_content) // 4)
@@ -138,17 +140,22 @@ def call_llm(
     usage = response.usage
 
     prices = PRICING.get(model, {"input": 0.15, "output": 0.60})
-    cost = (usage.prompt_tokens * prices["input"] + usage.completion_tokens * prices["output"]) / 1_000_000
+    cost = (
+        usage.prompt_tokens * prices["input"]
+        + usage.completion_tokens * prices["output"]
+    ) / 1_000_000
 
     parsed_tool_calls = None
     if choice.tool_calls:
         parsed_tool_calls = []
         for tc in choice.tool_calls:
-            parsed_tool_calls.append(ToolCall(
-                id=tc.id,
-                name=tc.function.name,
-                arguments=json.loads(tc.function.arguments),
-            ))
+            parsed_tool_calls.append(
+                ToolCall(
+                    id=tc.id,
+                    name=tc.function.name,
+                    arguments=json.loads(tc.function.arguments),
+                )
+            )
 
     msg = Message(
         role=Role.ASSISTANT,

@@ -12,7 +12,10 @@ def crm_lookup(company_name: str) -> str:
         "techstart": "TechStart Inc | Size: 50 employees | Industry: SaaS | Deal stage: Demo scheduled | Budget: $10K-50K | Contact: sarah@techstart.io",
         "bigbank": "BigBank Financial | Size: 10,000 employees | Industry: Finance | Deal stage: Enterprise pilot | Budget: $500K+ | Contact: mike@bigbank.com",
     }
-    return crm.get(company_name.lower(), f"No CRM record for '{company_name}'. New lead — needs qualification.")
+    return crm.get(
+        company_name.lower(),
+        f"No CRM record for '{company_name}'. New lead — needs qualification.",
+    )
 
 
 @tool(description="Search the product catalog for features, pricing, and plans")
@@ -27,7 +30,7 @@ def product_catalog(query: str) -> str:
     for key, val in catalog.items():
         if key in query_lower:
             return val
-    return f"Product info: AgentOS is the operating system for AI agents. Visit agentos.dev for details."
+    return "Product info: AgentOS is the operating system for AI agents. Visit agentos.dev for details."
 
 
 def create_sales_agent(model: str = "gpt-4o-mini", **kwargs) -> Agent:

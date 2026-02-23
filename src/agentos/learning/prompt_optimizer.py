@@ -20,14 +20,14 @@ from __future__ import annotations
 import os
 import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 from agentos.learning.analyzer import AnalysisReport, FeedbackAnalyzer
-from agentos.learning.feedback import FeedbackEntry, FeedbackStore
+from agentos.learning.feedback import FeedbackStore
 
 
 # ── Prompt patch ─────────────────────────────────────────────────────────────
+
 
 @dataclass
 class PromptPatch:
@@ -36,8 +36,8 @@ class PromptPatch:
     id: str = ""
     topic: str = ""
     instruction: str = ""
-    source: str = "auto"           # "auto" | "manual" | "llm"
-    confidence: float = 0.0        # 0-1 — how sure we are this helps
+    source: str = "auto"  # "auto" | "manual" | "llm"
+    confidence: float = 0.0  # 0-1 — how sure we are this helps
     created_at: float = 0.0
     active: bool = True
 
@@ -137,7 +137,9 @@ _TONE_PATCHES: dict[str, str] = {
 }
 
 
-def _generate_template_patch(topic: str, analysis: AnalysisReport) -> PromptPatch | None:
+def _generate_template_patch(
+    topic: str, analysis: AnalysisReport
+) -> PromptPatch | None:
     """Generate a patch from the built-in templates."""
     template = _TOPIC_TEMPLATES.get(topic)
     if not template:
@@ -163,7 +165,9 @@ def _generate_correction_patch(corrections: list[dict]) -> PromptPatch | None:
 
     lines = ["Based on user corrections, remember these rules:"]
     for c in corrections[:5]:
-        lines.append(f"- When asked about '{c['query'][:60]}', the correct approach is: {c['correction'][:120]}")
+        lines.append(
+            f"- When asked about '{c['query'][:60]}', the correct approach is: {c['correction'][:120]}"
+        )
 
     return PromptPatch(
         topic="corrections",
@@ -173,10 +177,13 @@ def _generate_correction_patch(corrections: list[dict]) -> PromptPatch | None:
     )
 
 
-def _generate_llm_patch(topic: str, complaints: list[str], corrections: list[dict]) -> PromptPatch | None:
+def _generate_llm_patch(
+    topic: str, complaints: list[str], corrections: list[dict]
+) -> PromptPatch | None:
     """Use GPT-4o-mini to synthesise a prompt patch. Falls back to template."""
     try:
         from openai import OpenAI
+
         client = OpenAI()
 
         complaint_text = "\n".join(f"- {c}" for c in complaints[:8])
@@ -216,6 +223,7 @@ def _generate_llm_patch(topic: str, complaints: list[str], corrections: list[dic
 
 # ── Optimizer ────────────────────────────────────────────────────────────────
 
+
 class PromptOptimizer:
     """Generate and manage prompt patches based on feedback analysis."""
 
@@ -225,6 +233,7 @@ class PromptOptimizer:
         use_llm: bool = False,
     ) -> None:
         from agentos.learning.feedback import get_feedback_store
+
         self.store = store or get_feedback_store()
         self.analyzer = FeedbackAnalyzer(self.store)
         self.use_llm = use_llm and bool(os.getenv("OPENAI_API_KEY"))
@@ -262,23 +271,30 @@ class PromptOptimizer:
         negative = [e for e in self.store.all() if not e.is_positive]
         for mood, template in _TONE_PATCHES.items():
             mood_hits = sum(
-                1 for e in negative
+                1
+                for e in negative
                 if mood in e.query.lower() or mood in e.comment.lower()
             )
             if mood_hits >= 2:
-                new_patches.append(PromptPatch(
-                    topic=f"tone_{mood}",
-                    instruction=template,
-                    source="auto",
-                    confidence=min(0.8, mood_hits / len(negative) + 0.3) if negative else 0.5,
-                ))
+                new_patches.append(
+                    PromptPatch(
+                        topic=f"tone_{mood}",
+                        instruction=template,
+                        source="auto",
+                        confidence=min(0.8, mood_hits / len(negative) + 0.3)
+                        if negative
+                        else 0.5,
+                    )
+                )
 
         self.patches = new_patches
-        self._history.append({
-            "timestamp": time.time(),
-            "patches_generated": len(new_patches),
-            "topics_covered": [p.topic for p in new_patches],
-        })
+        self._history.append(
+            {
+                "timestamp": time.time(),
+                "patches_generated": len(new_patches),
+                "topics_covered": [p.topic for p in new_patches],
+            }
+        )
         return new_patches
 
     def apply_patches(self, base_prompt: str) -> str:

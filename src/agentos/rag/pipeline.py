@@ -1,10 +1,10 @@
 """RAG Pipeline — ingest → chunk → embed → store → retrieve."""
 
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
-from agentos.rag.chunker import DocumentChunker, Chunk
+from agentos.rag.chunker import DocumentChunker
 from agentos.rag.embeddings import EmbeddingEngine
 from agentos.rag.vector_store import VectorStore
 from agentos.rag.types import SearchResult
@@ -91,7 +91,9 @@ class RAGPipeline:
         self.store.add_batch(texts, embeddings, metadatas, doc_ids)
         return len(chunks)
 
-    def ingest_directory(self, directory: str, extensions: list[str] | None = None) -> int:
+    def ingest_directory(
+        self, directory: str, extensions: list[str] | None = None
+    ) -> int:
         """Ingest all matching files in a directory. Returns total chunks added."""
         extensions = extensions or [".txt", ".md", ".pdf", ".rst"]
         total = 0
@@ -124,9 +126,7 @@ class RAGPipeline:
         parts = []
         for i, r in enumerate(results, 1):
             source = r.metadata.get("filename", r.doc_id or "unknown")
-            parts.append(
-                f"[Source {i}: {source} (score: {r.score:.3f})]\n{r.text}"
-            )
+            parts.append(f"[Source {i}: {source} (score: {r.score:.3f})]\n{r.text}")
         return "\n\n---\n\n".join(parts)
 
     # ── Info ──

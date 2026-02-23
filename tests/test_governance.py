@@ -5,7 +5,9 @@ from agentos.governance.guardrails import GovernanceEngine, GuardrailResult
 
 
 def test_budgetguard_basic_limits():
-    budget = BudgetGuard(max_per_action=1.0, max_per_hour=2.0, max_per_day=3.0, max_total=4.0)
+    budget = BudgetGuard(
+        max_per_action=1.0, max_per_hour=2.0, max_per_day=3.0, max_total=4.0
+    )
 
     ok, msg = budget.check_action(0.5)
     assert ok

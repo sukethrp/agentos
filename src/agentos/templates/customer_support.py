@@ -5,7 +5,9 @@ from agentos.core.tool import tool
 from agentos.tools.http_tool import calculator_tool
 
 
-@tool(description="Search the knowledge base for product information, policies, and FAQs")
+@tool(
+    description="Search the knowledge base for product information, policies, and FAQs"
+)
 def knowledge_base(query: str) -> str:
     kb = {
         "refund": "Refund Policy: Full refund within 30 days of purchase. After 30 days, store credit only. Processing time: 5-7 business days.",
@@ -26,7 +28,7 @@ def ticket_system(action: str, details: str = "") -> str:
     if "create" in action.lower():
         return f"Ticket #TK-{hash(details) % 10000:04d} created. Customer will receive email confirmation. Expected response: 24 hours."
     elif "status" in action.lower():
-        return f"Ticket status: In Progress. Assigned to support team. Last update: 2 hours ago."
+        return "Ticket status: In Progress. Assigned to support team. Last update: 2 hours ago."
     return f"Ticket action '{action}' completed."
 
 

@@ -43,10 +43,12 @@ class AgentStore:
     def log_quality(self, agent_name: str, score: float):
         """Track quality score for drift detection."""
         if agent_name in self.agents:
-            self.agents[agent_name]["quality_scores"].append({
-                "score": score,
-                "timestamp": time.time(),
-            })
+            self.agents[agent_name]["quality_scores"].append(
+                {
+                    "score": score,
+                    "timestamp": time.time(),
+                }
+            )
 
     def get_overview(self) -> dict:
         """Get overview of all agents."""
@@ -78,7 +80,7 @@ class AgentStore:
             return None
 
         scores = [s["score"] for s in agent["quality_scores"]]
-        old_avg = sum(scores[-window*2:-window]) / window
+        old_avg = sum(scores[-window * 2 : -window]) / window
         new_avg = sum(scores[-window:]) / window
         drift = new_avg - old_avg
 

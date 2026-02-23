@@ -11,12 +11,9 @@ All analysis is done with pure Python — no pandas or numpy required.
 
 from __future__ import annotations
 
-import re
 import statistics
-import time
-from collections import Counter, defaultdict
+from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any
 
 from agentos.learning.feedback import FeedbackEntry, FeedbackStore, FeedbackType
 
@@ -24,15 +21,59 @@ from agentos.learning.feedback import FeedbackEntry, FeedbackStore, FeedbackType
 # ── Topic detection ──────────────────────────────────────────────────────────
 
 _TOPIC_KEYWORDS: dict[str, list[str]] = {
-    "billing": ["bill", "invoice", "charge", "payment", "subscription", "pricing", "price", "cost", "plan", "tier"],
+    "billing": [
+        "bill",
+        "invoice",
+        "charge",
+        "payment",
+        "subscription",
+        "pricing",
+        "price",
+        "cost",
+        "plan",
+        "tier",
+    ],
     "refund": ["refund", "money back", "cancel", "cancellation", "return"],
-    "technical": ["error", "bug", "crash", "broken", "not working", "issue", "fail", "exception"],
-    "account": ["login", "password", "account", "sign in", "sign up", "register", "profile", "sso", "auth"],
-    "onboarding": ["getting started", "setup", "install", "new user", "beginner", "tutorial", "how to"],
+    "technical": [
+        "error",
+        "bug",
+        "crash",
+        "broken",
+        "not working",
+        "issue",
+        "fail",
+        "exception",
+    ],
+    "account": [
+        "login",
+        "password",
+        "account",
+        "sign in",
+        "sign up",
+        "register",
+        "profile",
+        "sso",
+        "auth",
+    ],
+    "onboarding": [
+        "getting started",
+        "setup",
+        "install",
+        "new user",
+        "beginner",
+        "tutorial",
+        "how to",
+    ],
     "integration": ["api", "webhook", "integrate", "sdk", "endpoint", "connect"],
     "performance": ["slow", "latency", "timeout", "speed", "performance"],
     "security": ["security", "gdpr", "compliance", "soc2", "encrypt", "data privacy"],
-    "feature_request": ["feature", "wish", "would be nice", "could you add", "suggestion"],
+    "feature_request": [
+        "feature",
+        "wish",
+        "would be nice",
+        "could you add",
+        "suggestion",
+    ],
     "general": [],
 }
 
@@ -56,6 +97,7 @@ def auto_tag_topics(entries: list[FeedbackEntry]) -> list[FeedbackEntry]:
 
 
 # ── Analysis results ─────────────────────────────────────────────────────────
+
 
 @dataclass
 class TopicAnalysis:
@@ -121,6 +163,7 @@ class TimeWindow:
 @dataclass
 class AnalysisReport:
     """Full analysis of feedback patterns."""
+
     total_feedback: int = 0
     positive_rate: float = 0.0
     avg_quality: float = 0.0
@@ -164,7 +207,7 @@ class AnalysisReport:
         if self.worst_tools:
             lines.append(f"  🔧 Problematic tools: {', '.join(self.worst_tools)}")
         if self.trending_issues:
-            lines.append(f"\n  📈 Trending issues:")
+            lines.append("\n  📈 Trending issues:")
             for issue in self.trending_issues[:5]:
                 lines.append(f"     • {issue}")
 
@@ -181,11 +224,13 @@ class AnalysisReport:
 
 # ── Analyzer ─────────────────────────────────────────────────────────────────
 
+
 class FeedbackAnalyzer:
     """Analyze a set of feedback entries and produce pattern insights."""
 
     def __init__(self, store: FeedbackStore | None = None) -> None:
         from agentos.learning.feedback import get_feedback_store
+
         self.store = store or get_feedback_store()
 
     def analyze(self, entries: list[FeedbackEntry] | None = None) -> AnalysisReport:
@@ -206,18 +251,27 @@ class FeedbackAnalyzer:
         # Topic analysis
         report.topics = self._analyze_topics(entries)
         report.worst_topics = [
-            t.topic for t in sorted(report.topics, key=lambda t: t.failure_rate, reverse=True)[:3]
+            t.topic
+            for t in sorted(report.topics, key=lambda t: t.failure_rate, reverse=True)[
+                :3
+            ]
             if t.failure_rate > 20
         ]
         report.best_topics = [
-            t.topic for t in sorted(report.topics, key=lambda t: t.avg_quality, reverse=True)[:3]
+            t.topic
+            for t in sorted(report.topics, key=lambda t: t.avg_quality, reverse=True)[
+                :3
+            ]
             if t.avg_quality >= 7
         ]
 
         # Tool analysis
         report.tools = self._analyze_tools(entries)
         report.worst_tools = [
-            t.tool_name for t in sorted(report.tools, key=lambda t: t.failure_rate, reverse=True)[:3]
+            t.tool_name
+            for t in sorted(report.tools, key=lambda t: t.failure_rate, reverse=True)[
+                :3
+            ]
             if t.failure_rate > 30
         ]
 
@@ -253,8 +307,7 @@ class FeedbackAnalyzer:
             ta.failure_rate = ta.negative / ta.total * 100
             ta.sample_queries = [e.query[:80] for e in group[:5]]
             ta.common_complaints = [
-                e.comment[:100] for e in group
-                if e.comment and not e.is_positive
+                e.comment[:100] for e in group if e.comment and not e.is_positive
             ][:5]
             results.append(ta)
 

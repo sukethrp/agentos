@@ -76,7 +76,9 @@ class Job:
             elif self.cron_expression:
                 self.next_run = next_cron_time(self.cron_expression)
 
-    def record_execution(self, result: str, cost: float = 0.0, tokens: int = 0, error: str = "") -> None:
+    def record_execution(
+        self, result: str, cost: float = 0.0, tokens: int = 0, error: str = ""
+    ) -> None:
         """Record a completed execution."""
         now = time.time()
         execution = JobExecution(
@@ -137,13 +139,20 @@ class Job:
 
 # ── Interval parsing ──
 
-INTERVAL_PATTERN = re.compile(r"^(\d+)\s*(s|sec|m|min|h|hr|hour|d|day)s?$", re.IGNORECASE)
+INTERVAL_PATTERN = re.compile(
+    r"^(\d+)\s*(s|sec|m|min|h|hr|hour|d|day)s?$", re.IGNORECASE
+)
 
 INTERVAL_MULTIPLIERS = {
-    "s": 1, "sec": 1,
-    "m": 60, "min": 60,
-    "h": 3600, "hr": 3600, "hour": 3600,
-    "d": 86400, "day": 86400,
+    "s": 1,
+    "sec": 1,
+    "m": 60,
+    "min": 60,
+    "h": 3600,
+    "hr": 3600,
+    "hour": 3600,
+    "d": 86400,
+    "day": 86400,
 }
 
 
@@ -162,6 +171,7 @@ def parse_interval(interval: str) -> float:
 
 
 # ── Cron parsing (basic: minute hour day_of_month month day_of_week) ──
+
 
 def next_cron_time(cron_expr: str) -> float:
     """Calculate the next run time for a basic cron expression.
@@ -195,11 +205,11 @@ def _cron_matches(dt: datetime, parts: list[str]) -> bool:
     """Check if a datetime matches a cron expression."""
     fields = [dt.minute, dt.hour, dt.day, dt.month, dt.isoweekday() % 7]
     ranges = [
-        (0, 59),   # minute
-        (0, 23),   # hour
-        (1, 31),   # day of month
-        (1, 12),   # month
-        (0, 6),    # day of week (0=Sunday)
+        (0, 59),  # minute
+        (0, 23),  # hour
+        (1, 31),  # day of month
+        (1, 12),  # month
+        (0, 6),  # day of week (0=Sunday)
     ]
 
     for i, (pattern, value, (low, high)) in enumerate(zip(parts, fields, ranges)):

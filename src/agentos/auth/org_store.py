@@ -45,10 +45,17 @@ def _save(data: dict) -> None:
         json.dump(data, f, indent=2)
 
 
-def create_org(name: str, monthly_token_cap: int = 0, monthly_cost_cap_usd: float = 0.0) -> Organization:
+def create_org(
+    name: str, monthly_token_cap: int = 0, monthly_cost_cap_usd: float = 0.0
+) -> Organization:
     data = _load()
     org_id = str(uuid.uuid4())[:16]
-    org = Organization(org_id=org_id, name=name, monthly_token_cap=monthly_token_cap, monthly_cost_cap_usd=monthly_cost_cap_usd)
+    org = Organization(
+        org_id=org_id,
+        name=name,
+        monthly_token_cap=monthly_token_cap,
+        monthly_cost_cap_usd=monthly_cost_cap_usd,
+    )
     data["orgs"].append(org.model_dump())
     _save(data)
     return org
@@ -64,7 +71,11 @@ def get_org(org_id: str) -> Organization | None:
 
 def list_org_members(org_id: str) -> list[OrgMembership]:
     data = _load()
-    return [OrgMembership.model_validate(m) for m in data.get("memberships", []) if m.get("org_id") == org_id]
+    return [
+        OrgMembership.model_validate(m)
+        for m in data.get("memberships", [])
+        if m.get("org_id") == org_id
+    ]
 
 
 def add_org_member(org_id: str, user_id: str, role: Role) -> OrgMembership:
@@ -84,14 +95,21 @@ def remove_org_member(org_id: str, user_id: str) -> bool:
     data = _load()
     ms = data.get("memberships", [])
     orig = len(ms)
-    data["memberships"] = [m for m in ms if not (m.get("org_id") == org_id and m.get("user_id") == user_id)]
+    data["memberships"] = [
+        m for m in ms if not (m.get("org_id") == org_id and m.get("user_id") == user_id)
+    ]
     if len(data["memberships"]) < orig:
         _save(data)
         return True
     return False
 
 
-def register_api_key(api_key: str, user_id: str, org_id: str | None = None, scopes: list[str] | None = None) -> ApiKey:
+def register_api_key(
+    api_key: str,
+    user_id: str,
+    org_id: str | None = None,
+    scopes: list[str] | None = None,
+) -> ApiKey:
     data = _load()
     kh = _hash_key(api_key)
     for ak in data.get("api_keys", []):

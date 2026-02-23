@@ -6,7 +6,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 from agentos.events import event_bus
 from agentos.workflows.steps import Step, StepResult, ParallelGroup
@@ -196,14 +196,18 @@ class WorkflowRunner:
                 agent=step.fallback_agent,
                 query=fb_query,
             )
-            sr = self._execute_agent(fb_step.agent, self._build_query(fb_step, ctx, results, last_output))
+            sr = self._execute_agent(
+                fb_step.agent, self._build_query(fb_step, ctx, results, last_output)
+            )
             sr.name = step.name
             if sr.status == "completed":
                 sr.status = "fallback"
             final_result = sr
 
         if final_result is None:
-            final_result = StepResult(name=step.name, status="failed", error="All retries and fallback failed")
+            final_result = StepResult(
+                name=step.name, status="failed", error="All retries and fallback failed"
+            )
 
         # Update context and path
         if final_result.status in ("completed", "fallback"):
@@ -261,4 +265,3 @@ class WorkflowRunner:
         except Exception:
             # Emission failures should not break the workflow
             pass
-

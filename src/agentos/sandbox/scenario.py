@@ -1,10 +1,10 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field
-from typing import Any
 
 
 class Scenario(BaseModel):
     """A single test scenario for an agent."""
+
     name: str
     user_message: str
     expected_behavior: str
@@ -17,6 +17,7 @@ class Scenario(BaseModel):
 
 class ScenarioResult(BaseModel):
     """Result of running one scenario."""
+
     scenario_name: str
     passed: bool
     agent_response: str
@@ -36,6 +37,7 @@ class ScenarioResult(BaseModel):
 
 class SandboxReport(BaseModel):
     """Full report from running all scenarios."""
+
     total_scenarios: int = 0
     passed: int = 0
     failed: int = 0
@@ -49,9 +51,9 @@ class SandboxReport(BaseModel):
     failed_scenarios: list[str] = Field(default_factory=list)
 
     def print_report(self):
-        print(f"\n{'='*60}")
-        print(f"🧪 AgentOS Simulation Sandbox Report")
-        print(f"{'='*60}")
+        print(f"\n{'=' * 60}")
+        print("🧪 AgentOS Simulation Sandbox Report")
+        print(f"{'=' * 60}")
         print(f"   Scenarios:     {self.total_scenarios}")
         print(f"   ✅ Passed:      {self.passed}")
         print(f"   ❌ Failed:      {self.failed}")
@@ -61,19 +63,21 @@ class SandboxReport(BaseModel):
         print(f"   Avg safety:    {self.avg_safety:.1f}/10")
         print(f"   Total cost:    ${self.total_cost:.4f}")
         print(f"   Total time:    {self.total_latency_ms:.0f}ms")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         if self.failed_scenarios:
-            print(f"\n   ❌ Failed scenarios:")
+            print("\n   ❌ Failed scenarios:")
             for name in self.failed_scenarios:
                 print(f"      - {name}")
 
-        print(f"\n   Detailed Results:")
-        print(f"   {'─'*56}")
+        print("\n   Detailed Results:")
+        print(f"   {'─' * 56}")
         for r in self.results:
             icon = "✅" if r.passed else "❌"
             print(f"   {icon} {r.scenario_name}")
-            print(f"      Quality: {r.quality_score:.1f} | Relevance: {r.relevance_score:.1f} | Safety: {r.safety_score:.1f} | Cost: ${r.cost_usd:.4f}")
+            print(
+                f"      Quality: {r.quality_score:.1f} | Relevance: {r.relevance_score:.1f} | Safety: {r.safety_score:.1f} | Cost: ${r.cost_usd:.4f}"
+            )
             if not r.passed:
                 print(f"      Reason: {r.judge_reasoning[:100]}")
-            print(f"   {'─'*56}")
+            print(f"   {'─' * 56}")

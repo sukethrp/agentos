@@ -12,12 +12,12 @@ import hashlib
 import hmac
 import json
 import secrets
-from typing import Any
 
 from agentos.mesh.protocol import MeshMessage
 
 
 # ── Key generation ───────────────────────────────────────────────────────────
+
 
 def generate_keypair() -> tuple[str, str]:
     """Return ``(private_key, public_key)`` hex strings.
@@ -32,6 +32,7 @@ def generate_keypair() -> tuple[str, str]:
 
 
 # ── Signing ──────────────────────────────────────────────────────────────────
+
 
 def _canonical(msg: MeshMessage) -> bytes:
     """Deterministic byte representation of the signable fields."""
@@ -70,6 +71,7 @@ def verify_signature(msg: MeshMessage, private_key: str) -> bool:
 
 # ── Challenge-response helpers (handshake) ───────────────────────────────────
 
+
 def generate_challenge() -> str:
     """Random nonce for a handshake challenge."""
     return secrets.token_hex(16)
@@ -77,7 +79,9 @@ def generate_challenge() -> str:
 
 def solve_challenge(challenge: str, private_key: str) -> str:
     """Prove knowledge of the private key by HMACing the challenge nonce."""
-    return hmac.new(private_key.encode(), challenge.encode(), hashlib.sha256).hexdigest()
+    return hmac.new(
+        private_key.encode(), challenge.encode(), hashlib.sha256
+    ).hexdigest()
 
 
 def verify_challenge(challenge: str, solution: str, private_key: str) -> bool:
@@ -86,6 +90,7 @@ def verify_challenge(challenge: str, solution: str, private_key: str) -> bool:
 
 
 # ── Shared-secret derivation (for two-party HMAC) ───────────────────────────
+
 
 def derive_shared_secret(key_a: str, key_b: str) -> str:
     """Derive a symmetric shared secret from two public keys.

@@ -282,8 +282,16 @@ class ConversationTree:
         b_unique = [m.to_dict() for m in b.messages[shared_len:]]
 
         return {
-            "branch_a": {"id": branch_a_id, "label": a.label, "total_messages": len(a.messages)},
-            "branch_b": {"id": branch_b_id, "label": b.label, "total_messages": len(b.messages)},
+            "branch_a": {
+                "id": branch_a_id,
+                "label": a.label,
+                "total_messages": len(a.messages),
+            },
+            "branch_b": {
+                "id": branch_b_id,
+                "label": b.label,
+                "total_messages": len(b.messages),
+            },
             "shared_messages": shared,
             "shared_count": shared_len,
             "branch_a_unique": a_unique,
@@ -336,7 +344,11 @@ class ConversationTree:
             role="system",
             content=merge_content,
             index=len(shared_msgs),
-            metadata={"type": "merge", "source_a": branch_a_id, "source_b": branch_b_id},
+            metadata={
+                "type": "merge",
+                "source_a": branch_a_id,
+                "source_b": branch_b_id,
+            },
         )
 
         merged_messages = shared_msgs + [merge_msg]

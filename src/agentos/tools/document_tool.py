@@ -54,7 +54,9 @@ def document_qa_tool(max_chars: int = 30_000) -> Tool:
     can directly answer questions about it.
     """
 
-    def read_and_prepare(file_path: str, question: str = "Summarize the key points.") -> str:
+    def read_and_prepare(
+        file_path: str, question: str = "Summarize the key points."
+    ) -> str:
         """Read a document and prepare context for answering a question about it.
 
         Args:

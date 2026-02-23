@@ -27,18 +27,20 @@ def _tools_to_ollama_schema(tools: list[Tool]) -> list[dict]:
             props[p.name] = {"type": p.type, "description": p.description}
             if p.required:
                 req.append(p.name)
-        schemas.append({
-            "type": "function",
-            "function": {
-                "name": t.name,
-                "description": t.description,
-                "parameters": {
-                    "type": "object",
-                    "properties": props,
-                    "required": req,
+        schemas.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": {
+                        "type": "object",
+                        "properties": props,
+                        "required": req,
+                    },
                 },
-            },
-        })
+            }
+        )
     return schemas
 
 
@@ -50,7 +52,9 @@ def _convert_messages(messages: list[dict]) -> list[dict]:
         if role == "system":
             ollama_messages.append({"role": "system", "content": content or ""})
         elif role == "tool":
-            ollama_messages.append({"role": "user", "content": f"Tool result: {content}"})
+            ollama_messages.append(
+                {"role": "user", "content": f"Tool result: {content}"}
+            )
         elif role == "assistant" and msg.get("tool_calls"):
             tool_calls = []
             for tc in msg["tool_calls"]:
@@ -61,8 +65,16 @@ def _convert_messages(messages: list[dict]) -> list[dict]:
                         args = json.loads(args.replace("'", '"')) if args else {}
                     except json.JSONDecodeError:
                         args = {}
-                tool_calls.append({"function": {"name": fn.get("name", ""), "arguments": args}})
-            ollama_messages.append({"role": "assistant", "content": content or "", "tool_calls": tool_calls})
+                tool_calls.append(
+                    {"function": {"name": fn.get("name", ""), "arguments": args}}
+                )
+            ollama_messages.append(
+                {
+                    "role": "assistant",
+                    "content": content or "",
+                    "tool_calls": tool_calls,
+                }
+            )
         else:
             ollama_messages.append({"role": role, "content": content or ""})
     return ollama_messages
@@ -102,7 +114,9 @@ class OllamaProvider(BaseProvider):
             name = m.get("name", "")
             if model == name or model == name.split(":")[0]:
                 return
-        raise ValueError(f"Model '{model}' not found. Available: {[m.get('name') for m in models]}")
+        raise ValueError(
+            f"Model '{model}' not found. Available: {[m.get('name') for m in models]}"
+        )
 
     async def chat_completion(
         self,
@@ -140,7 +154,9 @@ class OllamaProvider(BaseProvider):
         message_data = data.get("message", {})
         content = message_data.get("content", "")
         raw_tool_calls = message_data.get("tool_calls", [])
-        parsed_tool_calls = _parse_ollama_tool_calls(raw_tool_calls) if raw_tool_calls else None
+        parsed_tool_calls = (
+            _parse_ollama_tool_calls(raw_tool_calls) if raw_tool_calls else None
+        )
         prompt_tokens = data.get("prompt_eval_count", 0)
         completion_tokens = data.get("eval_count", 0)
         msg = Message(
@@ -189,7 +205,9 @@ class OllamaProvider(BaseProvider):
             payload["tools"] = tool_schemas
         try:
             start = time.time()
-            async with self._client.stream("POST", f"{self._base_url}/api/chat", json=payload) as resp:
+            async with self._client.stream(
+                "POST", f"{self._base_url}/api/chat", json=payload
+            ) as resp:
                 resp.raise_for_status()
                 content_parts = []
                 tool_calls_acc: dict[int, dict] = {}
@@ -230,7 +248,9 @@ class OllamaProvider(BaseProvider):
                     for idx in sorted(tool_calls_acc.keys()):
                         acc = tool_calls_acc[idx]
                         if acc["name"]:
-                            parsed_tool_calls.append(ToolCall(name=acc["name"], arguments=acc["arguments"]))
+                            parsed_tool_calls.append(
+                                ToolCall(name=acc["name"], arguments=acc["arguments"])
+                            )
                 prompt_tokens = chunk.get("prompt_eval_count", 0)
                 completion_tokens = chunk.get("eval_count", 0)
                 msg = Message(
@@ -271,8 +291,13 @@ def call_ollama(
     agent_name: str = "agent",
 ) -> tuple[Message, AgentEvent]:
     import asyncio
+
     provider = OllamaProvider()
-    return asyncio.run(provider.chat_completion(messages, tools, model, temperature, max_tokens, agent_name))
+    return asyncio.run(
+        provider.chat_completion(
+            messages, tools, model, temperature, max_tokens, agent_name
+        )
+    )
 
 
 def call_ollama_stream(
@@ -284,12 +309,16 @@ def call_ollama_stream(
     agent_name: str = "agent",
 ):
     import asyncio
+
     async def _collect():
         provider = OllamaProvider()
         chunks = []
-        async for c in provider.stream(messages, tools, model, temperature, max_tokens, agent_name):
+        async for c in provider.stream(
+            messages, tools, model, temperature, max_tokens, agent_name
+        ):
             chunks.append(c)
         return chunks
+
     chunks = asyncio.run(_collect())
     for c in chunks:
         yield c

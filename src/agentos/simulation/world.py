@@ -22,7 +22,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable
 
 from agentos.simulation.evaluator import Evaluator, InteractionResult
@@ -50,8 +50,8 @@ class WorldConfig:
     requests_per_second: float = 2.0
     use_llm_judge: bool = False
     pass_threshold: float = 6.0
-    personas: list[Persona] | None = None     # None → use weighted defaults
-    quiet: bool = False                        # suppress per-interaction prints
+    personas: list[Persona] | None = None  # None → use weighted defaults
+    quiet: bool = False  # suppress per-interaction prints
 
 
 class SimulatedWorld:
@@ -59,7 +59,7 @@ class SimulatedWorld:
 
     def __init__(
         self,
-        agent: Any,                           # Agent instance (or any object with .run(str)->Message)
+        agent: Any,  # Agent instance (or any object with .run(str)->Message)
         config: WorldConfig | None = None,
         on_interaction: Callable[[InteractionResult], None] | None = None,
     ) -> None:
@@ -100,7 +100,7 @@ class SimulatedWorld:
         )
 
         if not cfg.quiet:
-            print(f"\n🌐 Simulation World Starting")
+            print("\n🌐 Simulation World Starting")
             print(f"   Agent: {getattr(self.agent, 'config', {})}")
             print(f"   {describe_pattern(traffic_cfg)}")
             print(f"   Concurrency: {cfg.concurrency}")
@@ -141,7 +141,9 @@ class SimulatedWorld:
         # Build difficulty map for the report
         diff_map = {p.name: p.difficulty for p in ALL_PERSONAS}
 
-        report = build_report(self._results, duration_seconds=elapsed, persona_difficulty=diff_map)
+        report = build_report(
+            self._results, duration_seconds=elapsed, persona_difficulty=diff_map
+        )
 
         if not cfg.quiet:
             print(f"\n{report.summary_text()}")
@@ -182,7 +184,9 @@ class SimulatedWorld:
             sys.stdout = io.StringIO()
             try:
                 msg = self.agent.run(query)
-                result.response = msg.content or "" if hasattr(msg, "content") else str(msg)
+                result.response = (
+                    msg.content or "" if hasattr(msg, "content") else str(msg)
+                )
                 # Gather cost/token info from agent events
                 if hasattr(self.agent, "events"):
                     for ev in self.agent.events:

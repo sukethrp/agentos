@@ -1,7 +1,12 @@
 """Research Assistant Agent Template."""
 
 from agentos.core.agent import Agent
-from agentos.tools.http_tool import web_search_tool, weather_tool, news_tool, calculator_tool
+from agentos.tools.http_tool import (
+    web_search_tool,
+    weather_tool,
+    news_tool,
+    calculator_tool,
+)
 
 
 def create_research_agent(model: str = "gpt-4o-mini", **kwargs) -> Agent:

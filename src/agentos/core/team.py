@@ -17,14 +17,14 @@ Usage:
 
 from __future__ import annotations
 import time
-from typing import Any
 from pydantic import BaseModel, Field
 from agentos.core.agent import Agent
-from agentos.core.types import Message, Role, AgentEvent
+from agentos.core.types import AgentEvent
 
 
 class TeamMessage(BaseModel):
     """A message passed between agents in a team."""
+
     from_agent: str
     to_agent: str
     content: str
@@ -34,6 +34,7 @@ class TeamMessage(BaseModel):
 
 class TeamResult(BaseModel):
     """Result from a team execution."""
+
     final_output: str
     steps: list[dict] = Field(default_factory=list)
     messages: list[TeamMessage] = Field(default_factory=list)
@@ -72,11 +73,11 @@ class AgentTeam:
 
     def run(self, task: str) -> TeamResult:
         """Run the team on a task using the configured strategy."""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"👥 Team [{self.name}] — Strategy: {self.strategy}")
         print(f"   Agents: {', '.join(a.config.name for a in self.agents)}")
         print(f"   Task: {task}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         start = time.time()
 
@@ -106,7 +107,7 @@ class AgentTeam:
         total_tokens = 0
 
         for i, agent in enumerate(self.agents):
-            print(f"\n📌 Step {i+1}/{len(self.agents)}: {agent.config.name}")
+            print(f"\n📌 Step {i + 1}/{len(self.agents)}: {agent.config.name}")
             print(f"   Input: {current_input[:100]}...")
 
             # Build prompt that includes context from previous agents
@@ -125,21 +126,27 @@ class AgentTeam:
             total_tokens += tokens
 
             # Log inter-agent message
-            next_agent = self.agents[i+1].config.name if i+1 < len(self.agents) else "output"
-            self.messages.append(TeamMessage(
-                from_agent=agent.config.name,
-                to_agent=next_agent,
-                content=output[:500],
-                message_type="result",
-            ))
+            next_agent = (
+                self.agents[i + 1].config.name if i + 1 < len(self.agents) else "output"
+            )
+            self.messages.append(
+                TeamMessage(
+                    from_agent=agent.config.name,
+                    to_agent=next_agent,
+                    content=output[:500],
+                    message_type="result",
+                )
+            )
 
-            steps.append({
-                "agent": agent.config.name,
-                "input": current_input[:200],
-                "output": output[:500],
-                "cost": cost,
-                "tokens": tokens,
-            })
+            steps.append(
+                {
+                    "agent": agent.config.name,
+                    "input": current_input[:200],
+                    "output": output[:500],
+                    "cost": cost,
+                    "tokens": tokens,
+                }
+            )
 
             current_input = output
 
@@ -158,7 +165,9 @@ class AgentTeam:
         total_tokens = 0
 
         for i, agent in enumerate(self.agents):
-            print(f"\n📌 Agent {i+1}/{len(self.agents)}: {agent.config.name} (parallel)")
+            print(
+                f"\n📌 Agent {i + 1}/{len(self.agents)}: {agent.config.name} (parallel)"
+            )
 
             msg = agent.run(task)
             output = msg.content or ""
@@ -169,18 +178,20 @@ class AgentTeam:
             total_tokens += tokens
 
             results.append({"agent": agent.config.name, "output": output, "cost": cost})
-            steps.append({
-                "agent": agent.config.name,
-                "output": output[:500],
-                "cost": cost,
-                "tokens": tokens,
-            })
+            steps.append(
+                {
+                    "agent": agent.config.name,
+                    "output": output[:500],
+                    "cost": cost,
+                    "tokens": tokens,
+                }
+            )
 
         # Use the last agent (or manager) to pick the best result
         picker = self.manager or self.agents[-1]
-        comparison = "\n\n".join([
-            f"--- {r['agent']} ---\n{r['output']}" for r in results
-        ])
+        comparison = "\n\n".join(
+            [f"--- {r['agent']} ---\n{r['output']}" for r in results]
+        )
         pick_prompt = f"Multiple agents worked on this task: '{task}'\n\nHere are their responses:\n{comparison}\n\nPick the BEST response and explain why. Return only the best response, improved if possible."
 
         print(f"\n📌 Picking best result using: {picker.config.name}")
@@ -203,7 +214,7 @@ class AgentTeam:
         proposals = {}
 
         # Round 1: Initial proposals
-        print(f"\n🗣️ Round 1: Initial Proposals")
+        print("\n🗣️ Round 1: Initial Proposals")
         for agent in self.agents:
             msg = agent.run(f"Propose your best solution for: {task}")
             proposals[agent.config.name] = msg.content or ""
@@ -212,12 +223,14 @@ class AgentTeam:
             total_cost += cost
             total_tokens += tokens
 
-            steps.append({
-                "round": 1,
-                "agent": agent.config.name,
-                "type": "proposal",
-                "output": (msg.content or "")[:500],
-            })
+            steps.append(
+                {
+                    "round": 1,
+                    "agent": agent.config.name,
+                    "type": "proposal",
+                    "output": (msg.content or "")[:500],
+                }
+            )
 
         # Rounds 2+: Critique and improve
         for round_num in range(2, self.max_rounds + 1):
@@ -225,11 +238,13 @@ class AgentTeam:
             new_proposals = {}
 
             for agent in self.agents:
-                others = "\n\n".join([
-                    f"--- {name} ---\n{prop}"
-                    for name, prop in proposals.items()
-                    if name != agent.config.name
-                ])
+                others = "\n\n".join(
+                    [
+                        f"--- {name} ---\n{prop}"
+                        for name, prop in proposals.items()
+                        if name != agent.config.name
+                    ]
+                )
 
                 critique_prompt = f"Task: {task}\n\nYour previous proposal:\n{proposals[agent.config.name]}\n\nOther proposals:\n{others}\n\nCritique the other proposals and improve your own. Give your final improved answer."
 
@@ -240,19 +255,23 @@ class AgentTeam:
                 total_cost += cost
                 total_tokens += tokens
 
-                self.messages.append(TeamMessage(
-                    from_agent=agent.config.name,
-                    to_agent="team",
-                    content=(msg.content or "")[:300],
-                    message_type="feedback",
-                ))
+                self.messages.append(
+                    TeamMessage(
+                        from_agent=agent.config.name,
+                        to_agent="team",
+                        content=(msg.content or "")[:300],
+                        message_type="feedback",
+                    )
+                )
 
-                steps.append({
-                    "round": round_num,
-                    "agent": agent.config.name,
-                    "type": "critique",
-                    "output": (msg.content or "")[:500],
-                })
+                steps.append(
+                    {
+                        "round": round_num,
+                        "agent": agent.config.name,
+                        "type": "critique",
+                        "output": (msg.content or "")[:500],
+                    }
+                )
 
             proposals = new_proposals
 
@@ -260,7 +279,9 @@ class AgentTeam:
         all_final = "\n\n".join([f"--- {n} ---\n{p}" for n, p in proposals.items()])
         synthesizer = self.manager or self.agents[0]
         print(f"\n📌 Final synthesis by: {synthesizer.config.name}")
-        final = synthesizer.run(f"Synthesize these refined proposals into one final answer for: {task}\n\n{all_final}")
+        final = synthesizer.run(
+            f"Synthesize these refined proposals into one final answer for: {task}\n\n{all_final}"
+        )
         total_cost += sum(e.cost_usd for e in synthesizer.events)
         total_tokens += sum(e.tokens_used for e in synthesizer.events)
 
@@ -281,7 +302,9 @@ class AgentTeam:
         total_tokens = 0
 
         # Manager creates a plan
-        agent_list = ", ".join([f"{a.config.name}" for a in self.agents if a != self.manager])
+        agent_list = ", ".join(
+            [f"{a.config.name}" for a in self.agents if a != self.manager]
+        )
         plan_prompt = f"You are a manager. You have these team members: {agent_list}\n\nTask: {task}\n\nCreate a plan. For each step, specify which agent should do it and what their specific subtask is. Format: AGENT_NAME: subtask description (one per line)"
 
         print(f"\n📌 Manager [{self.manager.config.name}] creating plan...")
@@ -290,7 +313,9 @@ class AgentTeam:
         total_cost += sum(e.cost_usd for e in self.manager.events)
         total_tokens += sum(e.tokens_used for e in self.manager.events)
 
-        steps.append({"agent": self.manager.config.name, "type": "plan", "output": plan[:500]})
+        steps.append(
+            {"agent": self.manager.config.name, "type": "plan", "output": plan[:500]}
+        )
 
         # Execute each subtask with the assigned agent
         subtask_results = []
@@ -313,26 +338,30 @@ class AgentTeam:
 
                     subtask_results.append(f"{agent.config.name}: {result}")
 
-                    self.messages.append(TeamMessage(
-                        from_agent=self.manager.config.name,
-                        to_agent=agent.config.name,
-                        content=subtask,
-                        message_type="delegate",
-                    ))
+                    self.messages.append(
+                        TeamMessage(
+                            from_agent=self.manager.config.name,
+                            to_agent=agent.config.name,
+                            content=subtask,
+                            message_type="delegate",
+                        )
+                    )
 
-                    steps.append({
-                        "agent": agent.config.name,
-                        "type": "subtask",
-                        "input": subtask[:200],
-                        "output": result[:500],
-                    })
+                    steps.append(
+                        {
+                            "agent": agent.config.name,
+                            "type": "subtask",
+                            "input": subtask[:200],
+                            "output": result[:500],
+                        }
+                    )
                     break
 
         # Manager synthesizes results
         all_results = "\n\n".join(subtask_results)
         synthesis_prompt = f"Your team completed the subtasks. Here are their results:\n\n{all_results}\n\nSynthesize into a final comprehensive answer for: {task}"
 
-        print(f"\n📌 Manager synthesizing final result...")
+        print("\n📌 Manager synthesizing final result...")
         final = self.manager.run(synthesis_prompt)
         total_cost += sum(e.cost_usd for e in self.manager.events)
         total_tokens += sum(e.tokens_used for e in self.manager.events)
@@ -345,9 +374,9 @@ class AgentTeam:
         )
 
     def _print_summary(self, result: TeamResult):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"👥 Team Run Summary: {self.name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"   Strategy:     {self.strategy}")
         print(f"   Agents used:  {', '.join(result.agents_used)}")
         print(f"   Steps:        {len(result.steps)}")
@@ -355,7 +384,7 @@ class AgentTeam:
         print(f"   Total cost:   ${result.total_cost:.4f}")
         print(f"   Total tokens: {result.total_tokens:,}")
         print(f"   Total time:   {result.total_time_ms:.0f}ms")
-        print(f"{'='*60}")
-        print(f"\n📝 Final Output:")
+        print(f"{'=' * 60}")
+        print("\n📝 Final Output:")
         print(result.final_output)
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")

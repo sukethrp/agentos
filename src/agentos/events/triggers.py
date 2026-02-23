@@ -145,7 +145,9 @@ class AgentCompleteTrigger(BaseTrigger):
     def start(self) -> None:
         self._running = True
 
-    def fire(self, agent_name: str, result: str, cost: float = 0.0, tokens: int = 0) -> None:
+    def fire(
+        self, agent_name: str, result: str, cost: float = 0.0, tokens: int = 0
+    ) -> None:
         if not self._running:
             return
         self.bus.emit(
@@ -173,8 +175,16 @@ class AgentCompleteTrigger(BaseTrigger):
                 result = self._inner.run(user_input, **kwargs)
                 # Fire the trigger
                 content = result.content if hasattr(result, "content") else str(result)
-                cost = sum(e.cost_usd for e in self._inner.events) if self._inner.events else 0
-                tokens = sum(e.tokens_used for e in self._inner.events) if self._inner.events else 0
+                cost = (
+                    sum(e.cost_usd for e in self._inner.events)
+                    if self._inner.events
+                    else 0
+                )
+                tokens = (
+                    sum(e.tokens_used for e in self._inner.events)
+                    if self._inner.events
+                    else 0
+                )
                 trigger.fire(
                     agent_name=self._inner.config.name,
                     result=content,
@@ -231,7 +241,9 @@ class FileTrigger(BaseTrigger):
             return result
         for entry in os.scandir(self.watch_dir):
             if entry.is_file():
-                if self.patterns and not any(entry.name.endswith(p) for p in self.patterns):
+                if self.patterns and not any(
+                    entry.name.endswith(p) for p in self.patterns
+                ):
                     continue
                 result[entry.path] = entry.stat().st_mtime
         return result

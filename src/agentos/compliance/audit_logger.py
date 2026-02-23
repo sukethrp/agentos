@@ -2,12 +2,12 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 
 
 class AuditEvent(BaseModel):
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     agent_id: str = ""
     user_id: str = ""
     action_type: str = ""
@@ -25,15 +25,21 @@ class AuditLogger:
         self._path = log_path or AUDIT_LOG_PATH
 
     def _serialize(self, event: AuditEvent) -> str:
-        return json.dumps({
-            "timestamp": event.timestamp.isoformat(),
-            "agent_id": event.agent_id,
-            "user_id": event.user_id,
-            "action_type": event.action_type,
-            "resource": event.resource,
-            "outcome": event.outcome,
-            "ip_address": event.ip_address,
-        }, default=str) + "\n"
+        return (
+            json.dumps(
+                {
+                    "timestamp": event.timestamp.isoformat(),
+                    "agent_id": event.agent_id,
+                    "user_id": event.user_id,
+                    "action_type": event.action_type,
+                    "resource": event.resource,
+                    "outcome": event.outcome,
+                    "ip_address": event.ip_address,
+                },
+                default=str,
+            )
+            + "\n"
+        )
 
     def log_sync(self, event: AuditEvent) -> None:
         with open(self._path, "a") as f:

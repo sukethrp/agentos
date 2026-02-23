@@ -48,4 +48,3 @@ class ParallelGroup:
 
     name: str
     steps: List[Step] = field(default_factory=list)
-

@@ -13,7 +13,12 @@ class UsageSummary:
     cost: float
 
     def to_dict(self) -> dict:
-        return {"api_key": self.api_key, "queries": self.queries, "tokens": self.tokens, "cost": self.cost}
+        return {
+            "api_key": self.api_key,
+            "queries": self.queries,
+            "tokens": self.tokens,
+            "cost": self.cost,
+        }
 
 
 def _db_path() -> Path:
@@ -32,13 +37,18 @@ def _init_db(conn: sqlite3.Connection) -> None:
             created_at REAL NOT NULL
         )
     """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_usage_api_key ON usage_records(api_key_hash, month)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_usage_org ON usage_records(org_id, month)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_usage_api_key ON usage_records(api_key_hash, month)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_usage_org ON usage_records(org_id, month)"
+    )
     conn.commit()
 
 
 def _hash_key(key: str) -> str:
     import hashlib
+
     return hashlib.sha256(key.encode()).hexdigest()
 
 
@@ -50,17 +60,20 @@ class UsageTrackerAsync:
         _init_db(conn)
         conn.close()
 
-    async def record(self, api_key: str, tokens: int, cost: float, org_id: str | None = None) -> None:
+    async def record(
+        self, api_key: str, tokens: int, cost: float, org_id: str | None = None
+    ) -> None:
         if org_id is None:
             try:
                 from agentos.auth.org_store import get_api_key_info
+
                 info = get_api_key_info(api_key)
                 if info:
                     org_id = info.org_id
             except Exception:
                 pass
-        import calendar
         import time
+
         now = time.time()
         ts = time.gmtime(now)
         month = f"{ts.tm_year}-{ts.tm_mon:02d}"
@@ -91,7 +104,9 @@ class UsageTrackerAsync:
             return row or (0, 0, 0.0)
 
         count, tokens, cost = await asyncio.to_thread(_query)
-        return UsageSummary(api_key=api_key, queries=count, tokens=int(tokens), cost=float(cost))
+        return UsageSummary(
+            api_key=api_key, queries=count, tokens=int(tokens), cost=float(cost)
+        )
 
     async def get_org_usage(self, org_id: str, month: str) -> tuple[int, float]:
         def _query():

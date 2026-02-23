@@ -36,9 +36,9 @@ class SmartAlert:
     id: str = ""
     level: AlertLevel = AlertLevel.WARNING
     title: str = ""
-    cause: str = ""                 # e.g. "tool 'web_search' returning errors"
-    impact: str = ""                # e.g. "quality dropped from 8.1 to 5.3"
-    recommendation: str = ""        # e.g. "check web_search API key"
+    cause: str = ""  # e.g. "tool 'web_search' returning errors"
+    impact: str = ""  # e.g. "quality dropped from 8.1 to 5.3"
+    recommendation: str = ""  # e.g. "check web_search API key"
     agent_name: str = ""
     timestamp: float = 0.0
     evidence: dict[str, Any] = field(default_factory=dict)
@@ -46,6 +46,7 @@ class SmartAlert:
     def __post_init__(self):
         if not self.id:
             import uuid
+
             self.id = uuid.uuid4().hex[:10]
         if not self.timestamp:
             self.timestamp = time.time()
@@ -64,11 +65,14 @@ class SmartAlert:
         }
 
     def summary(self) -> str:
-        icon = {"info": "ℹ️", "warning": "⚠️", "critical": "🚨"}.get(self.level.value, "?")
+        icon = {"info": "ℹ️", "warning": "⚠️", "critical": "🚨"}.get(
+            self.level.value, "?"
+        )
         return f"{icon} [{self.level.value.upper()}] {self.title} — {self.cause}"
 
 
 # ── Alert generators ─────────────────────────────────────────────────────────
+
 
 def _check_tool_errors(traces: list[Trace]) -> list[SmartAlert]:
     """Detect when specific tools start failing."""
@@ -86,27 +90,33 @@ def _check_tool_errors(traces: list[Trace]) -> list[SmartAlert]:
         if stats["total"] >= 3:
             error_rate = stats["errors"] / stats["total"] * 100
             if error_rate >= 50:
-                alerts.append(SmartAlert(
-                    level=AlertLevel.CRITICAL,
-                    title=f"Tool '{tool_name}' is failing",
-                    cause=f"Tool '{tool_name}' returned errors in {error_rate:.0f}% of calls ({stats['errors']}/{stats['total']})",
-                    impact="Agent responses may be incomplete or hallucinated when this tool is needed",
-                    recommendation=f"Check the '{tool_name}' tool implementation, API keys, and external service status",
-                    evidence=stats,
-                ))
+                alerts.append(
+                    SmartAlert(
+                        level=AlertLevel.CRITICAL,
+                        title=f"Tool '{tool_name}' is failing",
+                        cause=f"Tool '{tool_name}' returned errors in {error_rate:.0f}% of calls ({stats['errors']}/{stats['total']})",
+                        impact="Agent responses may be incomplete or hallucinated when this tool is needed",
+                        recommendation=f"Check the '{tool_name}' tool implementation, API keys, and external service status",
+                        evidence=stats,
+                    )
+                )
             elif error_rate >= 20:
-                alerts.append(SmartAlert(
-                    level=AlertLevel.WARNING,
-                    title=f"Tool '{tool_name}' error rate elevated",
-                    cause=f"Tool '{tool_name}' has a {error_rate:.0f}% error rate",
-                    impact="Some queries relying on this tool may fail",
-                    recommendation=f"Monitor '{tool_name}' — may be intermittent API issue",
-                    evidence=stats,
-                ))
+                alerts.append(
+                    SmartAlert(
+                        level=AlertLevel.WARNING,
+                        title=f"Tool '{tool_name}' error rate elevated",
+                        cause=f"Tool '{tool_name}' has a {error_rate:.0f}% error rate",
+                        impact="Some queries relying on this tool may fail",
+                        recommendation=f"Monitor '{tool_name}' — may be intermittent API issue",
+                        evidence=stats,
+                    )
+                )
     return alerts
 
 
-def _check_quality_drop(traces: list[Trace], diagnoses: list[Diagnosis]) -> list[SmartAlert]:
+def _check_quality_drop(
+    traces: list[Trace], diagnoses: list[Diagnosis]
+) -> list[SmartAlert]:
     """Detect quality drops and correlate with root causes."""
     alerts: list[SmartAlert] = []
     if len(traces) < 6:
@@ -118,7 +128,9 @@ def _check_quality_drop(traces: list[Trace], diagnoses: list[Diagnosis]) -> list
     second_half = sorted_traces[mid:]
 
     first_fail = sum(1 for t in first_half if not t.success) / max(len(first_half), 1)
-    second_fail = sum(1 for t in second_half if not t.success) / max(len(second_half), 1)
+    second_fail = sum(1 for t in second_half if not t.success) / max(
+        len(second_half), 1
+    )
 
     if second_fail > first_fail + 0.15 and second_fail > 0.2:
         # Quality dropped — find the cause from diagnoses
@@ -138,19 +150,21 @@ def _check_quality_drop(traces: list[Trace], diagnoses: list[Diagnosis]) -> list
             "faithfulness": "the LLM is not using available data in its answers",
         }
 
-        alerts.append(SmartAlert(
-            level=AlertLevel.CRITICAL,
-            title="Quality regression detected",
-            cause=f"Root cause: {cause_map.get(top_cause[0], top_cause[0])} ({top_cause[1]} occurrences)",
-            impact=f"Failure rate rose from {first_fail*100:.0f}% to {second_fail*100:.0f}%",
-            recommendation=f"Focus on fixing '{top_cause[0]}' — it's the most common failure point",
-            evidence={
-                "first_half_fail_rate": round(first_fail * 100, 1),
-                "second_half_fail_rate": round(second_fail * 100, 1),
-                "top_cause": top_cause[0],
-                "cause_count": top_cause[1],
-            },
-        ))
+        alerts.append(
+            SmartAlert(
+                level=AlertLevel.CRITICAL,
+                title="Quality regression detected",
+                cause=f"Root cause: {cause_map.get(top_cause[0], top_cause[0])} ({top_cause[1]} occurrences)",
+                impact=f"Failure rate rose from {first_fail * 100:.0f}% to {second_fail * 100:.0f}%",
+                recommendation=f"Focus on fixing '{top_cause[0]}' — it's the most common failure point",
+                evidence={
+                    "first_half_fail_rate": round(first_fail * 100, 1),
+                    "second_half_fail_rate": round(second_fail * 100, 1),
+                    "top_cause": top_cause[0],
+                    "cause_count": top_cause[1],
+                },
+            )
+        )
     return alerts
 
 
@@ -179,20 +193,26 @@ def _check_latency_regression(traces: list[Trace]) -> list[SmartAlert]:
                 if s.latency_ms > 0:
                     step_latencies[s.step_type.value].append(s.latency_ms)
 
-        slowest = max(step_latencies, key=lambda k: statistics.mean(step_latencies[k])) if step_latencies else "unknown"
+        slowest = (
+            max(step_latencies, key=lambda k: statistics.mean(step_latencies[k]))
+            if step_latencies
+            else "unknown"
+        )
 
-        alerts.append(SmartAlert(
-            level=AlertLevel.WARNING,
-            title="Latency regression",
-            cause=f"'{slowest}' steps are the bottleneck",
-            impact=f"Average response time rose from {first_avg:.0f}ms to {second_avg:.0f}ms",
-            recommendation=f"Investigate '{slowest}' latency — may be model or tool API degradation",
-            evidence={
-                "first_avg_ms": round(first_avg, 1),
-                "second_avg_ms": round(second_avg, 1),
-                "slowest_step": slowest,
-            },
-        ))
+        alerts.append(
+            SmartAlert(
+                level=AlertLevel.WARNING,
+                title="Latency regression",
+                cause=f"'{slowest}' steps are the bottleneck",
+                impact=f"Average response time rose from {first_avg:.0f}ms to {second_avg:.0f}ms",
+                recommendation=f"Investigate '{slowest}' latency — may be model or tool API degradation",
+                evidence={
+                    "first_avg_ms": round(first_avg, 1),
+                    "second_avg_ms": round(second_avg, 1),
+                    "slowest_step": slowest,
+                },
+            )
+        )
     return alerts
 
 
@@ -207,18 +227,21 @@ def _check_missing_tools(traces: list[Trace]) -> list[SmartAlert]:
 
     for tool_name, count in missing.most_common(3):
         if count >= 2:
-            alerts.append(SmartAlert(
-                level=AlertLevel.WARNING,
-                title=f"LLM keeps hallucinating tool '{tool_name}'",
-                cause=f"Tool '{tool_name}' was called {count} times but doesn't exist",
-                impact="These interactions fail because the tool result is an error",
-                recommendation=f"Either add '{tool_name}' as a real tool or update the system prompt to clarify available tools",
-                evidence={"tool_name": tool_name, "attempts": count},
-            ))
+            alerts.append(
+                SmartAlert(
+                    level=AlertLevel.WARNING,
+                    title=f"LLM keeps hallucinating tool '{tool_name}'",
+                    cause=f"Tool '{tool_name}' was called {count} times but doesn't exist",
+                    impact="These interactions fail because the tool result is an error",
+                    recommendation=f"Either add '{tool_name}' as a real tool or update the system prompt to clarify available tools",
+                    evidence={"tool_name": tool_name, "attempts": count},
+                )
+            )
     return alerts
 
 
 # ── Alert engine ─────────────────────────────────────────────────────────────
+
 
 class AlertEngine:
     """Run all alert generators against recent traces."""

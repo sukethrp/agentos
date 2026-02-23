@@ -13,7 +13,9 @@ class KubernetesConfig(BaseModel):
 
 class AgentDeployConfig(BaseModel):
     name: str
-    resources: dict[str, str] = Field(default_factory=lambda: {"cpu": "100m", "memory": "128Mi"})
+    resources: dict[str, str] = Field(
+        default_factory=lambda: {"cpu": "100m", "memory": "128Mi"}
+    )
     replicas: int = 1
     env_vars: dict[str, str] = Field(default_factory=dict)
 
@@ -35,6 +37,7 @@ async def deploy_agent(
     else:
         deploy_cfg = agent_config
     from kubernetes_asyncio import client, config
+
     if k8s_config.kubeconfig_path:
         await config.load_kube_config(config_file=k8s_config.kubeconfig_path)
     else:
@@ -45,8 +48,7 @@ async def deploy_agent(
     cpu = deploy_cfg.resources.get("cpu", "100m")
     mem = deploy_cfg.resources.get("memory", "128Mi")
     env_list = [
-        client.V1EnvVar(name=k, value=v)
-        for k, v in deploy_cfg.env_vars.items()
+        client.V1EnvVar(name=k, value=v) for k, v in deploy_cfg.env_vars.items()
     ]
     container = client.V1Container(
         name=name,
@@ -124,7 +126,9 @@ async def deploy_agent(
         await apps.create_namespaced_deployment(namespace=ns, body=deployment)
         await core.create_namespaced_service(namespace=ns, body=service)
         await core.create_namespaced_config_map(namespace=ns, body=configmap)
-        await autoscaling.create_namespaced_horizontal_pod_autoscaler(namespace=ns, body=hpa)
+        await autoscaling.create_namespaced_horizontal_pod_autoscaler(
+            namespace=ns, body=hpa
+        )
     return {
         "deployment": name,
         "service": name,
@@ -134,8 +138,11 @@ async def deploy_agent(
     }
 
 
-async def scale_agent(agent_id: str, replicas: int, k8s_config: KubernetesConfig) -> None:
+async def scale_agent(
+    agent_id: str, replicas: int, k8s_config: KubernetesConfig
+) -> None:
     from kubernetes_asyncio import client, config
+
     if k8s_config.kubeconfig_path:
         await config.load_kube_config(config_file=k8s_config.kubeconfig_path)
     else:
@@ -152,6 +159,7 @@ async def scale_agent(agent_id: str, replicas: int, k8s_config: KubernetesConfig
 
 async def teardown_agent(agent_id: str, k8s_config: KubernetesConfig) -> None:
     from kubernetes_asyncio import client, config
+
     if k8s_config.kubeconfig_path:
         await config.load_kube_config(config_file=k8s_config.kubeconfig_path)
     else:
@@ -163,18 +171,26 @@ async def teardown_agent(agent_id: str, k8s_config: KubernetesConfig) -> None:
         core = client.CoreV1Api(api)
         autoscaling = client.AutoscalingV2Api(api)
         try:
-            await apps.delete_namespaced_deployment(name=agent_id, namespace=ns, body=delete_opts)
+            await apps.delete_namespaced_deployment(
+                name=agent_id, namespace=ns, body=delete_opts
+            )
         except client.rest.ApiException:
             pass
         try:
-            await core.delete_namespaced_service(name=agent_id, namespace=ns, body=delete_opts)
+            await core.delete_namespaced_service(
+                name=agent_id, namespace=ns, body=delete_opts
+            )
         except client.rest.ApiException:
             pass
         try:
-            await core.delete_namespaced_config_map(name=f"{agent_id}-config", namespace=ns, body=delete_opts)
+            await core.delete_namespaced_config_map(
+                name=f"{agent_id}-config", namespace=ns, body=delete_opts
+            )
         except client.rest.ApiException:
             pass
         try:
-            await autoscaling.delete_namespaced_horizontal_pod_autoscaler(name=agent_id, namespace=ns, body=delete_opts)
+            await autoscaling.delete_namespaced_horizontal_pod_autoscaler(
+                name=agent_id, namespace=ns, body=delete_opts
+            )
         except client.rest.ApiException:
             pass

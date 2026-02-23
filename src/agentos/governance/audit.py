@@ -54,23 +54,23 @@ class AuditLog:
             "total_actions": total,
             "allowed": allowed,
             "blocked": blocked,
-            "block_rate": f"{(blocked/total*100):.1f}%" if total > 0 else "0%",
+            "block_rate": f"{(blocked / total * 100):.1f}%" if total > 0 else "0%",
         }
 
     def print_report(self):
         summary = self.get_summary()
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"📋 Audit Report: {self.agent_name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"   Total actions:  {summary['total_actions']}")
         print(f"   ✅ Allowed:      {summary['allowed']}")
         print(f"   🚫 Blocked:      {summary['blocked']}")
         print(f"   Block rate:     {summary['block_rate']}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         blocked = self.get_blocked()
         if blocked:
-            print(f"\n   🚫 Blocked Actions:")
+            print("\n   🚫 Blocked Actions:")
             for e in blocked:
                 print(f"      [{e['time_readable']}] {e['action']}")
                 print(f"         Rule: {e['governance_rule']}")

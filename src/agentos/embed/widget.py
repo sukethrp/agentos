@@ -13,7 +13,6 @@ Usage:
 from __future__ import annotations
 
 import json
-from typing import Any
 
 
 # ── Colour palettes ──────────────────────────────────────────────────────────
@@ -53,6 +52,7 @@ def _get_theme(name: str) -> dict[str, str]:
 
 
 # ── Widget JavaScript (standalone, served at /embed/chat.js) ─────────────────
+
 
 def generate_widget_js() -> str:
     """Return the full JS source for the embeddable chat widget.
@@ -294,6 +294,7 @@ function httpFallback(q,typing){
 
 # ── Inline widget generator ─────────────────────────────────────────────────
 
+
 def generate_widget(
     agent_name: str = "AgentOS",
     base_url: str = "http://localhost:8000",
@@ -326,14 +327,12 @@ def generate_widget(
     }
     js_body = generate_widget_js()
     return (
-        "<script>\n"
-        f"window.AgentOSConfig = {json.dumps(config)};\n"
-        f"{js_body}\n"
-        "</script>"
+        f"<script>\nwindow.AgentOSConfig = {json.dumps(config)};\n{js_body}\n</script>"
     )
 
 
 # ── Snippet helpers for the embed preview / docs ────────────────────────────
+
 
 def generate_snippet(
     base_url: str = "http://localhost:8000",
@@ -352,7 +351,7 @@ def generate_snippet(
         f'    position: "{position}",',
         f'    accentColor: "{accent_color}",',
     ]
-    config_block = "\n".join(l for l in config_lines if l)
+    config_block = "\n".join(line for line in config_lines if line)
     return (
         "<script>\n"
         "  window.AgentOSConfig = {\n"

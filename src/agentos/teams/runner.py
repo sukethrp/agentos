@@ -29,17 +29,20 @@ class TeamRunner:
             budget=BudgetGuard(max_per_day=50.0, max_total=50.0),
         )
 
-    async def execute(self, dag: WorkflowDAG, initial_input: str = "") -> dict[str, str]:
+    async def execute(
+        self, dag: WorkflowDAG, initial_input: str = ""
+    ) -> dict[str, str]:
         outputs: dict[str, str] = {}
         order = dag.topological_order()
-        ready: dict[str, set[str]] = {n: set(dag.predecessors(n)) for n in order}
 
         async def run_node(node_id: str, task_input: str) -> str:
             await broadcast_team_node_event(self.team_id, node_id, "running", "")
             agent = self._agents.get(dag.node_data(node_id).get("agent_id", ""))
             if not agent:
                 out = ""
-                await broadcast_team_node_event(self.team_id, node_id, "error", "agent not found")
+                await broadcast_team_node_event(
+                    self.team_id, node_id, "error", "agent not found"
+                )
                 return out
             est_cost = 0.01
             check = self._gov.check_tool_call(f"llm:{node_id}", estimated_cost=est_cost)
@@ -80,7 +83,9 @@ class TeamRunner:
                 else:
                     parts = [outputs.get(p, "") for p in preds]
                     tasks_input.append("\n\n".join(parts))
-            results = await asyncio.gather(*[run_node(n, ti) for n, ti in zip(batch, tasks_input)])
+            results = await asyncio.gather(
+                *[run_node(n, ti) for n, ti in zip(batch, tasks_input)]
+            )
             for n, r in zip(batch, results):
                 outputs[n] = r
                 completed.add(n)
@@ -93,8 +98,13 @@ class ResultAggregator:
 
     def merge(self, outputs: dict[str, str], goal: str = "") -> dict[str, Any]:
         from agentos.providers.router import call_model
+
         parts = [f"[{k}]: {v}" for k, v in outputs.items()]
-        prompt = f"Synthesize these subtask outputs into a final structured response.\n\nGoal: {goal}\n\nOutputs:\n" + "\n\n".join(parts) + "\n\nReturn valid JSON with keys: summary, details, recommendations (or similar)."
+        prompt = (
+            f"Synthesize these subtask outputs into a final structured response.\n\nGoal: {goal}\n\nOutputs:\n"
+            + "\n\n".join(parts)
+            + "\n\nReturn valid JSON with keys: summary, details, recommendations (or similar)."
+        )
         msg, _ = call_model(
             model=self._model,
             messages=[{"role": "user", "content": prompt}],
@@ -105,6 +115,7 @@ class ResultAggregator:
         text = text.replace("```json", "").replace("```", "").strip()
         try:
             import json
+
             return json.loads(text)
         except Exception:
             return {"summary": text, "details": outputs, "recommendations": []}

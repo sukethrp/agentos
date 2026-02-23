@@ -14,7 +14,6 @@ Can be printed to the console or serialised for the web UI.
 
 from __future__ import annotations
 
-import textwrap
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -31,7 +30,7 @@ class ReplayFrame:
     detail: str = ""
     data: dict[str, Any] = field(default_factory=dict)
     is_failure_point: bool = False
-    severity: str = "ok"           # "ok" | "warn" | "fail"
+    severity: str = "ok"  # "ok" | "warn" | "fail"
 
     def to_dict(self) -> dict:
         return {
@@ -77,7 +76,9 @@ class Replay:
         ]
 
         for f in self.frames:
-            icon = "❌" if f.is_failure_point else ("⚠️" if f.severity == "warn" else "▶")
+            icon = (
+                "❌" if f.is_failure_point else ("⚠️" if f.severity == "warn" else "▶")
+            )
             pointer = " ← FAILURE POINT" if f.is_failure_point else ""
             lines.append(f"  {icon} Frame {f.frame_index}: {f.label}{pointer}")
             if f.detail:
@@ -89,7 +90,9 @@ class Replay:
             lines.append("  ─── Diagnosis ───")
             lines.append(f"  Root cause: {self.diagnosis.root_cause}")
             for c in self.diagnosis.checks:
-                sev_icon = {"pass": "✅", "warn": "⚠️", "fail": "❌"}.get(c.severity.value, "?")
+                sev_icon = {"pass": "✅", "warn": "⚠️", "fail": "❌"}.get(
+                    c.severity.value, "?"
+                )
                 lines.append(f"    {sev_icon} {c.check_name}: {c.title}")
 
         lines.append("=" * 70)
@@ -97,6 +100,7 @@ class Replay:
 
 
 # ── Replay builder ───────────────────────────────────────────────────────────
+
 
 def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
     """Build a step-by-step replay from a trace with full diagnosis."""
@@ -117,20 +121,27 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
         f"Model: {trace.model}\n"
         f"System prompt: {trace.system_prompt[:120]}{'…' if len(trace.system_prompt) > 120 else ''}"
     )
-    replay.frames.append(ReplayFrame(
-        frame_index=frame_idx,
-        label="SETUP — Agent initialised",
-        detail=setup_detail,
-        data={"model": trace.model, "system_prompt_length": len(trace.system_prompt)},
-    ))
+    replay.frames.append(
+        ReplayFrame(
+            frame_index=frame_idx,
+            label="SETUP — Agent initialised",
+            detail=setup_detail,
+            data={
+                "model": trace.model,
+                "system_prompt_length": len(trace.system_prompt),
+            },
+        )
+    )
     frame_idx += 1
 
     # Frame 1: User query
-    replay.frames.append(ReplayFrame(
-        frame_index=frame_idx,
-        label="USER QUERY",
-        detail=trace.user_query,
-    ))
+    replay.frames.append(
+        ReplayFrame(
+            frame_index=frame_idx,
+            label="USER QUERY",
+            detail=trace.user_query,
+        )
+    )
     frame_idx += 1
 
     # Build frames for each step
@@ -143,32 +154,41 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
 
     # Final outcome frame
     if trace.success:
-        replay.frames.append(ReplayFrame(
-            frame_index=frame_idx,
-            label="OUTCOME — Success",
-            detail=f"Final response ({len(trace.final_response)} chars): {trace.final_response[:200]}",
-            severity="ok",
-        ))
+        replay.frames.append(
+            ReplayFrame(
+                frame_index=frame_idx,
+                label="OUTCOME — Success",
+                detail=f"Final response ({len(trace.final_response)} chars): {trace.final_response[:200]}",
+                severity="ok",
+            )
+        )
     else:
-        replay.frames.append(ReplayFrame(
-            frame_index=frame_idx,
-            label="OUTCOME — Failed",
-            detail=trace.error or "Agent did not produce a successful response",
-            severity="fail",
-            is_failure_point=replay.failure_frame is None,
-        ))
+        replay.frames.append(
+            ReplayFrame(
+                frame_index=frame_idx,
+                label="OUTCOME — Failed",
+                detail=trace.error or "Agent did not produce a successful response",
+                severity="fail",
+                is_failure_point=replay.failure_frame is None,
+            )
+        )
         if replay.failure_frame is None:
             replay.failure_frame = frame_idx
 
     return replay
 
 
-def _step_to_frame(step: TraceStep, frame_idx: int, diag: Diagnosis, include_messages: bool) -> ReplayFrame:
+def _step_to_frame(
+    step: TraceStep, frame_idx: int, diag: Diagnosis, include_messages: bool
+) -> ReplayFrame:
     """Convert a TraceStep into a ReplayFrame."""
 
     is_failure = step.is_error
     # Also mark as failure if the diagnosis points to this step
-    if diag.root_cause_step == step.step_index and diag.overall_severity == Severity.FAIL:
+    if (
+        diag.root_cause_step == step.step_index
+        and diag.overall_severity == Severity.FAIL
+    ):
         is_failure = True
 
     severity = "fail" if is_failure else ("warn" if step.is_error else "ok")
@@ -190,7 +210,11 @@ def _step_to_frame(step: TraceStep, frame_idx: int, diag: Diagnosis, include_mes
             frame_index=frame_idx,
             label=f"LLM CALL (step {step.step_index})",
             detail="\n".join(detail_lines),
-            data={"tokens": step.tokens_used, "cost": step.cost_usd, "latency_ms": step.latency_ms},
+            data={
+                "tokens": step.tokens_used,
+                "cost": step.cost_usd,
+                "latency_ms": step.latency_ms,
+            },
             severity=severity,
             is_failure_point=is_failure,
         )

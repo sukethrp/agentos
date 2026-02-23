@@ -18,7 +18,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from agentos.mesh.auth import sign_message
 from agentos.mesh.protocol import (
     MeshMessage,
     MessageType,
@@ -26,6 +25,7 @@ from agentos.mesh.protocol import (
 
 
 # ── Transaction models ───────────────────────────────────────────────────────
+
 
 class TransactionStatus(str, Enum):
     PENDING = "pending"
@@ -41,9 +41,9 @@ class TransactionRequest(BaseModel):
     transaction_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
     description: str = ""
     agreed_terms: dict[str, Any] = Field(default_factory=dict)
-    negotiation_id: str = ""         # links back to the negotiation conversation
-    initiator: str = ""              # mesh_id
-    counterparty: str = ""           # mesh_id
+    negotiation_id: str = ""  # links back to the negotiation conversation
+    initiator: str = ""  # mesh_id
+    counterparty: str = ""  # mesh_id
     created_at: float = Field(default_factory=time.time)
 
 
@@ -58,7 +58,7 @@ class TransactionReceipt(BaseModel):
     initiator_signature: str = ""
     counterparty_signature: str = ""
     completed_at: float = Field(default_factory=time.time)
-    receipt_hash: str = ""           # SHA-256 of the canonical receipt
+    receipt_hash: str = ""  # SHA-256 of the canonical receipt
 
     def compute_hash(self) -> str:
         """Compute a tamper-evident hash of the receipt contents."""
@@ -83,6 +83,7 @@ class TransactionReceipt(BaseModel):
 
 
 # ── Message builders ─────────────────────────────────────────────────────────
+
 
 def make_transact(
     sender: str,
@@ -135,7 +136,11 @@ def make_verify_result(
     receipt: TransactionReceipt | None,
 ) -> MeshMessage:
     if receipt:
-        payload = {"found": True, "receipt": receipt.model_dump(), "integrity": receipt.verify_integrity()}
+        payload = {
+            "found": True,
+            "receipt": receipt.model_dump(),
+            "integrity": receipt.verify_integrity(),
+        }
     else:
         payload = {"found": False}
     return MeshMessage(
@@ -149,6 +154,7 @@ def make_verify_result(
 
 
 # ── Ledger ───────────────────────────────────────────────────────────────────
+
 
 class TransactionLedger:
     """In-memory audit trail of all transactions."""
@@ -174,14 +180,16 @@ class TransactionLedger:
         out = []
         for tid, req in self._transactions.items():
             r = self._receipts.get(tid)
-            out.append({
-                "transaction_id": tid,
-                "description": req.description,
-                "initiator": req.initiator,
-                "counterparty": req.counterparty,
-                "status": r.status.value if r else "pending",
-                "has_receipt": r is not None,
-            })
+            out.append(
+                {
+                    "transaction_id": tid,
+                    "description": req.description,
+                    "initiator": req.initiator,
+                    "counterparty": req.counterparty,
+                    "status": r.status.value if r else "pending",
+                    "has_receipt": r is not None,
+                }
+            )
         return out
 
     def verify(self, transaction_id: str) -> dict:
@@ -201,8 +209,16 @@ class TransactionLedger:
         return {
             "total_transactions": len(self._transactions),
             "total_receipts": len(self._receipts),
-            "completed": sum(1 for r in self._receipts.values() if r.status == TransactionStatus.COMPLETED),
-            "failed": sum(1 for r in self._receipts.values() if r.status == TransactionStatus.FAILED),
+            "completed": sum(
+                1
+                for r in self._receipts.values()
+                if r.status == TransactionStatus.COMPLETED
+            ),
+            "failed": sum(
+                1
+                for r in self._receipts.values()
+                if r.status == TransactionStatus.FAILED
+            ),
         }
 
 

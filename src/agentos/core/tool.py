@@ -1,7 +1,7 @@
 from __future__ import annotations
 import time
 import inspect
-from typing import Any, Callable
+from typing import Callable
 from agentos.core.types import ToolSpec, ToolParam, ToolCall, ToolResult
 
 
@@ -27,21 +27,25 @@ class Tool:
         for pname, p in sig.parameters.items():
             hint = p.annotation
             ptype = "string"
-            if hint == int or hint == float:
+            if hint is int or hint is float:
                 ptype = "number"
-            elif hint == bool:
+            elif hint is bool:
                 ptype = "boolean"
-            params.append(ToolParam(
-                name=pname,
-                type=ptype,
-                description=f"Parameter: {pname}",
-                required=p.default == inspect.Parameter.empty,
-            ))
+            params.append(
+                ToolParam(
+                    name=pname,
+                    type=ptype,
+                    description=f"Parameter: {pname}",
+                    required=p.default == inspect.Parameter.empty,
+                )
+            )
         return params
 
     @property
     def spec(self) -> ToolSpec:
-        return ToolSpec(name=self.name, description=self.description, parameters=self.params)
+        return ToolSpec(
+            name=self.name, description=self.description, parameters=self.params
+        )
 
     def execute(self, call: ToolCall) -> ToolResult:
         start = time.time()
@@ -71,5 +75,12 @@ def tool(
     max_retries: int = 0,
 ):
     def decorator(fn: Callable) -> Tool:
-        return Tool(fn=fn, name=name or fn.__name__, description=description, timeout_seconds=timeout_seconds, max_retries=max_retries)
+        return Tool(
+            fn=fn,
+            name=name or fn.__name__,
+            description=description,
+            timeout_seconds=timeout_seconds,
+            max_retries=max_retries,
+        )
+
     return decorator

@@ -14,7 +14,9 @@ Return ONLY valid JSON array, e.g. [{{"task": "...", "agent_id": "...", "depends
 
 
 class PlannerAgent:
-    def __init__(self, model: str = "gpt-4o-mini", registered_agents: list[str] | None = None):
+    def __init__(
+        self, model: str = "gpt-4o-mini", registered_agents: list[str] | None = None
+    ):
         self._model = model
         self._registered = set(registered_agents or [])
 
@@ -44,11 +46,15 @@ class PlannerAgent:
                 agent_id = str(item.get("agent_id", ""))
                 depends_on = item.get("depends_on", [])
                 if isinstance(depends_on, list):
-                    depends_on = [int(x) for x in depends_on if isinstance(x, (int, float))]
+                    depends_on = [
+                        int(x) for x in depends_on if isinstance(x, (int, float))
+                    ]
                 else:
                     depends_on = []
                 if not self._registered or agent_id in self._registered:
-                    validated.append({"task": task, "agent_id": agent_id, "depends_on": depends_on})
+                    validated.append(
+                        {"task": task, "agent_id": agent_id, "depends_on": depends_on}
+                    )
             return validated
         except (json.JSONDecodeError, ValueError):
             return []

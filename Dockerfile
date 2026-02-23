@@ -12,12 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install project dependencies
 COPY pyproject.toml README.md ./
+COPY src/ ./src/
+
 RUN pip install --no-cache-dir .
 
 # Copy application source
-COPY src ./src
-COPY examples ./examples
-COPY plugins ./plugins
+COPY . .
 
 EXPOSE 8000
 

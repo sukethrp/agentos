@@ -5,7 +5,13 @@ from agentos.rag.types import SearchResult
 
 class BaseVectorStore(ABC):
     @abstractmethod
-    def add(self, text: str, embedding: list[float], metadata: dict | None = None, doc_id: str = "") -> int:
+    def add(
+        self,
+        text: str,
+        embedding: list[float],
+        metadata: dict | None = None,
+        doc_id: str = "",
+    ) -> int:
         pass
 
     @abstractmethod
@@ -19,7 +25,9 @@ class BaseVectorStore(ABC):
         pass
 
     @abstractmethod
-    def search(self, query_embedding: list[float], top_k: int = 5, threshold: float = 0.0) -> list[SearchResult]:
+    def search(
+        self, query_embedding: list[float], top_k: int = 5, threshold: float = 0.0
+    ) -> list[SearchResult]:
         pass
 
     @property

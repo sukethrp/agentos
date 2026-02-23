@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 # ── Message types ────────────────────────────────────────────────────────────
 
+
 class MessageType(str, Enum):
     PING = "ping"
     PONG = "pong"
@@ -45,31 +46,35 @@ class NegotiationStatus(str, Enum):
 
 # ── Identity ─────────────────────────────────────────────────────────────────
 
+
 class MeshIdentity(BaseModel):
     """Public identity card of a mesh agent."""
 
-    mesh_id: str                       # e.g. "sales-bot@acme.com"
+    mesh_id: str  # e.g. "sales-bot@acme.com"
     display_name: str = ""
-    public_key: str = ""               # base64-encoded HMAC key (shared-secret simplified model)
-    capabilities: list[str] = Field(default_factory=list)  # ["negotiate", "quote", "transact"]
-    endpoint_url: str = ""             # "http://acme.com:9000/mesh"
+    public_key: str = ""  # base64-encoded HMAC key (shared-secret simplified model)
+    capabilities: list[str] = Field(
+        default_factory=list
+    )  # ["negotiate", "quote", "transact"]
+    endpoint_url: str = ""  # "http://acme.com:9000/mesh"
     organisation: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 # ── Core message envelope ────────────────────────────────────────────────────
 
+
 class MeshMessage(BaseModel):
     """Signed JSON envelope exchanged between mesh agents."""
 
     id: str = Field(default_factory=lambda: uuid.uuid4().hex[:16])
     type: MessageType
-    sender: str                        # mesh_id
-    recipient: str                     # mesh_id
+    sender: str  # mesh_id
+    recipient: str  # mesh_id
     payload: dict[str, Any] = Field(default_factory=dict)
     timestamp: float = Field(default_factory=time.time)
-    signature: str = ""                # HMAC-SHA256 hex digest
-    reply_to: str | None = None        # id of the message being replied to
+    signature: str = ""  # HMAC-SHA256 hex digest
+    reply_to: str | None = None  # id of the message being replied to
     conversation_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
 
     def summary(self) -> str:
@@ -77,6 +82,7 @@ class MeshMessage(BaseModel):
 
 
 # ── Negotiation helpers ──────────────────────────────────────────────────────
+
 
 class NegotiationProposal(BaseModel):
     """Structured proposal payload for a negotiate message."""
@@ -87,7 +93,7 @@ class NegotiationProposal(BaseModel):
     status: NegotiationStatus = NegotiationStatus.PROPOSED
     round: int = 1
     max_rounds: int = 5
-    deadline: float | None = None      # unix timestamp
+    deadline: float | None = None  # unix timestamp
 
 
 class NegotiationResponse(BaseModel):
@@ -102,14 +108,18 @@ class NegotiationResponse(BaseModel):
 
 # ── Helpers for building messages ────────────────────────────────────────────
 
+
 def make_ping(sender: str, recipient: str) -> MeshMessage:
     return MeshMessage(type=MessageType.PING, sender=sender, recipient=recipient)
 
 
 def make_pong(sender: str, ping: MeshMessage) -> MeshMessage:
     return MeshMessage(
-        type=MessageType.PONG, sender=sender, recipient=ping.sender,
-        reply_to=ping.id, conversation_id=ping.conversation_id,
+        type=MessageType.PONG,
+        sender=sender,
+        recipient=ping.sender,
+        reply_to=ping.id,
+        conversation_id=ping.conversation_id,
     )
 
 
@@ -163,7 +173,9 @@ def make_negotiate_response(
     )
 
 
-def make_error(sender: str, recipient: str, error: str, reply_to: str = "") -> MeshMessage:
+def make_error(
+    sender: str, recipient: str, error: str, reply_to: str = ""
+) -> MeshMessage:
     return MeshMessage(
         type=MessageType.ERROR,
         sender=sender,

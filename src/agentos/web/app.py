@@ -2,28 +2,37 @@
 
 from __future__ import annotations
 import asyncio
-import json
 import queue
 import threading
-import time as _time
-from collections import defaultdict
 import os
 import tempfile
 import uuid as _uuid
 from pathlib import Path as _Path
-from fastapi import Depends, FastAPI, File, Query, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Query,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from agentos.monitor.store import store
-from agentos.core.types import AgentEvent
 from agentos.tools import get_builtin_tools
-from agentos.core.multimodal import analyze_image, read_document, encode_image
-from agentos.core.branching import ConversationTree, get_or_create_tree, get_tree, list_trees
-from agentos.scheduler import AgentScheduler
+from agentos.core.multimodal import analyze_image, read_document
+from agentos.core.branching import get_or_create_tree, get_tree, list_trees
 from agentos.events import event_bus, WebhookTrigger
-from agentos.auth import User, create_user, get_current_user, get_optional_user, get_user_by_email
+from agentos.auth import (
+    User,
+    create_user,
+    get_current_user,
+    get_optional_user,
+    get_user_by_email,
+)
 from agentos.auth.usage import usage_tracker
 from agentos.core.ab_testing import ABTest
 from agentos.marketplace import get_marketplace_store
@@ -42,13 +51,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 from agentos.auth.middleware import ScopeMiddleware
-from agentos.auth.routers import router as auth_router
-app.add_middleware(ScopeMiddleware)
-app.include_router(auth_router)
+from agentos.api.routers import ALL_ROUTERS
 
-# Global scheduler instance
-_scheduler = AgentScheduler(max_concurrent=3)
-_scheduler.start()
+app.add_middleware(ScopeMiddleware)
+for router, prefix in ALL_ROUTERS:
+    app.include_router(router, prefix=prefix)
+
+from agentos.scheduler import get_scheduler
+
+_scheduler = get_scheduler()
 
 # Global webhook trigger (passive — fires when /api/webhook/ is hit)
 _webhook_trigger = WebhookTrigger(name="web-webhook")
@@ -99,6 +110,7 @@ class ABTestRequest(BaseModel):
 
 
 # ── WebSocket Chat (streaming) ──
+
 
 @app.websocket("/ws/chat")
 async def ws_chat(websocket: WebSocket):
@@ -166,18 +178,22 @@ async def ws_chat(websocket: WebSocket):
         response_text = "".join(full_response)
         cost = sum(e.cost_usd for e in agent.events)
         tokens = sum(e.tokens_used for e in agent.events)
-        tools_used = [e.data.get("tool", "") for e in agent.events if e.event_type == "tool_call"]
+        tools_used = [
+            e.data.get("tool", "") for e in agent.events if e.event_type == "tool_call"
+        ]
 
         for e in agent.events:
             store.log_event(e)
 
-        await websocket.send_json({
-            "type": "done",
-            "response": response_text,
-            "cost": round(cost, 6),
-            "tokens": tokens,
-            "tools_used": tools_used,
-        })
+        await websocket.send_json(
+            {
+                "type": "done",
+                "response": response_text,
+                "cost": round(cost, 6),
+                "tokens": tokens,
+                "tools_used": tools_used,
+            }
+        )
 
     except WebSocketDisconnect:
         pass
@@ -191,6 +207,7 @@ async def ws_chat(websocket: WebSocket):
 @app.websocket("/ws/monitor")
 async def ws_monitor(websocket: WebSocket):
     from agentos.monitor.ws_manager import get_monitor_manager
+
     mgr = get_monitor_manager()
     await mgr.connect(websocket)
     try:
@@ -201,6 +218,7 @@ async def ws_monitor(websocket: WebSocket):
 
 
 # ── API Endpoints ──
+
 
 @app.get("/")
 def home():
@@ -221,11 +239,41 @@ def get_events(limit: int = 50):
 def get_templates():
     return {
         "templates": [
-            {"id": "customer-support", "name": "Customer Support", "description": "Handle inquiries, complaints, tickets", "category": "support", "icon": "🎧"},
-            {"id": "research-assistant", "name": "Research Assistant", "description": "Research topics, gather data, analyze", "category": "research", "icon": "🔬"},
-            {"id": "sales-agent", "name": "Sales Agent", "description": "Qualify leads, answer product questions", "category": "sales", "icon": "💼"},
-            {"id": "code-reviewer", "name": "Code Reviewer", "description": "Review code for bugs and security", "category": "engineering", "icon": "👨‍💻"},
-            {"id": "custom", "name": "Custom Agent", "description": "Build your own from scratch", "category": "custom", "icon": "🛠️"},
+            {
+                "id": "customer-support",
+                "name": "Customer Support",
+                "description": "Handle inquiries, complaints, tickets",
+                "category": "support",
+                "icon": "🎧",
+            },
+            {
+                "id": "research-assistant",
+                "name": "Research Assistant",
+                "description": "Research topics, gather data, analyze",
+                "category": "research",
+                "icon": "🔬",
+            },
+            {
+                "id": "sales-agent",
+                "name": "Sales Agent",
+                "description": "Qualify leads, answer product questions",
+                "category": "sales",
+                "icon": "💼",
+            },
+            {
+                "id": "code-reviewer",
+                "name": "Code Reviewer",
+                "description": "Review code for bugs and security",
+                "category": "engineering",
+                "icon": "👨‍💻",
+            },
+            {
+                "id": "custom",
+                "name": "Custom Agent",
+                "description": "Build your own from scratch",
+                "category": "custom",
+                "icon": "🛠️",
+            },
         ]
     }
 
@@ -247,7 +295,9 @@ def run_agent(req: RunRequest, current_user: User | None = Depends(get_optional_
     )
 
     # Capture output
-    import io, sys
+    import io
+    import sys
+
     old = sys.stdout
     sys.stdout = io.StringIO()
     msg = agent.run(req.query)
@@ -260,7 +310,9 @@ def run_agent(req: RunRequest, current_user: User | None = Depends(get_optional_
 
     cost = sum(e.cost_usd for e in agent.events)
     tokens = sum(e.tokens_used for e in agent.events)
-    tools_used = [e.data.get("tool","") for e in agent.events if e.event_type == "tool_call"]
+    tools_used = [
+        e.data.get("tool", "") for e in agent.events if e.event_type == "tool_call"
+    ]
 
     # Track per-user usage (only if authenticated)
     if current_user:
@@ -277,14 +329,15 @@ def run_agent(req: RunRequest, current_user: User | None = Depends(get_optional_
 
 # ── Scheduler API ──
 
+
 class ScheduleRequest(BaseModel):
     agent_name: str = "scheduled-agent"
     model: str = "gpt-4o-mini"
     system_prompt: str = "You are a helpful assistant."
     query: str
     tools: list[str] = []
-    interval: str = ""     # e.g. "5m", "1h", "30s"
-    cron: str = ""         # e.g. "0 9 * * *"
+    interval: str = ""  # e.g. "5m", "1h", "30s"
+    cron: str = ""  # e.g. "0 9 * * *"
     max_executions: int = 0
 
 
@@ -345,6 +398,7 @@ def resume_scheduler_job(job_id: str):
 
 # ── Auth API ──
 
+
 @app.post("/api/auth/register")
 def register_user(req: RegisterRequest):
     """Create a new user and return an API key."""
@@ -387,13 +441,18 @@ def get_my_usage(period: str = "month", current_user: User = Depends(get_current
 
 
 @app.post("/api/ab-test")
-def run_ab_test(req: ABTestRequest, current_user: User | None = Depends(get_optional_user)):
+def run_ab_test(
+    req: ABTestRequest, current_user: User | None = Depends(get_optional_user)
+):
     """Run an A/B test between two agent configs using the Sandbox judge."""
     from agentos.core.agent import Agent
 
     queries = [q.strip() for q in req.queries if q.strip()]
     if not queries:
-        return {"status": "error", "message": "At least one non-empty query is required"}
+        return {
+            "status": "error",
+            "message": "At least one non-empty query is required",
+        }
 
     available_tools = get_builtin_tools()
 
@@ -431,10 +490,13 @@ async def upload_file(file: UploadFile = File(...)):
 
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in ALLOWED_EXTS:
-        return JSONResponse({
-            "status": "error",
-            "message": f"Unsupported file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_EXTS))}",
-        }, 400)
+        return JSONResponse(
+            {
+                "status": "error",
+                "message": f"Unsupported file type '{ext}'. Allowed: {', '.join(sorted(ALLOWED_EXTS))}",
+            },
+            400,
+        )
 
     # Save to temp directory with a unique name
     unique_name = f"{_uuid.uuid4().hex[:8]}_{file.filename}"
@@ -471,6 +533,7 @@ def analyze_uploaded_file(req: AnalyzeFileRequest):
 
     # Handle URL-based image analysis
     from agentos.core.multimodal import is_url
+
     if is_url(req.file_path):
         try:
             result = analyze_image(
@@ -504,6 +567,7 @@ def analyze_uploaded_file(req: AnalyzeFileRequest):
         try:
             content = read_document(str(path), max_chars=30_000)
             from agentos.core.agent import Agent
+
             agent = Agent(
                 name="doc-analyzer",
                 model=req.model if req.model != "gpt-4o" else "gpt-4o-mini",
@@ -513,7 +577,9 @@ def analyze_uploaded_file(req: AnalyzeFileRequest):
                     "document content provided."
                 ),
             )
-            import io, sys
+            import io
+            import sys
+
             old = sys.stdout
             sys.stdout = io.StringIO()
             msg = agent.run(
@@ -619,7 +685,11 @@ def add_branch_message(req: BranchMessageRequest):
         except KeyError as e:
             return JSONResponse({"status": "error", "message": str(e)}, 404)
     msg = tree.add_message(req.role, req.content)
-    return {"status": "ok", "message": msg.to_dict(), "branch_id": tree.active_branch_id}
+    return {
+        "status": "ok",
+        "message": msg.to_dict(),
+        "branch_id": tree.active_branch_id,
+    }
 
 
 @app.post("/api/branch/chat")
@@ -653,7 +723,9 @@ def chat_on_branch(req: BranchMessageRequest):
     agent.messages = tree.get_messages_openai()
     agent.events = []
 
-    import io, sys
+    import io
+    import sys
+
     old = sys.stdout
     sys.stdout = io.StringIO()
     try:
@@ -661,6 +733,7 @@ def chat_on_branch(req: BranchMessageRequest):
     except AttributeError:
         # Fallback: run full agent
         from agentos.providers.router import call_model as call_llm_direct
+
         msg_result, event = call_llm_direct(
             model="gpt-4o-mini",
             messages=tree.get_messages_openai(),
@@ -718,7 +791,10 @@ def delete_branch(tree_id: str, branch_id: str):
         return JSONResponse({"status": "error", "message": "Tree not found"}, 404)
     if tree.delete_branch(branch_id):
         return {"status": "deleted", "branch_id": branch_id}
-    return JSONResponse({"status": "error", "message": "Cannot delete main branch or branch not found"}, 400)
+    return JSONResponse(
+        {"status": "error", "message": "Cannot delete main branch or branch not found"},
+        400,
+    )
 
 
 @app.get("/api/branch/messages")
@@ -748,6 +824,7 @@ def create_new_tree():
 
 # ── Event Bus API ──
 
+
 @app.post("/api/webhook/{event_name}")
 async def webhook_receiver(event_name: str, body: dict = {}):
     """Receive a webhook POST and emit it through the event bus.
@@ -759,10 +836,13 @@ async def webhook_receiver(event_name: str, body: dict = {}):
     return {
         "status": "emitted",
         "event": f"webhook.{event_name}",
-        "listeners_matched": len([
-            l for l in event_bus.list_listeners()
-            if l.matches(f"webhook.{event_name}")
-        ]),
+        "listeners_matched": len(
+            [
+                lst
+                for lst in event_bus.list_listeners()
+                if lst.matches(f"webhook.{event_name}")
+            ]
+        ),
     }
 
 
@@ -771,7 +851,7 @@ def list_event_listeners():
     """List all registered event listeners."""
     return {
         "overview": event_bus.get_overview(),
-        "listeners": [l.to_dict() for l in event_bus.list_listeners()],
+        "listeners": [lst.to_dict() for lst in event_bus.list_listeners()],
     }
 
 
@@ -923,6 +1003,7 @@ def marketplace_delete(agent_id: str):
 @app.get("/marketplace/search")
 def marketplace_package_search(tags: str = "", capability: str = ""):
     from agentos.marketplace.registry import MarketplaceRegistry
+
     reg = MarketplaceRegistry()
     return {"packages": reg.search(tags=tags, capability=capability)}
 
@@ -951,16 +1032,20 @@ def workflows_run(workflow_id: str):
     from agentos.teams.runner import TeamRunner
     from agentos.core.agent import Agent
     import yaml
+
     w = _workflows_store[workflow_id]
     try:
         data = yaml.safe_load(w["dag"])
         nodes = data.get("nodes", [])
         edges = data.get("edges", [])
         dag = WorkflowDAG(nodes=nodes, edges=edges)
-        agents = {n.get("agent_id", "agent"): Agent(name=n.get("agent_id", "agent")) for n in nodes}
+        agents = {
+            n.get("agent_id", "agent"): Agent(name=n.get("agent_id", "agent"))
+            for n in nodes
+        }
         runner = TeamRunner(workflow_id, agents)
         asyncio.run(runner.execute(dag, ""))
-    except Exception as e:
+    except Exception:
         pass
     return {"status": "started", "workflow_id": workflow_id}
 
@@ -1064,8 +1149,8 @@ def embed_preview(
     )
     page = f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><title>AgentOS Widget Preview</title>
-<style>body{{margin:0;font-family:system-ui;background:{'#f5f5f5' if theme=='light' else '#1a1a2e'};
-color:{'#333' if theme=='light' else '#eee'};display:flex;align-items:center;justify-content:center;min-height:100vh}}
+<style>body{{margin:0;font-family:system-ui;background:{"#f5f5f5" if theme == "light" else "#1a1a2e"};
+color:{"#333" if theme == "light" else "#eee"};display:flex;align-items:center;justify-content:center;min-height:100vh}}
 .demo{{text-align:center}}.demo h1{{font-size:28px}}.demo p{{opacity:.6}}</style></head>
 <body><div class="demo"><h1>Your Website</h1><p>The AgentOS chat widget is in the corner ↘</p></div>
 {widget_html}</body></html>"""
@@ -1074,7 +1159,10 @@ color:{'#333' if theme=='light' else '#eee'};display:flex;align-items:center;jus
 
 # ── Observability / RCA API ──
 
-from agentos.observability.tracer import get_trace_store as _obs_trace_store, TraceBuilder
+from agentos.observability.tracer import (
+    get_trace_store as _obs_trace_store,
+    TraceBuilder,
+)
 from agentos.observability.diagnostics import diagnose as _obs_diagnose
 from agentos.observability.alerts import AlertEngine as _ObsAlertEngine
 from agentos.observability.replay import build_replay as _obs_build_replay
@@ -1135,25 +1223,79 @@ async def obs_seed_demo():
     """Seed example traces for demonstration."""
     ts = _obs_trace_store()
     # Healthy trace
-    b = TraceBuilder("demo-agent", "gpt-4o-mini", "You are a helpful assistant with tools.")
+    b = TraceBuilder(
+        "demo-agent", "gpt-4o-mini", "You are a helpful assistant with tools."
+    )
     b.set_query("What's the weather in Tokyo?")
-    b.add_llm_call([{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What's the weather in Tokyo?"}], ["weather"], 150, 0.0003, 450)
-    b.add_tool_call("weather", {"location": "Tokyo"}, '{"temperature": "22C", "condition": "Sunny"}', 120)
-    b.add_llm_call([{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What's the weather in Tokyo?"}, {"role": "tool", "content": '{"temperature": "22C"}'}], ["weather"], 180, 0.0004, 380)
+    b.add_llm_call(
+        [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "What's the weather in Tokyo?"},
+        ],
+        ["weather"],
+        150,
+        0.0003,
+        450,
+    )
+    b.add_tool_call(
+        "weather",
+        {"location": "Tokyo"},
+        '{"temperature": "22C", "condition": "Sunny"}',
+        120,
+    )
+    b.add_llm_call(
+        [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "What's the weather in Tokyo?"},
+            {"role": "tool", "content": '{"temperature": "22C"}'},
+        ],
+        ["weather"],
+        180,
+        0.0004,
+        380,
+    )
     b.add_final_answer("It is currently 22C and sunny in Tokyo.")
     ts.add(b.finish())
     # Tool error trace
-    b2 = TraceBuilder("demo-agent", "gpt-4o-mini", "You are a helpful assistant with tools.")
+    b2 = TraceBuilder(
+        "demo-agent", "gpt-4o-mini", "You are a helpful assistant with tools."
+    )
     b2.set_query("What's the weather in Paris?")
-    b2.add_llm_call([{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What's the weather in Paris?"}], ["weather"], 140, 0.0003, 420)
-    b2.add_tool_call("weather", {"location": "Paris"}, "ERROR: API rate limit exceeded", 2100)
+    b2.add_llm_call(
+        [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "What's the weather in Paris?"},
+        ],
+        ["weather"],
+        140,
+        0.0003,
+        420,
+    )
+    b2.add_tool_call(
+        "weather", {"location": "Paris"}, "ERROR: API rate limit exceeded", 2100
+    )
     b2.add_error("Tool returned error — unreliable response")
     ts.add(b2.finish())
     # Missing tool trace
     b3 = TraceBuilder("support-bot", "gpt-4o-mini", "You are a customer support agent.")
     b3.set_query("Check order #12345")
-    b3.add_llm_call([{"role": "system", "content": "Support agent."}, {"role": "user", "content": "Check order #12345"}], ["search"], 120, 0.0002, 350)
-    b3.add_tool_call("order_lookup", {"order_id": "12345"}, "ERROR: Tool 'order_lookup' not found", 1, not_found=True)
+    b3.add_llm_call(
+        [
+            {"role": "system", "content": "Support agent."},
+            {"role": "user", "content": "Check order #12345"},
+        ],
+        ["search"],
+        120,
+        0.0002,
+        350,
+    )
+    b3.add_tool_call(
+        "order_lookup",
+        {"order_id": "12345"},
+        "ERROR: Tool 'order_lookup' not found",
+        1,
+        not_found=True,
+    )
     b3.add_error("LLM hallucinated tool name 'order_lookup'")
     ts.add(b3.finish())
     return {"seeded": 3, "total": ts.stats()["total_traces"]}
@@ -1161,7 +1303,11 @@ async def obs_seed_demo():
 
 # ── Learning API ──
 
-from agentos.learning.feedback import FeedbackEntry as _FBEntry, FeedbackType as _FBType, get_feedback_store as _get_fb
+from agentos.learning.feedback import (
+    FeedbackEntry as _FBEntry,
+    FeedbackType as _FBType,
+    get_feedback_store as _get_fb,
+)
 from agentos.learning.analyzer import FeedbackAnalyzer as _FBAnalyzer
 from agentos.learning.prompt_optimizer import PromptOptimizer as _PromptOpt
 from agentos.learning.few_shot import FewShotBuilder as _FSBuilder
@@ -1239,7 +1385,13 @@ def learning_progress() -> dict:
 # ── Simulation API ──
 
 import threading as _sim_threading
-from agentos.simulation import SimulatedWorld, WorldConfig, TrafficPattern, SimulationReport, ALL_PERSONAS
+from agentos.simulation import (
+    SimulatedWorld,
+    WorldConfig,
+    TrafficPattern,
+    SimulationReport,
+    ALL_PERSONAS,
+)
 
 _sim_world: SimulatedWorld | None = None
 _sim_report: SimulationReport | None = None
@@ -1261,6 +1413,7 @@ def simulation_run(body: _SimRunBody) -> dict:
         return {"status": "already_running"}
 
     from agentos.core.agent import Agent
+
     agent = Agent(
         name="sim-agent",
         model="gpt-4o-mini",
@@ -1315,6 +1468,7 @@ def simulation_personas() -> list:
 @app.get("/sandbox/runs/{run_id}/report")
 def sandbox_run_report(run_id: str):
     from agentos.sandbox.simulation_runner import get_run_report
+
     report = get_run_report(run_id)
     if report is None:
         return JSONResponse({"error": "run not found"}, status_code=404)
@@ -1326,7 +1480,11 @@ def sandbox_run_report(run_id: str):
 from agentos.mesh.protocol import MeshMessage as _MeshMsg, MeshIdentity as _MeshId
 from agentos.mesh.discovery import get_registry as _get_mesh_registry
 from agentos.mesh.transaction import get_ledger as _get_mesh_ledger
-from agentos.mesh.server import handle_message as _mesh_handle, get_node as _get_mesh_node, init_node as _mesh_init_node
+from agentos.mesh.server import (
+    handle_message as _mesh_handle,
+    get_node as _get_mesh_node,
+    init_node as _mesh_init_node,
+)
 
 # Initialise a default mesh node on the main web server
 try:
@@ -1378,8 +1536,12 @@ def mesh_list_registry() -> list:
 
 
 @app.get("/api/mesh/registry/search")
-def mesh_search_registry(q: str = "", capability: str = "", organisation: str = "") -> list:
-    results = _get_mesh_registry().search(query=q, capability=capability, organisation=organisation)
+def mesh_search_registry(
+    q: str = "", capability: str = "", organisation: str = ""
+) -> list:
+    results = _get_mesh_registry().search(
+        query=q, capability=capability, organisation=organisation
+    )
     return [a.model_dump() for a in results]
 
 
@@ -1402,17 +1564,13 @@ def mesh_stats() -> dict:
     }
 
 
-from agentos.api.routers.mesh import router as mesh_health_router
-from agentos.api.routers.compliance import router as compliance_router
-app.include_router(mesh_health_router, prefix="/api")
-app.include_router(compliance_router, prefix="/api")
-
-
 # ── Analytics API ──
+
 
 def _bucket_key(ts: float, granularity: str) -> str:
     """Convert a unix timestamp to a bucket key string."""
     import datetime
+
     dt = datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc)
     if granularity == "hour":
         return dt.strftime("%Y-%m-%d %H:00")
@@ -1425,7 +1583,9 @@ def _bucket_key(ts: float, granularity: str) -> str:
 
 
 @app.get("/api/analytics/cost-over-time")
-def analytics_cost_over_time(granularity: str = Query("day", pattern="^(hour|day|week)$")):
+def analytics_cost_over_time(
+    granularity: str = Query("day", pattern="^(hour|day|week)$"),
+):
     """Aggregate cost by time bucket (hour / day / week)."""
     buckets: dict[str, dict] = {}
     for ev in store.events:
@@ -1451,7 +1611,12 @@ def analytics_popular_tools():
             continue
         tool_name = (ev.get("data") or {}).get("tool", "unknown")
         if tool_name not in counts:
-            counts[tool_name] = {"tool": tool_name, "count": 0, "total_latency_ms": 0.0, "total_cost": 0.0}
+            counts[tool_name] = {
+                "tool": tool_name,
+                "count": 0,
+                "total_latency_ms": 0.0,
+                "total_cost": 0.0,
+            }
         counts[tool_name]["count"] += 1
         counts[tool_name]["total_latency_ms"] += ev.get("latency_ms", 0.0)
         counts[tool_name]["total_cost"] += ev.get("cost_usd", 0.0)
@@ -1472,8 +1637,11 @@ def analytics_model_comparison():
         model = (ev.get("data") or {}).get("model", "unknown")
         if model not in models:
             models[model] = {
-                "model": model, "calls": 0, "total_cost": 0.0,
-                "total_tokens": 0, "total_latency_ms": 0.0,
+                "model": model,
+                "calls": 0,
+                "total_cost": 0.0,
+                "total_tokens": 0,
+                "total_latency_ms": 0.0,
                 "quality_scores": [],
             }
         m = models[model]
@@ -1506,18 +1674,22 @@ def analytics_agent_leaderboard():
         avg_quality = round(sum(scores) / len(scores), 2) if scores else None
         total_queries = a.get("total_llm_calls", 0)
         cost_per_query = round(a["total_cost"] / max(total_queries, 1), 6)
-        leaderboard.append({
-            "agent": name,
-            "avg_quality": avg_quality,
-            "total_cost": round(a["total_cost"], 6),
-            "total_tokens": a["total_tokens"],
-            "total_queries": total_queries,
-            "total_tool_calls": a.get("total_tool_calls", 0),
-            "cost_per_query": cost_per_query,
-            "total_events": a["total_events"],
-        })
+        leaderboard.append(
+            {
+                "agent": name,
+                "avg_quality": avg_quality,
+                "total_cost": round(a["total_cost"], 6),
+                "total_tokens": a["total_tokens"],
+                "total_queries": total_queries,
+                "total_tool_calls": a.get("total_tool_calls", 0),
+                "cost_per_query": cost_per_query,
+                "total_events": a["total_events"],
+            }
+        )
     # Sort: quality first (desc), then by queries (desc)
-    leaderboard.sort(key=lambda x: (x["avg_quality"] or 0, x["total_queries"]), reverse=True)
+    leaderboard.sort(
+        key=lambda x: (x["avg_quality"] or 0, x["total_queries"]), reverse=True
+    )
     # Compute summary totals
     total_spend = round(sum(a["total_cost"] for a in store.agents.values()), 6)
     total_queries = sum(a.get("total_llm_calls", 0) for a in store.agents.values())

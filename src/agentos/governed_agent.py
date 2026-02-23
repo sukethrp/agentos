@@ -36,11 +36,10 @@ Usage:
 from __future__ import annotations
 from agentos.core.agent import Agent
 from agentos.core.tool import Tool
-from agentos.core.types import AgentEvent, Message, Role
+from agentos.core.types import Message
 from agentos.governance.budget import BudgetGuard
 from agentos.governance.permissions import PermissionGuard
 from agentos.governance.guardrails import GovernanceEngine
-from agentos.governance.audit import AuditLog
 from agentos.monitor.store import store
 from agentos.sandbox.scenario import Scenario
 from agentos.sandbox.runner import Sandbox
@@ -100,10 +99,13 @@ class GovernedAgent:
 
             def make_governed(tool_obj, orig):
                 def governed_execute(call):
-                    check = self.governance.check_tool_call(tool_obj.name, estimated_cost=0.001)
+                    check = self.governance.check_tool_call(
+                        tool_obj.name, estimated_cost=0.001
+                    )
                     if not check.allowed:
                         print(f"   🚫 BLOCKED: {check.message}")
                         from agentos.core.types import ToolResult
+
                         return ToolResult(
                             tool_call_id=call.id,
                             name=tool_obj.name,
@@ -112,6 +114,7 @@ class GovernedAgent:
                     result = orig(call)
                     self.governance.record_action(tool_obj.name, cost=0.001)
                     return result
+
                 return governed_execute
 
             t.execute = make_governed(t, original)

@@ -2,7 +2,7 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -15,14 +15,16 @@ class MeshMessage(BaseModel):
     receiver: str | None
     topic: str
     payload: dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     correlation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
 class MeshRouter:
     def __init__(self) -> None:
         self._queues: dict[str, asyncio.Queue[MeshMessage]] = {}
-        self._subscriptions: dict[tuple[str, str], list[Callable[[MeshMessage], Awaitable[Any]]]] = {}
+        self._subscriptions: dict[
+            tuple[str, str], list[Callable[[MeshMessage], Awaitable[Any]]]
+        ] = {}
         self._delivery_tasks: dict[str, asyncio.Task[None]] = {}
         self._redis = None
         self._redis_task: asyncio.Task[None] | None = None
@@ -64,7 +66,9 @@ class MeshRouter:
             return
         try:
             loop = asyncio.get_running_loop()
-            self._delivery_tasks[agent_id] = loop.create_task(self._delivery_loop(agent_id))
+            self._delivery_tasks[agent_id] = loop.create_task(
+                self._delivery_loop(agent_id)
+            )
         except RuntimeError:
             pass
 
@@ -101,7 +105,9 @@ class MeshRouter:
                 msg = await self.send_message(from_id, aid, payload, topic)
                 msgs.append(msg)
         if self._redis_url:
-            bcast = MeshMessage(sender=from_id, receiver=None, topic=topic, payload=payload)
+            bcast = MeshMessage(
+                sender=from_id, receiver=None, topic=topic, payload=payload
+            )
             await self._publish_redis(bcast)
             msgs.append(bcast)
         return msgs
@@ -122,6 +128,7 @@ class MeshRouter:
     async def _publish_redis(self, msg: MeshMessage) -> None:
         try:
             from redis.asyncio import Redis
+
             if self._redis is None:
                 self._redis = Redis.from_url(self._redis_url, decode_responses=True)
             channel = f"mesh:{msg.topic}"
@@ -135,6 +142,7 @@ class MeshRouter:
         try:
             from redis.asyncio import Redis
             import json
+
             r = Redis.from_url(self._redis_url, decode_responses=True)
             self._redis = r
             pubsub = r.pubsub()

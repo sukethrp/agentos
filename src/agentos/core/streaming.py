@@ -21,7 +21,7 @@ Usage:
 from __future__ import annotations
 import asyncio
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import AsyncGenerator, Generator
 from agentos.core.agent import Agent
 from agentos.core.types import AgentEvent, Message

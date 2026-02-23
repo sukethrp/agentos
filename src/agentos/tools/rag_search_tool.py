@@ -3,7 +3,6 @@ import json
 from agentos.core.tool import Tool, tool
 from agentos.rag.ingestion import _get_store
 from agentos.rag.embeddings import EmbeddingEngine
-from agentos.rag.config import rag_config
 
 
 def _rag_search_impl(query: str, collection: str, top_k: int) -> list[str]:

@@ -6,7 +6,9 @@ from agentos.sandbox.simulation_runner import _DB_PATH, _init_db
 
 class ComparisonReport:
     @staticmethod
-    def generate(run_id_a: str, run_id_b: str, db_path: str | Path | None = None) -> dict:
+    def generate(
+        run_id_a: str, run_id_b: str, db_path: str | Path | None = None
+    ) -> dict:
         db = Path(db_path) if db_path else _DB_PATH
         conn = sqlite3.connect(db)
         _init_db(conn)
@@ -27,15 +29,19 @@ class ComparisonReport:
             s_id = r["scenario_id"]
             sa = float(r["score_a"])
             sb = float(r["score_b"])
-            deltas.append({
-                "scenario_id": s_id,
-                "score_a": sa,
-                "score_b": sb,
-                "delta": sb - sa,
-            })
+            deltas.append(
+                {
+                    "scenario_id": s_id,
+                    "score_a": sa,
+                    "score_b": sb,
+                    "delta": sb - sa,
+                }
+            )
         return {
             "run_id_a": run_id_a,
             "run_id_b": run_id_b,
             "scenarios": deltas,
-            "avg_delta": sum(d["delta"] for d in deltas) / len(deltas) if deltas else 0.0,
+            "avg_delta": sum(d["delta"] for d in deltas) / len(deltas)
+            if deltas
+            else 0.0,
         }

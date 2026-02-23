@@ -19,7 +19,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -147,7 +147,9 @@ class PluginManager:
 
         # Remove tools registered by this plugin
         plugin_prefix = f"{name}:"
-        to_remove = [k for k in self._ctx.tools if k.startswith(plugin_prefix) or k == name]
+        to_remove = [
+            k for k in self._ctx.tools if k.startswith(plugin_prefix) or k == name
+        ]
         for k in to_remove:
             del self._ctx.tools[k]
 

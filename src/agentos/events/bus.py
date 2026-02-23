@@ -72,7 +72,9 @@ class Listener:
         return {
             "listener_id": self.listener_id,
             "event_pattern": self.event_pattern,
-            "agent_name": getattr(self.agent, "config", None) and self.agent.config.name or "unknown",
+            "agent_name": getattr(self.agent, "config", None)
+            and self.agent.config.name
+            or "unknown",
             "query_template": self.query_template,
             "execution_count": self.execution_count,
             "last_triggered": self.last_triggered,
@@ -143,12 +145,20 @@ class EventBus:
         """
         with self._lock:
             before = len(self._listeners)
-            agent_name = getattr(agent, "config", None) and agent.config.name or id(agent)
+            agent_name = (
+                getattr(agent, "config", None) and agent.config.name or id(agent)
+            )
             self._listeners = [
-                l for l in self._listeners
+                lst
+                for lst in self._listeners
                 if not (
-                    l.event_pattern == event_pattern
-                    and (getattr(l.agent, "config", None) and l.agent.config.name or id(l.agent)) == agent_name
+                    lst.event_pattern == event_pattern
+                    and (
+                        getattr(lst.agent, "config", None)
+                        and lst.agent.config.name
+                        or id(lst.agent)
+                    )
+                    == agent_name
                 )
             ]
             return len(self._listeners) < before
@@ -157,16 +167,22 @@ class EventBus:
         """Remove a listener by its ID."""
         with self._lock:
             before = len(self._listeners)
-            self._listeners = [l for l in self._listeners if l.listener_id != listener_id]
+            self._listeners = [
+                lst for lst in self._listeners if lst.listener_id != listener_id
+            ]
             return len(self._listeners) < before
 
-    def on_callback(self, event_pattern: str, callback: Callable[[Event], None]) -> None:
+    def on_callback(
+        self, event_pattern: str, callback: Callable[[Event], None]
+    ) -> None:
         """Register a raw callback (not an agent) for an event."""
         self._callbacks.append((event_pattern, callback))
 
     # ── Emit ──
 
-    def emit(self, event_name: str, data: dict | None = None, source: str = "") -> EventLog:
+    def emit(
+        self, event_name: str, data: dict | None = None, source: str = ""
+    ) -> EventLog:
         """Fire an event. All matching listeners run their agents in background threads.
 
         Args:
@@ -182,7 +198,9 @@ class EventBus:
 
         # Find matching listeners
         with self._lock:
-            matching = [l for l in self._listeners if l.matches(event_name)]
+            matching = [
+                lst for lst in self._listeners if lst.matches(event_name)
+            ]
 
         # Run raw callbacks
         for pattern, cb in self._callbacks:
@@ -210,7 +228,9 @@ class EventBus:
 
         return log
 
-    def _execute_listener(self, listener: Listener, event: Event, log: EventLog) -> None:
+    def _execute_listener(
+        self, listener: Listener, event: Event, log: EventLog
+    ) -> None:
         """Run a single listener's agent in a thread."""
         query = listener.build_query(event)
         start = time.time()
@@ -230,30 +250,34 @@ class EventBus:
             listener.execution_count += 1
             listener.last_triggered = time.time()
 
-            log.results.append({
-                "listener_id": listener.listener_id,
-                "agent_name": listener.agent.config.name,
-                "query": query,
-                "result": result[:500],
-                "cost_usd": cost,
-                "tokens_used": tokens,
-                "latency_ms": round((time.time() - start) * 1000, 1),
-                "status": "completed",
-            })
+            log.results.append(
+                {
+                    "listener_id": listener.listener_id,
+                    "agent_name": listener.agent.config.name,
+                    "query": query,
+                    "result": result[:500],
+                    "cost_usd": cost,
+                    "tokens_used": tokens,
+                    "latency_ms": round((time.time() - start) * 1000, 1),
+                    "status": "completed",
+                }
+            )
 
         except Exception as e:
-            sys.stdout = old_stdout if 'old_stdout' in dir() else sys.__stdout__
+            sys.stdout = old_stdout if "old_stdout" in dir() else sys.__stdout__
             listener.execution_count += 1
             listener.last_triggered = time.time()
 
-            log.results.append({
-                "listener_id": listener.listener_id,
-                "agent_name": listener.agent.config.name,
-                "query": query,
-                "result": "",
-                "error": str(e),
-                "status": "failed",
-            })
+            log.results.append(
+                {
+                    "listener_id": listener.listener_id,
+                    "agent_name": listener.agent.config.name,
+                    "query": query,
+                    "result": "",
+                    "error": str(e),
+                    "status": "failed",
+                }
+            )
 
     # ── Info ──
 
@@ -267,8 +291,12 @@ class EventBus:
         return {
             "total_listeners": len(self._listeners),
             "total_events_emitted": len(self._history),
-            "total_executions": sum(l.execution_count for l in self._listeners),
-            "event_patterns": list({l.event_pattern for l in self._listeners}),
+            "total_executions": sum(
+                lst.execution_count for lst in self._listeners
+            ),
+            "event_patterns": list(
+                {lst.event_pattern for lst in self._listeners}
+            ),
         }
 
     def clear(self) -> None:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 import hashlib
 import json
-import os
 from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv

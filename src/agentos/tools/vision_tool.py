@@ -8,7 +8,7 @@ Usage:
 from __future__ import annotations
 
 from agentos.core.tool import Tool
-from agentos.core.multimodal import analyze_image, is_url, encode_image, image_media_type
+from agentos.core.multimodal import analyze_image
 
 
 def vision_tool(model: str = "gpt-4o") -> Tool:
@@ -19,7 +19,9 @@ def vision_tool(model: str = "gpt-4o") -> Tool:
         - *question*: what to analyze (defaults to "Describe this image in detail.")
     """
 
-    def analyze_image_tool(image: str, question: str = "Describe this image in detail.") -> str:
+    def analyze_image_tool(
+        image: str, question: str = "Describe this image in detail."
+    ) -> str:
         """Analyze an image and answer a question about it using AI vision.
 
         Args:

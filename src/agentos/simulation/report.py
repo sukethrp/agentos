@@ -14,7 +14,6 @@ from __future__ import annotations
 import statistics
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import Any
 
 from agentos.simulation.evaluator import InteractionResult
 
@@ -84,11 +83,17 @@ class SimulationReport:
     failure_reasons: dict[str, int] = field(default_factory=dict)
 
     # Chart data
-    quality_over_time: list[dict] = field(default_factory=list)       # [{idx, overall}]
-    latency_over_time: list[dict] = field(default_factory=list)       # [{idx, latency_ms}]
-    persona_quality_chart: list[dict] = field(default_factory=list)   # [{persona, avg_quality}]
-    difficulty_vs_quality: list[dict] = field(default_factory=list)   # [{difficulty, overall}]
-    score_distribution: dict[str, int] = field(default_factory=dict)  # {"1-2": n, "3-4": n, ...}
+    quality_over_time: list[dict] = field(default_factory=list)  # [{idx, overall}]
+    latency_over_time: list[dict] = field(default_factory=list)  # [{idx, latency_ms}]
+    persona_quality_chart: list[dict] = field(
+        default_factory=list
+    )  # [{persona, avg_quality}]
+    difficulty_vs_quality: list[dict] = field(
+        default_factory=list
+    )  # [{difficulty, overall}]
+    score_distribution: dict[str, int] = field(
+        default_factory=dict
+    )  # {"1-2": n, "3-4": n, ...}
 
     # Worst interactions (for debugging)
     worst_interactions: list[dict] = field(default_factory=list)
@@ -150,7 +155,9 @@ class SimulationReport:
 
         if self.failure_reasons:
             lines.append("\n  Top Failure Reasons:")
-            for reason, count in sorted(self.failure_reasons.items(), key=lambda x: -x[1])[:5]:
+            for reason, count in sorted(
+                self.failure_reasons.items(), key=lambda x: -x[1]
+            )[:5]:
                 lines.append(f"    • {reason}: {count}")
 
         lines.append("=" * 60)
@@ -158,6 +165,7 @@ class SimulationReport:
 
 
 # ── Builder ──────────────────────────────────────────────────────────────────
+
 
 def build_report(
     results: list[InteractionResult],
@@ -208,7 +216,9 @@ def build_report(
     rpt.per_persona = persona_stats
 
     if persona_stats:
-        rpt.strongest_personas = [p.name for p in persona_stats[:2] if p.pass_rate >= 60]
+        rpt.strongest_personas = [
+            p.name for p in persona_stats[:2] if p.pass_rate >= 60
+        ]
         rpt.weakest_personas = [p.name for p in persona_stats[-2:] if p.pass_rate < 80]
 
     # Failure reasons
@@ -219,17 +229,30 @@ def build_report(
     rpt.failure_reasons = dict(reasons.most_common(10))
 
     # Chart data
-    rpt.quality_over_time = [{"idx": r.interaction_id, "overall": r.overall} for r in results]
-    rpt.latency_over_time = [{"idx": r.interaction_id, "latency_ms": round(r.latency_ms, 1)} for r in results]
+    rpt.quality_over_time = [
+        {"idx": r.interaction_id, "overall": r.overall} for r in results
+    ]
+    rpt.latency_over_time = [
+        {"idx": r.interaction_id, "latency_ms": round(r.latency_ms, 1)} for r in results
+    ]
     rpt.persona_quality_chart = [
-        {"persona": p.name, "mood": p.mood, "avg_quality": round(p.avg_quality, 2), "pass_rate": round(p.pass_rate, 1)}
+        {
+            "persona": p.name,
+            "mood": p.mood,
+            "avg_quality": round(p.avg_quality, 2),
+            "pass_rate": round(p.pass_rate, 1),
+        }
         for p in persona_stats
     ]
 
     # Difficulty vs quality scatter
     diff_map = persona_difficulty or {}
     rpt.difficulty_vs_quality = [
-        {"persona": r.persona_name, "difficulty": diff_map.get(r.persona_name, 0.5), "overall": r.overall}
+        {
+            "persona": r.persona_name,
+            "difficulty": diff_map.get(r.persona_name, 0.5),
+            "overall": r.overall,
+        }
         for r in results
     ]
 

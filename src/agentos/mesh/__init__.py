@@ -44,8 +44,19 @@ from agentos.mesh.transaction import (
     make_verify,
     make_verify_result,
 )
-from agentos.mesh.server import MeshNode, mesh_app, init_node, get_node, handle_message, run_mesh_server
-from agentos.mesh.mesh_router import MeshRouter, MeshMessage as MeshRouterMessage, get_mesh_router
+from agentos.mesh.server import (
+    MeshNode,
+    mesh_app,
+    init_node,
+    get_node,
+    handle_message,
+    run_mesh_server,
+)
+from agentos.mesh.mesh_router import (
+    MeshRouter,
+    MeshMessage as MeshRouterMessage,
+    get_mesh_router,
+)
 
 __all__ = [
     # Protocol

@@ -10,11 +10,9 @@ Storage is JSON-file-backed — no database required.
 from __future__ import annotations
 
 import json
-import os
 import time
 import uuid
 from collections import defaultdict
-from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -24,12 +22,13 @@ from pydantic import BaseModel, Field
 
 # ── Models ───────────────────────────────────────────────────────────────────
 
+
 class FeedbackType(str, Enum):
     THUMBS_UP = "thumbs_up"
     THUMBS_DOWN = "thumbs_down"
-    RATING = "rating"            # 1-5 stars
-    CORRECTION = "correction"    # user provides the correct answer
-    COMMENT = "comment"          # free-text feedback
+    RATING = "rating"  # 1-5 stars
+    CORRECTION = "correction"  # user provides the correct answer
+    COMMENT = "comment"  # free-text feedback
 
 
 class FeedbackEntry(BaseModel):
@@ -38,12 +37,12 @@ class FeedbackEntry(BaseModel):
     id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
     agent_name: str = ""
     feedback_type: FeedbackType
-    query: str                          # the original user query
-    response: str                       # the agent's response
-    rating: float = 0.0                 # 1-5 stars (0 = not rated)
-    correction: str = ""                # what the response *should* have been
-    comment: str = ""                   # free-text note
-    topic: str = ""                     # auto-detected or user-tagged topic
+    query: str  # the original user query
+    response: str  # the agent's response
+    rating: float = 0.0  # 1-5 stars (0 = not rated)
+    correction: str = ""  # what the response *should* have been
+    comment: str = ""  # free-text note
+    topic: str = ""  # auto-detected or user-tagged topic
     tools_used: list[str] = Field(default_factory=list)
     model: str = ""
     timestamp: float = Field(default_factory=time.time)
@@ -68,13 +67,14 @@ class FeedbackEntry(BaseModel):
         if self.feedback_type == FeedbackType.THUMBS_DOWN:
             return 2.0
         if self.feedback_type == FeedbackType.RATING:
-            return self.rating * 2        # 1-5 → 2-10
+            return self.rating * 2  # 1-5 → 2-10
         if self.feedback_type == FeedbackType.CORRECTION:
-            return 3.0                    # needed correction → poor
-        return 5.0                        # neutral comment
+            return 3.0  # needed correction → poor
+        return 5.0  # neutral comment
 
 
 # ── Store ────────────────────────────────────────────────────────────────────
+
 
 class FeedbackStore:
     """JSON-file-backed feedback store with query helpers."""
@@ -109,52 +109,97 @@ class FeedbackStore:
         return entry
 
     def thumbs_up(
-        self, query: str, response: str, agent_name: str = "", **kw: Any,
+        self,
+        query: str,
+        response: str,
+        agent_name: str = "",
+        **kw: Any,
     ) -> FeedbackEntry:
-        return self.add(FeedbackEntry(
-            feedback_type=FeedbackType.THUMBS_UP,
-            query=query, response=response, agent_name=agent_name, **kw,
-        ))
+        return self.add(
+            FeedbackEntry(
+                feedback_type=FeedbackType.THUMBS_UP,
+                query=query,
+                response=response,
+                agent_name=agent_name,
+                **kw,
+            )
+        )
 
     def thumbs_down(
-        self, query: str, response: str, agent_name: str = "",
-        comment: str = "", **kw: Any,
+        self,
+        query: str,
+        response: str,
+        agent_name: str = "",
+        comment: str = "",
+        **kw: Any,
     ) -> FeedbackEntry:
-        return self.add(FeedbackEntry(
-            feedback_type=FeedbackType.THUMBS_DOWN,
-            query=query, response=response, agent_name=agent_name,
-            comment=comment, **kw,
-        ))
+        return self.add(
+            FeedbackEntry(
+                feedback_type=FeedbackType.THUMBS_DOWN,
+                query=query,
+                response=response,
+                agent_name=agent_name,
+                comment=comment,
+                **kw,
+            )
+        )
 
     def rate(
-        self, query: str, response: str, rating: float,
-        agent_name: str = "", **kw: Any,
+        self,
+        query: str,
+        response: str,
+        rating: float,
+        agent_name: str = "",
+        **kw: Any,
     ) -> FeedbackEntry:
-        return self.add(FeedbackEntry(
-            feedback_type=FeedbackType.RATING,
-            query=query, response=response, rating=max(1, min(rating, 5)),
-            agent_name=agent_name, **kw,
-        ))
+        return self.add(
+            FeedbackEntry(
+                feedback_type=FeedbackType.RATING,
+                query=query,
+                response=response,
+                rating=max(1, min(rating, 5)),
+                agent_name=agent_name,
+                **kw,
+            )
+        )
 
     def correct(
-        self, query: str, response: str, correction: str,
-        agent_name: str = "", **kw: Any,
+        self,
+        query: str,
+        response: str,
+        correction: str,
+        agent_name: str = "",
+        **kw: Any,
     ) -> FeedbackEntry:
-        return self.add(FeedbackEntry(
-            feedback_type=FeedbackType.CORRECTION,
-            query=query, response=response, correction=correction,
-            agent_name=agent_name, **kw,
-        ))
+        return self.add(
+            FeedbackEntry(
+                feedback_type=FeedbackType.CORRECTION,
+                query=query,
+                response=response,
+                correction=correction,
+                agent_name=agent_name,
+                **kw,
+            )
+        )
 
     def comment(
-        self, query: str, response: str, comment: str,
-        agent_name: str = "", **kw: Any,
+        self,
+        query: str,
+        response: str,
+        comment: str,
+        agent_name: str = "",
+        **kw: Any,
     ) -> FeedbackEntry:
-        return self.add(FeedbackEntry(
-            feedback_type=FeedbackType.COMMENT,
-            query=query, response=response, comment=comment,
-            agent_name=agent_name, **kw,
-        ))
+        return self.add(
+            FeedbackEntry(
+                feedback_type=FeedbackType.COMMENT,
+                query=query,
+                response=response,
+                comment=comment,
+                agent_name=agent_name,
+                **kw,
+            )
+        )
 
     # ── Read / query ─────────────────────────────────────────────────────
 
@@ -189,9 +234,12 @@ class FeedbackStore:
     def search(self, query: str) -> list[FeedbackEntry]:
         q = query.lower()
         return [
-            e for e in self._entries
-            if q in e.query.lower() or q in e.response.lower()
-            or q in e.comment.lower() or q in e.topic.lower()
+            e
+            for e in self._entries
+            if q in e.query.lower()
+            or q in e.response.lower()
+            or q in e.comment.lower()
+            or q in e.topic.lower()
         ]
 
     # ── Stats ────────────────────────────────────────────────────────────
@@ -220,7 +268,9 @@ class FeedbackStore:
             "negative": neg,
             "positive_rate": round(pos / max(total, 1) * 100, 1),
             "avg_rating": round(avg_rating, 2),
-            "corrections": sum(1 for e in self._entries if e.feedback_type == FeedbackType.CORRECTION),
+            "corrections": sum(
+                1 for e in self._entries if e.feedback_type == FeedbackType.CORRECTION
+            ),
             "by_type": dict(by_type),
             "top_topics": dict(sorted(topics.items(), key=lambda x: -x[1])[:10]),
         }

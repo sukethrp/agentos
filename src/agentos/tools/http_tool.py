@@ -17,8 +17,7 @@ from __future__ import annotations
 import httpx
 import json
 from agentos.core.tool import Tool
-from agentos.core.types import ToolCall, ToolResult, ToolParam
-import time
+from agentos.core.types import ToolParam
 
 
 def create_api_tool(
@@ -47,21 +46,25 @@ def create_api_tool(
                     placeholder = val.strip("{}")
                     if placeholder not in all_placeholders:
                         all_placeholders.add(placeholder)
-                        params.append(ToolParam(
-                            name=placeholder,
-                            type="string",
-                            description=f"Value for {placeholder}",
-                            required=True,
-                        ))
+                        params.append(
+                            ToolParam(
+                                name=placeholder,
+                                type="string",
+                                description=f"Value for {placeholder}",
+                                required=True,
+                            )
+                        )
 
     # If no template placeholders, add a generic query param
     if not params:
-        params.append(ToolParam(
-            name="query",
-            type="string",
-            description="Query parameter for the API",
-            required=True,
-        ))
+        params.append(
+            ToolParam(
+                name="query",
+                type="string",
+                description="Query parameter for the API",
+                required=True,
+            )
+        )
 
     def api_caller(**kwargs) -> str:
         try:
@@ -90,9 +93,17 @@ def create_api_tool(
                 if method.upper() == "GET":
                     resp = client.get(url, params=final_params, headers=headers or {})
                 elif method.upper() == "POST":
-                    resp = client.post(url, json=final_body, params=final_params, headers=headers or {})
+                    resp = client.post(
+                        url, json=final_body, params=final_params, headers=headers or {}
+                    )
                 else:
-                    resp = client.request(method.upper(), url, params=final_params, json=final_body, headers=headers or {})
+                    resp = client.request(
+                        method.upper(),
+                        url,
+                        params=final_params,
+                        json=final_body,
+                        headers=headers or {},
+                    )
 
                 resp.raise_for_status()
                 data = resp.json()
@@ -123,8 +134,10 @@ def create_api_tool(
 
 # ── Pre-built Tools ──
 
+
 def calculator_tool() -> Tool:
     """Create a calculator tool for evaluating math expressions."""
+
     def calculator(expression: str) -> str:
         try:
             allowed = set("0123456789+-*/.() ")
@@ -134,11 +147,16 @@ def calculator_tool() -> Tool:
         except Exception as e:
             return f"Error: {e}"
 
-    return Tool(fn=calculator, name="calculator", description="Calculate a math expression like '2+2' or '100*0.15'")
+    return Tool(
+        fn=calculator,
+        name="calculator",
+        description="Calculate a math expression like '2+2' or '100*0.15'",
+    )
 
 
 def web_search_tool(api_key: str | None = None) -> Tool:
     """Create a web search tool using DuckDuckGo (no API key needed)."""
+
     def search(query: str) -> str:
         try:
             resp = httpx.get(
@@ -157,7 +175,11 @@ def web_search_tool(api_key: str | None = None) -> Tool:
         except Exception as e:
             return f"Search error: {e}"
 
-    return Tool(fn=search, name="web_search", description="Search the web for current information on any topic")
+    return Tool(
+        fn=search,
+        name="web_search",
+        description="Search the web for current information on any topic",
+    )
 
 
 def weather_tool() -> Tool:
@@ -179,7 +201,9 @@ def weather_tool() -> Tool:
         city_lower = city.lower().strip()
         coords = CITIES.get(city_lower)
         if not coords:
-            return f"City '{city}' not in database. Available: {', '.join(CITIES.keys())}"
+            return (
+                f"City '{city}' not in database. Available: {', '.join(CITIES.keys())}"
+            )
 
         try:
             resp = httpx.get(
@@ -194,17 +218,35 @@ def weather_tool() -> Tool:
             data = resp.json()
             weather = data.get("current_weather", {})
             temp_c = weather.get("temperature", "N/A")
-            temp_f = round(temp_c * 9/5 + 32, 1) if isinstance(temp_c, (int, float)) else "N/A"
+            temp_f = (
+                round(temp_c * 9 / 5 + 32, 1)
+                if isinstance(temp_c, (int, float))
+                else "N/A"
+            )
             wind = weather.get("windspeed", "N/A")
             code = weather.get("weathercode", 0)
 
             conditions = {
-                0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
-                45: "Foggy", 48: "Rime fog", 51: "Light drizzle", 53: "Moderate drizzle",
-                55: "Dense drizzle", 61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
-                71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
-                80: "Slight rain showers", 81: "Moderate rain showers", 82: "Heavy rain showers",
-                95: "Thunderstorm", 96: "Thunderstorm with hail",
+                0: "Clear sky",
+                1: "Mainly clear",
+                2: "Partly cloudy",
+                3: "Overcast",
+                45: "Foggy",
+                48: "Rime fog",
+                51: "Light drizzle",
+                53: "Moderate drizzle",
+                55: "Dense drizzle",
+                61: "Slight rain",
+                63: "Moderate rain",
+                65: "Heavy rain",
+                71: "Slight snow",
+                73: "Moderate snow",
+                75: "Heavy snow",
+                80: "Slight rain showers",
+                81: "Moderate rain showers",
+                82: "Heavy rain showers",
+                95: "Thunderstorm",
+                96: "Thunderstorm with hail",
             }
             condition = conditions.get(code, f"Code {code}")
 
@@ -212,11 +254,16 @@ def weather_tool() -> Tool:
         except Exception as e:
             return f"Weather error: {e}"
 
-    return Tool(fn=get_real_weather, name="weather", description="Get current real weather data for a city. Supports major cities worldwide.")
+    return Tool(
+        fn=get_real_weather,
+        name="weather",
+        description="Get current real weather data for a city. Supports major cities worldwide.",
+    )
 
 
 def news_tool() -> Tool:
     """Create a news search tool using DuckDuckGo."""
+
     def search_news(topic: str) -> str:
         try:
             resp = httpx.get(
@@ -235,4 +282,8 @@ def news_tool() -> Tool:
         except Exception as e:
             return f"News search error: {e}"
 
-    return Tool(fn=search_news, name="news_search", description="Search for recent news articles on any topic")
+    return Tool(
+        fn=search_news,
+        name="news_search",
+        description="Search for recent news articles on any topic",
+    )

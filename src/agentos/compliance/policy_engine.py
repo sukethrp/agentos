@@ -23,4 +23,6 @@ class PolicyEngine:
                 f"PHI data cannot be sent to provider '{provider}'. Approved: {sorted(self._phi_approved)}"
             )
         if action in ("tool_call", "tool_execute") and not tool_logged:
-            raise PolicyViolationError(f"Tool call '{action}' must be logged before execution")
+            raise PolicyViolationError(
+                f"Tool call '{action}' must be logged before execution"
+            )

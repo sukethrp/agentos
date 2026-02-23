@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import time
-from pathlib import Path
-from typing import Any
 
 from agentos.marketplace.models import AgentConfig, MarketplaceAgent, Review
 
@@ -143,9 +140,9 @@ class MarketplaceStore:
 
     def get_trending(self, limit: int = 10) -> list[MarketplaceAgent]:
         """Most downloaded agents (proxy for "trending this week")."""
-        return sorted(
-            self._agents.values(), key=lambda a: a.downloads, reverse=True
-        )[:limit]
+        return sorted(self._agents.values(), key=lambda a: a.downloads, reverse=True)[
+            :limit
+        ]
 
     def get_top_rated(self, limit: int = 10) -> list[MarketplaceAgent]:
         """Highest-rated agents with at least 1 review."""

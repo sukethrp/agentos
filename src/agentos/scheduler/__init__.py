@@ -16,10 +16,22 @@ Usage:
 from agentos.scheduler.scheduler import AgentScheduler
 from agentos.scheduler.job import Job, JobStatus, JobExecution, parse_interval
 
+_default_scheduler: AgentScheduler | None = None
+
+
+def get_scheduler() -> AgentScheduler:
+    global _default_scheduler
+    if _default_scheduler is None:
+        _default_scheduler = AgentScheduler(max_concurrent=3)
+        _default_scheduler.start()
+    return _default_scheduler
+
+
 __all__ = [
     "AgentScheduler",
     "Job",
     "JobStatus",
     "JobExecution",
     "parse_interval",
+    "get_scheduler",
 ]
