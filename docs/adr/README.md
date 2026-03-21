@@ -13,6 +13,7 @@ decision, rationale, alternatives considered, and consequences.
 | [003](003-llm-as-judge-for-sandbox.md) | LLM-as-Judge for Sandbox Testing | Accepted |
 | [004](004-json-file-storage-over-database.md) | JSON File Storage Over a Database | Accepted |
 | [005](005-governed-agent-class-over-decorators.md) | Single GovernedAgent Class Over Separate Decorators | Accepted |
+| [006](006-agent-mesh-protocol.md) | Agent Mesh Protocol for Multi-Agent Communication | Accepted |
 
 ## Contributing
 

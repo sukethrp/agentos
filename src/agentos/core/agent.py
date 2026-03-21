@@ -335,6 +335,16 @@ class Agent:
                 latency_ms=round(latency, 2),
             )
 
+    def delegate(self, to_agent: Agent, task: str) -> str:
+        """Delegate a subtask to another agent and return its text response.
+
+        This is a simple point-to-point delegation.  For multi-agent
+        orchestration with cost tracking and shared context, use
+        :class:`~agentos.mesh.AgentMesh` instead.
+        """
+        response = to_agent.run(task)
+        return response.content or ""
+
     def as_mcp_server(self, name: str | None = None) -> MCPServer:
         """Return an MCPServer exposing this agent's tools over MCP.
 

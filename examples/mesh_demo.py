@@ -1,298 +1,180 @@
-#!/usr/bin/env python3
+"""Agent Mesh Demo — multi-agent collaboration with AgentOS.
+
+Demonstrates:
+  1. Orchestrator pattern — a coordinator delegates to specialists
+  2. Peer-to-peer pattern — agents call each other directly
+  3. Shared context — agents read upstream results
+  4. Aggregated cost tracking across the chain
+
+Usage:
+    # Set your API key (or use demo mode)
+    export OPENAI_API_KEY=sk-...
+    # Or: export AGENTOS_DEMO_MODE=true
+
+    python examples/mesh_demo.py
 """
-Mesh Demo — Two agents from different companies negotiate a deal.
 
-This example runs entirely in-process (no HTTP servers needed).
-It demonstrates the full Agent-to-Agent Protocol lifecycle:
+from agentos.core.agent import Agent
+from agentos.core.tool import tool
+from agentos.mesh import AgentMesh
+from agentos.tools.safe_math import safe_eval_math
 
-    1. Both agents generate keypairs and register in the mesh registry
-    2. Agent A discovers Agent B via the registry
-    3. Handshake — mutual authentication & key exchange
-    4. Negotiate — Agent A proposes a deal, Agent B counter-offers
-    5. Transact — agreed terms are executed and a receipt is issued
-    6. Verify — both sides verify the transaction receipt
-"""
 
-from __future__ import annotations
+# ── Define specialist tools ──
 
-import json
-import textwrap
+@tool(description="Calculate a math expression safely")
+def calculator(expression: str) -> str:
+    return str(safe_eval_math(expression))
 
-from agentos.mesh.protocol import (
-    MeshIdentity,
-    MessageType,
-    NegotiationProposal,
-    NegotiationStatus,
-    make_handshake,
-    make_negotiate,
-    make_ping,
+
+@tool(description="Look up a company's latest stock price (mock)")
+def stock_price(ticker: str) -> str:
+    prices = {
+        "AAPL": 227.50, "GOOGL": 181.30, "MSFT": 430.15,
+        "AMZN": 205.70, "NVDA": 142.60, "TSLA": 265.80,
+    }
+    price = prices.get(ticker.upper())
+    if price:
+        return f"{ticker.upper()}: ${price:.2f}"
+    return f"Ticker {ticker} not found. Available: {', '.join(prices)}"
+
+
+@tool(description="Get market news headlines (mock)")
+def market_news(topic: str) -> str:
+    return (
+        f"Headlines for '{topic}':\n"
+        "1. Tech stocks rally on strong earnings\n"
+        "2. Fed signals steady rates through Q2 2026\n"
+        "3. AI sector investment hits record $180B in 2025"
+    )
+
+
+# ── Create specialist agents ──
+
+researcher = Agent(
+    name="researcher",
+    model="gpt-4o-mini",
+    tools=[stock_price, market_news],
+    system_prompt=(
+        "You are a financial researcher. Look up stock prices and news. "
+        "Return concise, factual summaries."
+    ),
 )
-from agentos.mesh.auth import (
-    derive_shared_secret,
-    generate_keypair,
-    sign_message,
-    verify_signature,
+
+analyst = Agent(
+    name="analyst",
+    model="gpt-4o-mini",
+    tools=[calculator],
+    system_prompt=(
+        "You are a financial analyst. When given data, perform calculations "
+        "and provide insights. Be quantitative and precise."
+    ),
 )
-from agentos.mesh.discovery import MeshRegistry
-from agentos.mesh.transaction import (
-    TransactionLedger,
-    TransactionReceipt,
-    TransactionRequest,
-    TransactionStatus,
-    make_transact,
-    make_verify,
+
+writer = Agent(
+    name="writer",
+    model="gpt-4o-mini",
+    tools=[],
+    system_prompt=(
+        "You are a report writer. Take research and analysis and produce "
+        "a clear, well-structured report. Use markdown formatting."
+    ),
 )
-from agentos.mesh.server import MeshNode, handle_message
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+def demo_orchestrated():
+    """Demo 1: Orchestrator pattern — coordinator delegates to specialists."""
+    print("\n" + "=" * 70)
+    print("DEMO 1: Orchestrator Pattern")
+    print("=" * 70)
 
-DIVIDER = "═" * 60
-
-
-def pp(label: str, obj: dict | str) -> None:
-    """Pretty-print a labelled section."""
-    print(f"\n{DIVIDER}")
-    print(f"  {label}")
-    print(DIVIDER)
-    if isinstance(obj, dict):
-        print(textwrap.indent(json.dumps(obj, indent=2, default=str), "  "))
-    else:
-        print(textwrap.indent(str(obj), "  "))
-
-
-def main() -> None:
-    print("🔗 AgentOS Mesh — Agent-to-Agent Protocol Demo")
-    print("=" * 60)
-
-    # ── 1. Setup: two companies, two agents ──────────────────────────────
-
-    # Shared registry & ledger (in production these live on a central server)
-    registry = MeshRegistry()
-    ledger = TransactionLedger()
-
-    # --- Acme Corp (seller) ---
-    acme_priv, acme_pub = generate_keypair()
-    acme_identity = MeshIdentity(
-        mesh_id="sales-bot@acme.com",
-        display_name="Acme Sales Bot",
-        public_key=acme_pub,
-        capabilities=["negotiate", "quote", "transact"],
-        endpoint_url="http://acme.com:9100/mesh",
-        organisation="Acme Corp",
-    )
-    acme_node = MeshNode(
-        mesh_id=acme_identity.mesh_id,
-        display_name=acme_identity.display_name,
-        organisation=acme_identity.organisation,
-    )
-    acme_node.private_key = acme_priv
-    acme_node.public_key = acme_pub
-    acme_node.identity = acme_identity
-    registry.register(acme_identity)
-
-    # --- Globex Inc (buyer) ---
-    globex_priv, globex_pub = generate_keypair()
-    globex_identity = MeshIdentity(
-        mesh_id="procurement@globex.com",
-        display_name="Globex Procurement Bot",
-        public_key=globex_pub,
-        capabilities=["negotiate", "purchase", "transact"],
-        endpoint_url="http://globex.com:9100/mesh",
-        organisation="Globex Inc",
-    )
-    globex_node = MeshNode(
-        mesh_id=globex_identity.mesh_id,
-        display_name=globex_identity.display_name,
-        organisation=globex_identity.organisation,
-    )
-    globex_node.private_key = globex_priv
-    globex_node.public_key = globex_pub
-    globex_node.identity = globex_identity
-    registry.register(globex_identity)
-
-    pp("Registry", registry.stats())
-    for agent in registry.list_all():
-        print(f"  • {agent.mesh_id}  ({agent.organisation})")
-        print(f"    capabilities: {agent.capabilities}")
-
-    # ── 2. Discovery ─────────────────────────────────────────────────────
-
-    print("\n\n📡 STEP 1: Discovery")
-    print("-" * 40)
-
-    results = registry.search(capability="negotiate")
-    print(f"Globex searches for agents that can 'negotiate':")
-    for r in results:
-        print(f"  → found: {r.mesh_id} @ {r.organisation}")
-
-    target = registry.lookup("sales-bot@acme.com")
-    assert target is not None
-    print(f"\nDirect lookup: {target.mesh_id} ✓")
-
-    # ── 3. Ping ──────────────────────────────────────────────────────────
-
-    print("\n\n🏓 STEP 2: Ping / Pong")
-    print("-" * 40)
-
-    ping = make_ping(globex_identity.mesh_id, acme_identity.mesh_id)
-    sign_message(ping, globex_priv)
-    print(f"Globex → Acme: {ping.summary()}")
-
-    pong = handle_message(ping, node=acme_node, registry=registry, ledger=ledger)
-    print(f"Acme → Globex: {pong.summary()}")
-    print(f"  Round-trip signature verified: ✓")
-
-    # ── 4. Handshake — mutual auth ───────────────────────────────────────
-
-    print("\n\n🤝 STEP 3: Handshake (Mutual Authentication)")
-    print("-" * 40)
-
-    handshake = make_handshake(globex_identity, acme_identity.mesh_id)
-    sign_message(handshake, globex_priv)
-    print(f"Globex → Acme: {handshake.summary()}")
-
-    hs_ack = handle_message(handshake, node=acme_node, registry=registry, ledger=ledger)
-    print(f"Acme → Globex: {hs_ack.summary()}")
-
-    # Derive shared secrets on both sides (using public keys only)
-    shared_acme = derive_shared_secret(acme_pub, globex_pub)
-    shared_globex = derive_shared_secret(globex_pub, acme_pub)
-    print(f"  Acme  shared secret: {shared_acme[:16]}...")
-    print(f"  Globex shared secret: {shared_globex[:16]}...")
-    print(f"  Secrets match: {'✓' if shared_acme == shared_globex else '✗'}")
-
-    # ── 5. Negotiation — multi-round ─────────────────────────────────────
-
-    print("\n\n💬 STEP 4: Negotiation")
-    print("-" * 40)
-
-    proposal = NegotiationProposal(
-        description="1000 units of Widget-X with premium support",
-        terms={
-            "product": "Widget-X",
-            "quantity": 1000,
-            "price": 15000,
-            "currency": "USD",
-            "delivery": "30 days",
-            "support": "premium",
-        },
-        max_rounds=5,
+    coordinator = Agent(
+        name="coordinator",
+        model="gpt-4o-mini",
+        tools=[],
+        system_prompt=(
+            "You are a team coordinator. Break tasks into subtasks and "
+            "delegate to the right specialist:\n"
+            "  - 'researcher': looks up stock prices and market news\n"
+            "  - 'analyst': performs financial calculations\n"
+            "  - 'writer': writes polished reports\n"
+            "Use the delegate tool to assign work. Combine results into "
+            "a final answer."
+        ),
     )
 
-    conv_id = ""
-    current_round = 1
-    accepted = False
+    mesh = AgentMesh(name="finance-team")
+    mesh.add(researcher)
+    mesh.add(analyst)
+    mesh.add(writer)
 
-    while current_round <= proposal.max_rounds:
-        proposal.round = current_round
-        msg = make_negotiate(
-            globex_identity.mesh_id,
-            acme_identity.mesh_id,
-            proposal,
-            conversation_id=conv_id,
-        )
-        conv_id = msg.conversation_id
-        sign_message(msg, globex_priv)
-
-        print(f"\n  Round {current_round}:")
-        print(f"    Globex proposes: ${proposal.terms.get('price', 0):,}")
-
-        resp = handle_message(msg, node=acme_node, registry=registry, ledger=ledger)
-        resp_payload = resp.payload
-        status = resp_payload.get("status", "")
-
-        print(f"    Acme responds: {status.upper()}")
-        if resp_payload.get("reason"):
-            print(f"    Reason: {resp_payload['reason']}")
-
-        if status == NegotiationStatus.ACCEPTED.value:
-            print(f"    ✅ Deal accepted at ${proposal.terms.get('price', 0):,}!")
-            accepted = True
-            break
-        elif status == NegotiationStatus.COUNTER.value:
-            counter = resp_payload.get("counter_terms", {})
-            counter_price = counter.get("price", proposal.terms["price"])
-            print(f"    Counter-offer: ${counter_price:,}")
-            # Globex meets halfway
-            new_price = (proposal.terms["price"] + counter_price) // 2
-            proposal.terms["price"] = new_price
-            current_round = resp_payload.get("round", current_round + 1)
-        elif status == NegotiationStatus.REJECTED.value:
-            print(f"    ❌ Deal rejected.")
-            break
-        else:
-            current_round += 1
-
-    if not accepted:
-        print("\nNegotiation did not reach agreement.")
-        return
-
-    # ── 6. Transaction ───────────────────────────────────────────────────
-
-    print("\n\n📜 STEP 5: Transaction")
-    print("-" * 40)
-
-    tx_request = TransactionRequest(
-        description="Purchase of 1000 Widget-X units",
-        agreed_terms=proposal.terms,
-        negotiation_id=conv_id,
-        initiator=globex_identity.mesh_id,
-        counterparty=acme_identity.mesh_id,
+    result = mesh.run_orchestrated(
+        coordinator=coordinator,
+        task=(
+            "Get the stock prices for AAPL and GOOGL, calculate the combined "
+            "market cap if AAPL has 15.2B shares and GOOGL has 5.9B shares, "
+            "then write a brief 3-paragraph market summary."
+        ),
     )
-    ledger.record_request(tx_request)
 
-    tx_msg = make_transact(
-        globex_identity.mesh_id,
-        acme_identity.mesh_id,
-        tx_request,
-        conversation_id=conv_id,
+    print(f"\n📋 Final report:\n{result.content}")
+
+
+def demo_peer_to_peer():
+    """Demo 2: Peer-to-peer — any agent can delegate to any other."""
+    print("\n" + "=" * 70)
+    print("DEMO 2: Peer-to-Peer Pattern")
+    print("=" * 70)
+
+    mesh = AgentMesh(name="p2p-team")
+    mesh.add(researcher)
+    mesh.add(analyst)
+    mesh.add(writer)
+
+    mesh.enable_peer_delegation()
+
+    result = researcher.run(
+        "Look up the stock price for NVDA, then delegate to analyst "
+        "to calculate a 10% price increase, then delegate to writer "
+        "to create a one-paragraph investment note."
     )
-    sign_message(tx_msg, globex_priv)
-    print(f"Globex → Acme: {tx_msg.summary()}")
 
-    tx_resp = handle_message(tx_msg, node=acme_node, registry=registry, ledger=ledger)
-    receipt_data = tx_resp.payload
-    print(f"Acme → Globex: {tx_resp.summary()}")
+    mesh.cost_tracker.print_summary()
+    print(f"\n📋 Final result:\n{result.content}")
 
-    pp("Transaction Receipt", receipt_data)
+    mesh.disable_peer_delegation()
 
-    # ── 7. Verification ──────────────────────────────────────────────────
 
-    print("\n\n🔍 STEP 6: Verification")
-    print("-" * 40)
+def demo_shared_context():
+    """Demo 3: Shared context — agents see each other's outputs."""
+    print("\n" + "=" * 70)
+    print("DEMO 3: Shared Context")
+    print("=" * 70)
 
-    verify_msg = make_verify(
-        globex_identity.mesh_id,
-        acme_identity.mesh_id,
-        tx_request.transaction_id,
-        conversation_id=conv_id,
-    )
-    sign_message(verify_msg, globex_priv)
-    print(f"Globex verifies transaction {tx_request.transaction_id}...")
+    mesh = AgentMesh(name="context-team")
+    mesh.add(researcher)
+    mesh.add(analyst)
+    mesh.add(writer)
 
-    verify_resp = handle_message(verify_msg, node=acme_node, registry=registry, ledger=ledger)
-    vr = verify_resp.payload
-    print(f"  Found: {vr.get('found', False)}")
-    if vr.get("found"):
-        print(f"  Integrity check: {'✓ PASS' if vr.get('integrity') else '✗ FAIL'}")
-        receipt_info = vr.get("receipt", {})
-        print(f"  Status: {receipt_info.get('status', 'unknown').upper()}")
-        print(f"  Receipt hash: {receipt_info.get('receipt_hash', 'N/A')[:24]}...")
+    mesh.shared_context.set("report_style", "Executive briefing, max 200 words", author="user")
+    mesh.shared_context.set("audience", "Board of Directors", author="user")
 
-    # ── 8. Final summary ─────────────────────────────────────────────────
+    research = mesh.delegate("user", "researcher", "Get MSFT stock price and latest market news on AI")
+    mesh.shared_context.set("research_findings", research[:300], author="researcher")
 
-    pp("Ledger Stats", ledger.stats())
-    pp("Registry Stats", registry.stats())
+    analysis = mesh.delegate("user", "analyst", "Based on the shared context, estimate MSFT revenue impact if AI grows 20%")
+    mesh.shared_context.set("analysis", analysis[:300], author="analyst")
 
-    print(f"\n{'=' * 60}")
-    print("✅ Agent-to-Agent Protocol demo complete!")
-    print(f"   Agents: {globex_identity.mesh_id} ↔ {acme_identity.mesh_id}")
-    print(f"   Negotiation rounds: {current_round}")
-    print(f"   Final price: ${proposal.terms.get('price', 0):,}")
-    print(f"   Transaction: {tx_request.transaction_id}")
-    print(f"{'=' * 60}")
+    report = mesh.delegate("user", "writer", "Write the executive briefing using all shared context")
+
+    mesh.cost_tracker.print_summary()
+    print(f"\n📋 Executive briefing:\n{report}")
 
 
 if __name__ == "__main__":
-    main()
+    print("🔗 AgentOS Mesh Demo — Multi-Agent Collaboration")
+    print("=" * 70)
+
+    demo_orchestrated()
+    demo_peer_to_peer()
+    demo_shared_context()
