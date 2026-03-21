@@ -64,6 +64,27 @@ if is_demo_mode():
 
     seed_all()
 
+_DEMO_BANNER_HTML = """
+<div id="demo-banner" style="
+  position:fixed;top:0;left:0;right:0;z-index:9999;
+  background:linear-gradient(135deg,#7c5cfc 0%,#00d4ff 100%);
+  color:#fff;text-align:center;padding:8px 16px;
+  font-family:'Inter',system-ui,sans-serif;font-size:13px;font-weight:600;
+  letter-spacing:0.3px;
+  box-shadow:0 2px 12px rgba(0,212,255,0.3);
+">
+  &#x1F3AD; Running in Demo Mode &mdash; no API keys needed
+  <span style="margin-left:12px;opacity:0.85;font-weight:400;">
+    Using MockProvider &middot; All data is simulated
+  </span>
+  <button onclick="this.parentElement.style.display='none'"
+    style="margin-left:16px;background:rgba(255,255,255,0.2);border:none;
+    color:#fff;border-radius:4px;padding:2px 10px;cursor:pointer;
+    font-size:12px;">Dismiss</button>
+</div>
+<style>#demo-banner ~ .app{margin-top:36px;height:calc(100vh - 36px)}</style>
+"""
+
 from agentos.scheduler import get_scheduler
 
 _scheduler = get_scheduler()
@@ -229,7 +250,23 @@ async def ws_monitor(websocket: WebSocket):
 
 @app.get("/")
 def home():
-    return HTMLResponse(WEB_UI_HTML)
+    html = WEB_UI_HTML
+    if is_demo_mode():
+        html = html.replace(
+            '<div class="app">',
+            _DEMO_BANNER_HTML + '<div class="app">',
+        )
+    return HTMLResponse(html)
+
+
+@app.get("/api/config")
+def get_config():
+    """Return platform configuration, including demo mode status."""
+    return {
+        "demo_mode": is_demo_mode(),
+        "version": app.version,
+        "provider": "MockProvider (no API keys)" if is_demo_mode() else "auto",
+    }
 
 
 @app.get("/api/overview")

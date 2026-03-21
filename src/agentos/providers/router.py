@@ -68,9 +68,9 @@ def call_model(
     from agentos.demo import is_demo_mode
 
     if is_demo_mode():
-        from agentos.providers.demo_provider import call_demo
+        from agentos.providers.mock import call_mock
 
-        return call_demo(
+        return call_mock(
             messages, tools, model=model, temperature=temperature,
             max_tokens=max_tokens, agent_name=agent_name,
         )
@@ -133,9 +133,9 @@ def call_model_stream(
     from agentos.demo import is_demo_mode
 
     if is_demo_mode():
-        from agentos.providers.demo_provider import call_demo_stream
+        from agentos.providers.mock import call_mock_stream
 
-        yield from call_demo_stream(
+        yield from call_mock_stream(
             messages, tools, model=model, temperature=temperature,
             max_tokens=max_tokens, agent_name=agent_name,
         )

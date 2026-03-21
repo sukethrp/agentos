@@ -1,0 +1,359 @@
+"""MockProvider — run AgentOS without any API keys.
+
+A fully-featured mock LLM provider that implements the same interface as
+OpenAIProvider and returns realistic fake responses.  Useful for:
+
+- **Local development** without burning API credits
+- **CI/CD pipelines** where secrets aren't available
+- **Demos and workshops** for first-time users
+- **Integration tests** that need deterministic-ish outputs
+
+Activate via environment variable::
+
+    AGENTOS_DEMO_MODE=true python -m agentos
+
+Or use ``MockProvider`` directly::
+
+    from agentos.providers.mock import MockProvider
+    provider = MockProvider()
+    msg, event = provider.call(messages, tools)
+"""
+
+from __future__ import annotations
+
+import json
+import random
+import time
+import uuid
+from typing import AsyncGenerator, Generator
+
+from agentos.core.tool import Tool
+from agentos.core.types import AgentEvent, Message, Role, ToolCall
+from agentos.providers.base import BaseProvider
+
+# ---------------------------------------------------------------------------
+# Response templates keyed by topic detected in the user message
+# ---------------------------------------------------------------------------
+
+_TOPIC_RESPONSES: dict[str, list[str]] = {
+    "calculator": [
+        "Based on my calculation, the result is **{tool_result}**.\n\n"
+        "I used the calculator tool to compute this. Let me know if you'd "
+        "like me to run any other calculations!",
+        "The answer is **{tool_result}**. I computed this using the "
+        "calculator tool. Would you like to try a different expression?",
+    ],
+    "weather": [
+        "Here's the current weather:\n\n**{tool_result}**\n\n"
+        "Would you like a more detailed forecast or weather for another city?",
+        "According to the weather data: **{tool_result}**\n\n"
+        "Let me know if you need forecasts for additional locations!",
+    ],
+    "general": [
+        "Based on my analysis, here's what I found:\n\n"
+        "AgentOS provides a comprehensive platform for building, testing, and "
+        "deploying AI agents. It includes governance controls, monitoring, and "
+        "a marketplace for sharing agent templates.\n\n"
+        "Key features include:\n"
+        "- **Simulation Sandbox** for testing agents against scenarios\n"
+        "- **Live Dashboard** for real-time monitoring\n"
+        "- **Governance Engine** with budget limits and permissions\n"
+        "- **Multi-provider support** for OpenAI, Anthropic, and Ollama",
+
+        "I'd be happy to help with that! Here's a summary:\n\n"
+        "The task has been completed successfully. AgentOS makes it easy to "
+        "build production-ready AI agents with just a few lines of code. "
+        "The platform handles tool orchestration, cost tracking, and safety "
+        "controls automatically.\n\n"
+        "Would you like me to go into more detail on any specific aspect?",
+
+        "Great question! Let me break this down:\n\n"
+        "1. **Agent Definition** — Define tools and system prompts\n"
+        "2. **Testing** — Run sandbox scenarios before deploying\n"
+        "3. **Deployment** — Push to production with governance controls\n"
+        "4. **Monitoring** — Track costs, latency, and quality in real-time\n\n"
+        "This workflow ensures agents are safe and reliable before they "
+        "interact with real users.",
+    ],
+}
+
+# Maps tool names to keywords that trigger them
+_TOOL_TRIGGERS: dict[str, list[str]] = {
+    "calculator": ["calculate", "math", "compute", "tip", "percent", "%", "+", "*", "sum", "total"],
+    "calc": ["calculate", "math", "compute", "tip", "percent", "%", "+", "*", "sum", "total"],
+    "get_weather": ["weather", "temperature", "forecast", "rain", "sunny", "cold", "hot"],
+    "weather": ["weather", "temperature", "forecast", "rain", "sunny", "cold", "hot"],
+    "web_search": ["search", "look up", "find", "google", "latest", "news"],
+    "company_lookup": ["company", "about", "tell me about", "info on"],
+}
+
+# Default arguments for demo tool calls
+_DEMO_TOOL_ARGS: dict[str, dict] = {
+    "calculator": {"expression": "85.50 * 0.15"},
+    "calc": {"expression": "85.50 * 0.15"},
+    "get_weather": {"city": "San Francisco"},
+    "weather": {"city": "San Francisco"},
+    "web_search": {"query": "latest AI agent frameworks 2026"},
+    "company_lookup": {"company_name": "Anthropic"},
+}
+
+MOCK_COST_PER_RESPONSE = 0.0001
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _estimate_tokens(text: str) -> int:
+    """Roughly 1 token per 4 characters, matching real tokeniser heuristics."""
+    return max(1, len(text) // 4)
+
+
+def _pick_tool_call(user_msg: str, tools: list[Tool]) -> ToolCall | None:
+    """Decide whether to simulate a tool call based on message keywords."""
+    msg_lower = user_msg.lower()
+    for tool in tools:
+        triggers = _TOOL_TRIGGERS.get(tool.name, [])
+        if any(t in msg_lower for t in triggers):
+            args = _DEMO_TOOL_ARGS.get(tool.name, {})
+            return ToolCall(
+                id=f"call_{uuid.uuid4().hex[:8]}",
+                name=tool.name,
+                arguments=args,
+            )
+    return None
+
+
+def _has_tool_results(messages: list[dict]) -> bool:
+    """Check if the conversation already contains tool results."""
+    return any(m.get("role") == "tool" for m in messages)
+
+
+def _detect_topic(messages: list[dict]) -> str:
+    """Detect the response topic from the conversation."""
+    tool_results = [m for m in messages if m.get("role") == "tool"]
+    if tool_results:
+        for m in reversed(messages):
+            if m.get("role") == "assistant" and m.get("tool_calls"):
+                for tc in m["tool_calls"]:
+                    # Handle both dict and object formats
+                    if isinstance(tc, dict):
+                        fn = tc.get("function", {})
+                        name = fn.get("name", "") if isinstance(fn, dict) else tc.get("name", "")
+                    else:
+                        name = getattr(tc, "name", "")
+                    if name in ("calculator", "calc"):
+                        return "calculator"
+                    if name in ("get_weather", "weather"):
+                        return "weather"
+    return "general"
+
+
+def _synthesize_response(messages: list[dict]) -> str:
+    """Build a final response, incorporating tool results if present."""
+    topic = _detect_topic(messages)
+    templates = _TOPIC_RESPONSES.get(topic, _TOPIC_RESPONSES["general"])
+    template = random.choice(templates)
+
+    tool_results = [m for m in messages if m.get("role") == "tool"]
+    if tool_results and "{tool_result}" in template:
+        result_text = ", ".join(m.get("content", "") for m in tool_results)
+        return template.format(tool_result=result_text)
+    if "{tool_result}" in template:
+        return template.format(tool_result="(no data)")
+    return template
+
+
+def _make_event(
+    agent_name: str,
+    model: str,
+    latency_ms: float,
+    prompt_tokens: int,
+    completion_tokens: int,
+    has_tool_calls: bool = False,
+) -> AgentEvent:
+    """Build an AgentEvent with realistic-looking metrics."""
+    total_tokens = prompt_tokens + completion_tokens
+    cost = MOCK_COST_PER_RESPONSE
+    return AgentEvent(
+        agent_name=agent_name,
+        event_type="llm_call",
+        tokens_used=total_tokens,
+        cost_usd=round(cost, 6),
+        latency_ms=round(latency_ms, 2),
+        data={
+            "provider": "mock",
+            "model": model,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "has_tool_calls": has_tool_calls,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# MockProvider class (implements BaseProvider interface)
+# ---------------------------------------------------------------------------
+
+
+class MockProvider(BaseProvider):
+    """A mock LLM provider that returns realistic responses without API keys.
+
+    Implements the same ``BaseProvider`` interface as the real providers so it
+    can be used as a drop-in replacement anywhere AgentOS expects a provider.
+
+    Behaviour:
+    - Inspects the user message for keywords ("calculate", "weather", etc.)
+      and simulates the appropriate tool call if matching tools are available.
+    - After tool results are fed back, generates a natural-language summary.
+    - For general queries, returns a helpful paragraph about AgentOS.
+    - Adds a 200-500 ms delay to mimic real LLM latency.
+    - Reports ~1 token per 4 characters and $0.0001 per response.
+    """
+
+    async def chat_completion(
+        self,
+        messages: list[dict],
+        tools: list[Tool],
+        model: str = "mock",
+        temperature: float = 0.7,
+        max_tokens: int = 1024,
+        agent_name: str = "agent",
+    ) -> tuple[Message, AgentEvent]:
+        """Return a mock chat completion, optionally with tool calls."""
+        msg, event = call_mock(
+            messages, tools,
+            model=model, temperature=temperature,
+            max_tokens=max_tokens, agent_name=agent_name,
+        )
+        return msg, event
+
+    async def stream(
+        self,
+        messages: list[dict],
+        tools: list[Tool],
+        model: str = "mock",
+        temperature: float = 0.7,
+        max_tokens: int = 1024,
+        agent_name: str = "agent",
+    ) -> AsyncGenerator[str | tuple[str, Message, AgentEvent], None]:
+        """Yield tokens with small delays, then a final (tag, Message, Event)."""
+        for item in call_mock_stream(
+            messages, tools,
+            model=model, temperature=temperature,
+            max_tokens=max_tokens, agent_name=agent_name,
+        ):
+            yield item
+
+
+# ---------------------------------------------------------------------------
+# Module-level functions (match openai_provider / demo_provider signatures)
+# ---------------------------------------------------------------------------
+
+
+def call_mock(
+    messages: list[dict],
+    tools: list[Tool],
+    model: str = "mock",
+    temperature: float = 0.7,
+    max_tokens: int = 1024,
+    agent_name: str = "agent",
+) -> tuple[Message, AgentEvent]:
+    """Synchronous mock LLM call — returns (Message, AgentEvent)."""
+    start = time.time()
+
+    user_msgs = [m for m in messages if m.get("role") == "user"]
+    last_user_msg = user_msgs[-1]["content"] if user_msgs else ""
+
+    # Simulate realistic latency (200-500ms)
+    delay = random.uniform(0.20, 0.50)
+    time.sleep(delay)
+
+    prompt_tokens = _estimate_tokens(
+        " ".join(m.get("content", "") or "" for m in messages)
+    )
+
+    # Phase 1: if tools are available and no tool results yet, try a tool call
+    if tools and not _has_tool_results(messages):
+        tc = _pick_tool_call(last_user_msg, tools)
+        if tc:
+            latency = (time.time() - start) * 1000
+            msg = Message(role=Role.ASSISTANT, content=None, tool_calls=[tc])
+            event = _make_event(
+                agent_name, model, latency,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=20,
+                has_tool_calls=True,
+            )
+            return msg, event
+
+    # Phase 2: generate a text response
+    content = _synthesize_response(messages)
+    latency = (time.time() - start) * 1000
+    completion_tokens = _estimate_tokens(content)
+
+    msg = Message(role=Role.ASSISTANT, content=content)
+    event = _make_event(
+        agent_name, model, latency,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+    )
+    return msg, event
+
+
+def call_mock_stream(
+    messages: list[dict],
+    tools: list[Tool],
+    model: str = "mock",
+    temperature: float = 0.7,
+    max_tokens: int = 1024,
+    agent_name: str = "agent",
+) -> Generator[str | tuple[str, Message, AgentEvent], None, None]:
+    """Streaming mock — yields string tokens then a final (tag, Message, Event).
+
+    Simulates realistic streaming by yielding words with small delays
+    (10-30 ms per token) so the UI feels like a real LLM.
+    """
+    start = time.time()
+
+    user_msgs = [m for m in messages if m.get("role") == "user"]
+    last_user_msg = user_msgs[-1]["content"] if user_msgs else ""
+
+    prompt_tokens = _estimate_tokens(
+        " ".join(m.get("content", "") or "" for m in messages)
+    )
+
+    # Phase 1: tool call (no streaming needed — tool calls arrive as one chunk)
+    if tools and not _has_tool_results(messages):
+        tc = _pick_tool_call(last_user_msg, tools)
+        if tc:
+            time.sleep(random.uniform(0.10, 0.25))
+            latency = (time.time() - start) * 1000
+            msg = Message(role=Role.ASSISTANT, content=None, tool_calls=[tc])
+            event = _make_event(
+                agent_name, model, latency,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=20,
+                has_tool_calls=True,
+            )
+            yield ("tool_calls", msg, event)
+            return
+
+    # Phase 2: stream text token-by-token
+    content = _synthesize_response(messages)
+    words = content.split(" ")
+    for i, word in enumerate(words):
+        time.sleep(random.uniform(0.01, 0.03))
+        yield word + (" " if i < len(words) - 1 else "")
+
+    latency = (time.time() - start) * 1000
+    completion_tokens = _estimate_tokens(content)
+
+    msg = Message(role=Role.ASSISTANT, content=content)
+    event = _make_event(
+        agent_name, model, latency,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+    )
+    yield ("done", msg, event)
