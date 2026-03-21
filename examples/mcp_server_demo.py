@@ -33,12 +33,10 @@ from agentos.mcp import MCPServer
 
 @tool(description="Calculate a math expression like '2 + 2' or '100 * 3.14'")
 def calculator(expression: str) -> str:
-    allowed = set("0123456789+-*/.() ")
-    if not all(c in allowed for c in expression):
-        return "Error: Only basic math expressions allowed"
     try:
-        return str(eval(expression))
-    except Exception as e:
+        from agentos.tools.safe_math import safe_eval_math
+        return str(safe_eval_math(expression))
+    except (ValueError, ZeroDivisionError, ArithmeticError) as e:
         return f"Error: {e}"
 
 

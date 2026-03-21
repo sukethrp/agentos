@@ -10,7 +10,8 @@ Usage:
 
     @tool(description="Calculator")
     def calc(expression: str) -> str:
-        return str(eval(expression))
+        from agentos.tools.safe_math import safe_eval_math
+        return str(safe_eval_math(expression))
 
     agent = GovernedAgent(
         name="my-agent",

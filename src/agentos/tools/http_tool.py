@@ -140,11 +140,10 @@ def calculator_tool() -> Tool:
 
     def calculator(expression: str) -> str:
         try:
-            allowed = set("0123456789+-*/.() ")
-            if not all(c in allowed for c in expression):
-                return "Error: Only basic math allowed"
-            return str(eval(expression))
-        except Exception as e:
+            from agentos.tools.safe_math import safe_eval_math
+
+            return str(safe_eval_math(expression))
+        except (ValueError, ZeroDivisionError, ArithmeticError) as e:
             return f"Error: {e}"
 
     return Tool(

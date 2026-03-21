@@ -60,7 +60,8 @@ from agentos.governance.permissions import PermissionGuard
 
 @tool(description="Calculate a math expression")
 def calculator(expression: str) -> str:
-    return str(eval(expression))
+    from agentos.tools.safe_math import safe_eval_math
+    return str(safe_eval_math(expression))
 
 @tool(description="Get weather for a city")
 def get_weather(city: str) -> str:

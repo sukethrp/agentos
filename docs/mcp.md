@@ -21,7 +21,8 @@ from agentos.mcp import MCPServer
 
 @tool(description="Calculate a math expression")
 def calculator(expression: str) -> str:
-    return str(eval(expression))
+    from agentos.tools.safe_math import safe_eval_math
+    return str(safe_eval_math(expression))
 
 
 server = MCPServer("my-server", tools=[calculator])

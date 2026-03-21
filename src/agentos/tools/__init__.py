@@ -23,6 +23,7 @@ from agentos.tools.http_tool import (
 from agentos.tools.vision_tool import vision_tool
 from agentos.tools.document_tool import document_reader_tool, document_qa_tool
 from agentos.tools.rag_search_tool import rag_search_tool
+from agentos.tools.safe_math import safe_eval_math
 
 
 def get_builtin_tools() -> dict[str, Tool]:
@@ -60,4 +61,5 @@ __all__ = [
     "document_reader_tool",
     "document_qa_tool",
     "rag_search_tool",
+    "safe_eval_math",
 ]
