@@ -1,4 +1,6 @@
 .env
+.venv/
+venv/
 
 # Python
 __pycache__/
@@ -12,12 +14,14 @@ dist/
 build/
 *.egg
 
-# Testing
+# Testing / Coverage
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 htmlcov/
 .coverage
+.coverage.*
+coverage.xml
 
 # IDE
 .vscode/
@@ -34,6 +38,10 @@ src/agentos/sandbox/sim_results.db
 
 # Marketplace data
 agent_data/
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Logs
 *.log
