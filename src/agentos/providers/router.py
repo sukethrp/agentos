@@ -13,6 +13,9 @@ from __future__ import annotations
 from typing import Generator
 from agentos.core.types import Message, AgentEvent
 from agentos.core.tool import Tool
+from agentos.logging import get_logger, get_correlation
+
+_log = get_logger("agentos.providers")
 
 
 # Provider registry
@@ -73,6 +76,10 @@ def call_model(
         )
 
     provider = detect_provider(model)
+    _log.debug(
+        "provider.route",
+        extra={**get_correlation(), "provider": provider, "model": model},
+    )
 
     if provider == "openai":
         from agentos.providers.openai_provider import call_llm

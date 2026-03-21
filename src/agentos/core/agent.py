@@ -21,6 +21,7 @@ from agentos.core.tool import Tool
 from agentos.core.memory import Memory
 from agentos.providers.router import call_model as call_llm
 from agentos.providers.router import call_model_stream as call_llm_stream
+from agentos.logging import correlation, get_logger
 from agentos.telemetry import (
     agent_span,
     llm_span,
@@ -28,6 +29,8 @@ from agentos.telemetry import (
     record_tool_metrics,
     tool_span,
 )
+
+_log = get_logger("agentos.agent")
 
 _tool_cache: TTLCache[str, str] = TTLCache(maxsize=256, ttl=300)
 
@@ -82,8 +85,14 @@ class Agent:
         print(f"\n🤖 [{self.config.name}] Processing: {user_input}")
         print("-" * 60)
 
-        with agent_span(self.config.name, self.config.model, user_input) as _span:
+        with (
+            agent_span(self.config.name, self.config.model, user_input) as _span,
+            correlation(agent=self.config.name, model=self.config.model, session=self._session_id) as ctx,
+        ):
+            _log.info("agent.run.start", extra=ctx(input=user_input[:200]))
+
             for i in range(self.config.max_iterations):
+                _log.debug("llm.call.start", extra=ctx(step=i + 1))
                 with llm_span(self.config.model):
                     msg, event = call_llm(
                         model=self.config.model,
@@ -94,6 +103,16 @@ class Agent:
                     )
                 self.events.append(event)
                 record_llm_metrics(event)
+                _log.info(
+                    "llm.call.end",
+                    extra=ctx(
+                        step=i + 1,
+                        tokens=event.tokens_used,
+                        cost=event.cost_usd,
+                        latency_ms=event.latency_ms,
+                        provider=event.data.get("provider", ""),
+                    ),
+                )
 
                 if not msg.tool_calls:
                     print(
@@ -107,6 +126,14 @@ class Agent:
                     self.memory.add_exchange(user_input, msg.content or "")
                     self.memory.extract_facts_from_response(user_input, msg.content or "")
 
+                    _log.info(
+                        "agent.run.end",
+                        extra=ctx(
+                            output=(msg.content or "")[:200],
+                            total_tokens=sum(e.tokens_used for e in self.events),
+                            total_cost=sum(e.cost_usd for e in self.events),
+                        ),
+                    )
                     return msg
 
                 print(f"\n🔧 Step {i + 1}: Using {len(msg.tool_calls)} tool(s)")
@@ -128,15 +155,23 @@ class Agent:
                     }
                 )
                 budget_remaining = 0.0
-                ctx = ToolExecutionContext(
+                exec_ctx = ToolExecutionContext(
                     agent_id=self.config.name,
                     session_id=self._session_id,
                     budget_remaining=budget_remaining,
                 )
-                results = self._execute_tools_batch(msg.tool_calls, ctx)
+                results = self._execute_tools_batch(msg.tool_calls, exec_ctx)
                 for tc, (result_str, latency_ms) in zip(msg.tool_calls, results):
                     print(f"   🔨 {tc.name}({tc.arguments}) → {result_str[:80]}")
                     record_tool_metrics(self.config.name, tc.name, latency_ms)
+                    _log.info(
+                        "tool.execute",
+                        extra=ctx(
+                            tool=tc.name,
+                            latency_ms=latency_ms,
+                            error=result_str[:120] if result_str.startswith("ERROR") else None,
+                        ),
+                    )
                     self.events.append(
                         AgentEvent(
                             agent_name=self.config.name,
@@ -153,6 +188,7 @@ class Agent:
                         {"role": "tool", "tool_call_id": tc.id, "content": result_str}
                     )
 
+            _log.warning("agent.run.max_iterations", extra=ctx())
             print("⚠️ Max iterations reached")
             return Message(role=Role.ASSISTANT, content="Could not complete the task.")
 
