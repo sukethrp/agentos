@@ -19,7 +19,7 @@ class PermissionGuard:
         blocked_tools: list[str] | None = None,
         require_approval: list[str] | None = None,
         max_actions_per_run: int = 50,
-    ):
+    ) -> None:
         self.allowed_tools = set(allowed_tools) if allowed_tools else None
         self.blocked_tools = set(blocked_tools) if blocked_tools else set()
         self.require_approval = set(require_approval) if require_approval else set()
@@ -51,7 +51,7 @@ class PermissionGuard:
 
         return True, "OK"
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset action count for a new run."""
         self.action_count = 0
 

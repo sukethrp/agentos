@@ -50,7 +50,7 @@ class SandboxReport(BaseModel):
     results: list[ScenarioResult] = Field(default_factory=list)
     failed_scenarios: list[str] = Field(default_factory=list)
 
-    def print_report(self):
+    def print_report(self) -> None:
         print(f"\n{'=' * 60}")
         print("🧪 AgentOS Simulation Sandbox Report")
         print(f"{'=' * 60}")

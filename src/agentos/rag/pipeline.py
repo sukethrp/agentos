@@ -43,7 +43,7 @@ class RAGPipeline:
         cache_dir: str | None = None,
         top_k: int = 5,
         similarity_threshold: float = 0.0,
-    ):
+    ) -> None:
         self.chunker = DocumentChunker(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,

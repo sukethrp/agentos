@@ -3,8 +3,11 @@ import asyncio
 import hashlib
 import json
 import uuid
-from typing import Generator
+from typing import TYPE_CHECKING, Generator
 from cachetools import TTLCache
+
+if TYPE_CHECKING:
+    from agentos.mcp import MCPServer
 from agentos.core.types import (
     AgentConfig,
     AgentEvent,
@@ -12,6 +15,7 @@ from agentos.core.types import (
     Role,
     ToolCall,
     ToolExecutionContext,
+    ToolResult,
 )
 from agentos.core.tool import Tool
 from agentos.core.memory import Memory
@@ -37,7 +41,7 @@ class Agent:
         max_iterations: int = 10,
         temperature: float = 0.7,
         memory: Memory | None = None,
-    ):
+    ) -> None:
         self.config = AgentConfig(
             name=name,
             model=model,
@@ -260,8 +264,7 @@ class Agent:
 
         return list(await asyncio.gather(*[run_one(tc) for tc in tool_calls]))
 
-    def _execute_tool_with_retry(self, tool: Tool, tc: ToolCall):
-        from agentos.core.tool import ToolResult
+    def _execute_tool_with_retry(self, tool: Tool, tc: ToolCall) -> ToolResult:
         import time
 
         start = time.time()
@@ -283,7 +286,7 @@ class Agent:
                 latency_ms=round(latency, 2),
             )
 
-    def as_mcp_server(self, name: str | None = None):
+    def as_mcp_server(self, name: str | None = None) -> MCPServer:
         """Return an MCPServer exposing this agent's tools over MCP.
 
         Requires the ``mcp`` extra: ``pip install 'agentos-platform[mcp]'``
@@ -292,7 +295,7 @@ class Agent:
 
         return MCPServer.from_agent(self, name=name)
 
-    def _print_summary(self):
+    def _print_summary(self) -> None:
         total_cost = sum(e.cost_usd for e in self.events)
         total_tokens = sum(e.tokens_used for e in self.events)
         total_latency = sum(e.latency_ms for e in self.events)

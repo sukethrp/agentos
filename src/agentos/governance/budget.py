@@ -18,7 +18,7 @@ class BudgetGuard:
         max_per_hour: float = 10.00,
         max_per_day: float = 50.00,
         max_total: float = 500.00,
-    ):
+    ) -> None:
         self.max_per_action = max_per_action
         self.max_per_hour = max_per_hour
         self.max_per_day = max_per_day
@@ -32,7 +32,7 @@ class BudgetGuard:
         self.action_count = 0
         self.blocked_count = 0
 
-    def _reset_windows(self):
+    def _reset_windows(self) -> None:
         now = time.time()
         if now - self.last_hour_reset > 3600:
             self.hourly_spent = 0.0
@@ -76,7 +76,7 @@ class BudgetGuard:
 
         return True, "OK"
 
-    def record_spend(self, cost: float):
+    def record_spend(self, cost: float) -> None:
         """Record actual spending after an action completes."""
         self.total_spent += cost
         self.hourly_spent += cost

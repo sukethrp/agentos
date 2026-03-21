@@ -8,12 +8,12 @@ from agentos.core.types import ToolSpec, ToolParam, ToolCall, ToolResult
 class Tool:
     def __init__(
         self,
-        fn: Callable,
+        fn: Callable[..., str],
         name: str | None = None,
         description: str | None = None,
         timeout_seconds: float = 30.0,
         max_retries: int = 0,
-    ):
+    ) -> None:
         self.fn = fn
         self.name = name or fn.__name__
         self.description = description or fn.__doc__ or f"Tool: {self.name}"
@@ -73,8 +73,8 @@ def tool(
     description: str | None = None,
     timeout_seconds: float = 30.0,
     max_retries: int = 0,
-):
-    def decorator(fn: Callable) -> Tool:
+) -> Callable[[Callable[..., str]], Tool]:
+    def decorator(fn: Callable[..., str]) -> Tool:
         return Tool(
             fn=fn,
             name=name or fn.__name__,
