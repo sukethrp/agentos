@@ -31,6 +31,29 @@ AgentOS solves this.
 
 ---
 
+## How AgentOS Compares
+
+| Feature | AgentOS | LangChain | CrewAI | AutoGen |
+|---|---|---|---|---|
+| Testing Sandbox | ✅ Built-in | ❌ | ❌ | ❌ |
+| A/B Testing | ✅ Built-in | ❌ | ❌ | ❌ |
+| Governance & Kill Switch | ✅ Built-in | ❌ | ❌ | ❌ |
+| Live Dashboard | ✅ Built-in | ⚡ LangSmith | ❌ | ❌ |
+| Agent Marketplace | ✅ Built-in | 🔗 LangChain Hub | ❌ | ❌ |
+| Embeddable Widget | ✅ Built-in | ❌ | ❌ | ❌ |
+| RAG Pipeline | ✅ Built-in | ✅ | ❌ | ❌ |
+| Workflow Engine | ✅ Built-in | ✅ LangGraph | ✅ | ❌ |
+| Multi-Agent | 🔜 Roadmap | ✅ | ✅ | ✅ |
+| Community & Ecosystem | 🌱 Growing | ✅ Massive | ✅ Large | ✅ Large |
+| Multi-Model | ✅ | ✅ | ✅ | ✅ |
+| Lines to Start | ~10 | ~30 | ~20 | ~40 |
+
+**Key:** ✅ = Built-in/Yes | ⚡ = Available via paid add-on | 🔗 = Partial/separate tool | 🔜 = On roadmap | 🌱 = Early stage | ❌ = Not available
+
+> **A note on honesty:** AgentOS focuses on what others don't: testing, governance, and monitoring built in from day one. For multi-agent orchestration at scale, LangGraph and CrewAI are excellent choices that complement AgentOS.
+
+---
+
 ## Quick Start
 
 ### Install
