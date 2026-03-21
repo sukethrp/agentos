@@ -10,24 +10,20 @@ Build, Test, Deploy, Monitor, and Govern AI agents — from prototype to product
 [![Version](https://img.shields.io/badge/version-0.3.1-green.svg)](#)
 [![codecov](https://codecov.io/gh/sukethrp/agentos/branch/main/graph/badge.svg)](https://codecov.io/gh/sukethrp/agentos)
 
+<!-- TODO: Replace with actual demo recording -->
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="AgentOS Demo" width="700">
+</p>
+
+> **AgentOS is for teams who need to deploy AI agents in production with testing, governance, and monitoring built in — not bolted on.**
+
 ---
 
-## Why AgentOS?
+## What Makes AgentOS Different?
 
-Every company is building AI agents. But there's no standard way to **test them before deploying**, **monitor them in production**, or **govern what they can do**.
-
-AgentOS solves this.
-
-| Problem | AgentOS Solution |
-|---------|-----------------|
-| Agents deployed without testing | **Simulation Sandbox** — test against 100+ scenarios automatically |
-| No visibility into agent behavior | **Live Dashboard** — see every action, every cost, in real-time |
-| Agents with no safety controls | **Governance Engine** — budgets, permissions, kill switch, audit trails |
-| Complex frameworks, 100+ lines of setup | **10 lines of code** — define a production-ready agent |
-| Vendor lock-in to one LLM provider | **Any LLM** — OpenAI, Claude, Ollama, or any provider |
-| No way to share or reuse agents | **Marketplace** — publish packages, install via CLI, scope API keys |
-| Multi-agent orchestration | **Teams** — WorkflowDAG, PlannerAgent, parallel execution, org budget caps |
-| Can't embed agents in your product | **Embed SDK** — white-label chat widget in one script tag |
+- 🧪 **Test before you deploy** — Simulation sandbox scores agent responses automatically. No more shipping untested agents.
+- 🛡️ **Govern what agents can do** — Budget limits, permission controls, kill switch, and audit trails. Enterprise-ready.
+- 📊 **See everything in real-time** — Live dashboard tracks every LLM call, tool use, and dollar spent. Zero configuration.
 
 ---
 
@@ -56,24 +52,9 @@ AgentOS solves this.
 
 ## Quick Start
 
-### Install
-
 ```bash
 pip install agentos-platform
 ```
-
-Or install from source:
-
-```bash
-git clone https://github.com/sukethrp/agentos.git
-cd agentos
-pip install -e ".[dev]"
-```
-
-Optional extras:
-- `pip install -e ".[rag]"` — ChromaDB, Pinecone, pgvector for RAG vector stores
-
-### Define a Governed Agent (10 lines)
 
 ```python
 from agentos.governed_agent import GovernedAgent
@@ -100,6 +81,10 @@ agent = GovernedAgent(
 
 agent.run("What's 15% tip on $85?")
 ```
+
+---
+
+## More Examples
 
 ### Test Before Deploying
 
@@ -130,9 +115,27 @@ python examples/run_web_builder.py
 # Open http://localhost:8000
 ```
 
+### Try Without API Keys
+
+```bash
+AGENTOS_DEMO_MODE=true python examples/demo_mode.py
+```
+
+### Install from Source
+
+```bash
+git clone https://github.com/sukethrp/agentos.git
+cd agentos
+pip install -e ".[dev]"
+```
+
+Optional extras:
+- `pip install -e ".[rag]"` — ChromaDB, Pinecone, pgvector for RAG vector stores
+
 ---
 
-## Features
+<details>
+<summary><strong>📋 All 15 Modules (click to expand)</strong></summary>
 
 ### Agent SDK
 - Define agents in 10 lines of code
@@ -262,6 +265,8 @@ python examples/run_web_builder.py
 - Customer Support, Research Assistant, Sales Agent, Code Reviewer
 - Ready to deploy or customise
 
+</details>
+
 ---
 
 ## Web Platform
@@ -296,6 +301,9 @@ python examples/run_web_builder.py
 ```bash
 # Quick start
 python examples/quickstart.py
+
+# Demo mode (no API keys needed)
+AGENTOS_DEMO_MODE=true python examples/demo_mode.py
 
 # Web platform (all features)
 python examples/run_web_builder.py
