@@ -24,6 +24,12 @@ from agentos.tools.vision_tool import vision_tool
 from agentos.tools.document_tool import document_reader_tool, document_qa_tool
 from agentos.tools.rag_search_tool import rag_search_tool
 from agentos.tools.safe_math import safe_eval_math
+from agentos.tools.web_scraper_tool import web_scraper_tool
+from agentos.tools.database_tool import database_query_tool
+from agentos.tools.email_tool import email_sender_tool
+from agentos.tools.slack_tool import slack_notification_tool
+from agentos.tools.file_tool import file_read_tool, file_write_tool
+from agentos.tools.data_parser_tool import json_parser_tool, csv_parser_tool
 
 
 def get_builtin_tools() -> dict[str, Tool]:
@@ -40,6 +46,14 @@ def get_builtin_tools() -> dict[str, Tool]:
         "read_document": document_reader_tool(),
         "analyze_document": document_qa_tool(),
         "rag_search": rag_search_tool(),
+        "web_scraper": web_scraper_tool(),
+        "database_query": database_query_tool(),
+        "send_email": email_sender_tool(),
+        "slack_notify": slack_notification_tool(),
+        "read_file": file_read_tool(),
+        "write_file": file_write_tool(),
+        "parse_json": json_parser_tool(),
+        "parse_csv": csv_parser_tool(),
     }
     try:
         from agentos.marketplace.registry import _installed_tools
@@ -62,4 +76,12 @@ __all__ = [
     "document_qa_tool",
     "rag_search_tool",
     "safe_eval_math",
+    "web_scraper_tool",
+    "database_query_tool",
+    "email_sender_tool",
+    "slack_notification_tool",
+    "file_read_tool",
+    "file_write_tool",
+    "json_parser_tool",
+    "csv_parser_tool",
 ]
