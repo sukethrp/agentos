@@ -1,9 +1,12 @@
 """Comprehensive tests for the governance module.
 
 Covers:
-- BudgetGuard: per-action, hourly, daily, total limits; window resets; status
-- PermissionGuard: allowed/blocked/approval lists; max actions; reset; status
-- AuditLog: logging, querying, summary, blocked filter, JSON export, report
+- BudgetGuard: per-action, hourly, daily, total limits; window resets; status;
+  zero-budget edge case; cumulative spend tracking
+- PermissionGuard: allowed/blocked/approval lists; max actions; reset; status;
+  kill-switch blocks all tools
+- AuditLog: logging, querying, summary, blocked filter, JSON export, report;
+  timestamp presence; append-only immutability
 - GovernanceEngine: kill switch, revive, budget+perm integration, record_action
 - Edge cases: zero budgets, empty permissions, boundary values
 """
@@ -169,6 +172,75 @@ class TestBudgetGuardDefaults:
         assert bg.total_spent == 0.0
 
 
+class TestBudgetGuardZeroBudget:
+    """Edge cases when budget limits are set to zero."""
+
+    def test_zero_per_action_blocks_nonzero_cost(self):
+        """A per-action limit of 0 should block any action with cost > 0."""
+        bg = BudgetGuard(max_per_action=0.0)
+        ok, msg = bg.check_action(0.001)
+        assert ok is False
+        assert "exceeds per-action limit" in msg
+
+    def test_zero_hourly_blocks_after_any_spend(self):
+        """A zero hourly limit should block once any spend is recorded."""
+        bg = BudgetGuard(max_per_action=10.0, max_per_hour=0.0)
+        ok, msg = bg.check_action(0.001)
+        assert ok is False
+        assert "Hourly spend" in msg
+
+    def test_zero_daily_blocks_after_any_spend(self):
+        """A zero daily limit should block once any spend is recorded."""
+        bg = BudgetGuard(max_per_action=10.0, max_per_hour=10.0, max_per_day=0.0)
+        ok, msg = bg.check_action(0.001)
+        assert ok is False
+        assert "Daily spend" in msg
+
+    def test_zero_total_blocks_any_nonzero_action(self):
+        """A zero total limit should block any action with cost > 0."""
+        bg = BudgetGuard(
+            max_per_action=10.0, max_per_hour=10.0, max_per_day=10.0, max_total=0.0
+        )
+        ok, msg = bg.check_action(0.001)
+        assert ok is False
+        assert "Total spend" in msg
+
+    def test_all_zero_limits_allow_zero_cost(self):
+        """A zero-cost action should pass even with all limits set to zero."""
+        bg = BudgetGuard(
+            max_per_action=0.0, max_per_hour=0.0, max_per_day=0.0, max_total=0.0
+        )
+        ok, _ = bg.check_action(0.0)
+        assert ok is True
+
+
+class TestBudgetGuardCumulativeSpend:
+    """Verify spend tracking stays accurate across many operations."""
+
+    def test_cumulative_spend_matches_recorded_total(self):
+        """Total spent should equal the sum of all record_spend calls."""
+        bg = BudgetGuard()
+        amounts = [0.01, 0.02, 0.05, 0.10, 0.03]
+        for a in amounts:
+            bg.record_spend(a)
+        assert round(bg.total_spent, 6) == round(sum(amounts), 6)
+
+    def test_hourly_and_daily_track_independently_from_total(self):
+        """After hourly reset, hourly should be zero but total preserved."""
+        bg = BudgetGuard(max_per_action=100.0, max_per_hour=100.0, max_total=1000.0)
+        bg.record_spend(5.0)
+        bg.last_hour_reset = time.time() - 3601
+        bg._reset_windows()
+        assert bg.hourly_spent == 0.0
+        assert bg.total_spent == 5.0
+
+    def test_budget_remaining_in_status(self, strict_budget):
+        """get_status() should report accurate remaining budget."""
+        strict_budget.record_spend(1.50)
+        status = strict_budget.get_status()
+        assert status["budget_remaining"] == round(5.00 - 1.50, 6)
+
+
 # ═══════════════════════════════════════════════════════════════════
 # PermissionGuard
 # ═══════════════════════════════════════════════════════════════════
@@ -256,6 +328,34 @@ class TestPermissionGuardMaxActions:
         assert pg.blocked_count == 1
 
 
+class TestPermissionGuardBlocksAllWhenKillSwitchActive:
+    """When GovernanceEngine kill switch is on, ALL tools should be blocked."""
+
+    def test_kill_switch_blocks_allowed_tool(self, tmp_audit_log):
+        """Even explicitly allowed tools are blocked when the kill switch is on."""
+        perms = PermissionGuard(allowed_tools=["calc", "weather"])
+        gov = GovernanceEngine(agent_name="bot", permissions=perms)
+        gov.kill("emergency")
+        res = gov.check_tool_call("calc", estimated_cost=0.0)
+        assert res.allowed is False
+        assert res.rule == "kill_switch"
+
+    def test_kill_switch_blocks_every_tool_name(self, tmp_audit_log):
+        """Any arbitrary tool name should be rejected under kill switch."""
+        gov = GovernanceEngine(agent_name="bot")
+        gov.kill("lockdown")
+        for tool_name in ["calc", "weather", "deploy", "unknown_tool"]:
+            res = gov.check_tool_call(tool_name, estimated_cost=0.0)
+            assert res.allowed is False
+
+    def test_empty_permissions_still_blocked_by_kill(self, tmp_audit_log):
+        """An open PermissionGuard should still be overridden by kill switch."""
+        gov = GovernanceEngine(agent_name="bot", permissions=PermissionGuard())
+        gov.kill("safety")
+        res = gov.check_tool_call("anything", estimated_cost=0.0)
+        assert res.allowed is False
+
+
 class TestPermissionGuardStatus:
     def test_status_with_allowed_tools(self):
         pg = PermissionGuard(
@@ -282,6 +382,39 @@ class TestPermissionGuardStatus:
         pg.check_tool("lookup")
         status = pg.get_status()
         assert status["pending_approvals"] == 2
+
+
+class TestPermissionGuardWithFixtures:
+    """Tests using the shared conftest fixtures."""
+
+    def test_open_permissions_allow_everything(self, open_permissions):
+        """An unrestricted guard should allow any tool."""
+        ok, _ = open_permissions.check_tool("literally_anything")
+        assert ok is True
+
+    def test_locked_permissions_allow_only_calculator(self, locked_permissions):
+        """The locked fixture should only allow 'calculator'."""
+        ok, _ = locked_permissions.check_tool("calculator")
+        assert ok is True
+        ok, _ = locked_permissions.check_tool("weather")
+        assert ok is False
+
+    def test_locked_permissions_block_dangerous_tools(self, locked_permissions):
+        """Explicitly blocked tools should be rejected."""
+        ok, msg = locked_permissions.check_tool("delete_file")
+        assert ok is False
+        assert "blocked" in msg
+
+    def test_locked_permissions_require_approval_for_deploy(self):
+        """Tools in require_approval (and also in allowed_tools) should be gated."""
+        pg = PermissionGuard(
+            allowed_tools=["calculator", "deploy"],
+            blocked_tools=["delete_file", "send_email"],
+            require_approval=["deploy"],
+        )
+        ok, msg = pg.check_tool("deploy")
+        assert ok is False
+        assert "requires human approval" in msg
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -415,10 +548,46 @@ class TestAuditLogExportAndReport:
         assert "Blocked Actions" not in output
 
 
+class TestAuditLogTimestamps:
+    """Verify every entry gets a proper timestamp."""
+
+    def test_entry_has_numeric_timestamp(self, audit_log):
+        """Each entry should have a float Unix timestamp."""
+        audit_log.log(action="test_action")
+        entry = audit_log.get_entries()[0]
+        assert isinstance(entry["timestamp"], float)
+        assert entry["timestamp"] > 0
+
+    def test_entry_has_human_readable_time(self, audit_log):
+        """Each entry should have a formatted time string."""
+        audit_log.log(action="test_action")
+        entry = audit_log.get_entries()[0]
+        assert isinstance(entry["time_readable"], str)
+        assert "-" in entry["time_readable"]  # e.g. "2025-02-15 14:30:00"
+
+    def test_timestamps_are_monotonically_increasing(self, audit_log):
+        """Successive entries should have non-decreasing timestamps."""
+        audit_log.log(action="first")
+        audit_log.log(action="second")
+        audit_log.log(action="third")
+        entries = audit_log.get_entries()
+        for i in range(1, len(entries)):
+            assert entries[i]["timestamp"] >= entries[i - 1]["timestamp"]
+
+    def test_timestamp_is_recent(self, audit_log):
+        """Timestamp should be within the last few seconds."""
+        before = time.time()
+        audit_log.log(action="now")
+        after = time.time()
+        ts = audit_log.get_entries()[0]["timestamp"]
+        assert before <= ts <= after
+
+
 class TestAuditLogImmutability:
-    """Entries should be append-only; no method removes past entries."""
+    """Entries should be append-only; no public method removes past entries."""
 
     def test_entries_are_append_only(self):
+        """New entries are appended; existing entries stay untouched."""
         audit = AuditLog("a")
         audit.log(action="first")
         audit.log(action="second")
@@ -426,10 +595,38 @@ class TestAuditLogImmutability:
         assert audit.entries[0]["action"] == "first"
 
     def test_get_entries_returns_copy_slice(self):
+        """get_entries should not return a reference that can mutate internals."""
         audit = AuditLog("a")
         audit.log(action="x")
         entries = audit.get_entries()
         assert entries is not audit.entries or len(entries) == len(audit.entries)
+
+    def test_cannot_remove_entries_via_get_blocked(self):
+        """get_blocked() returns a new list; mutating it doesn't affect the log."""
+        audit = AuditLog("a")
+        audit.log(action="blocked_action", allowed=False)
+        blocked = audit.get_blocked()
+        blocked.clear()
+        assert len(audit.get_blocked()) == 1
+
+    def test_entry_content_preserved_after_more_logs(self):
+        """Earlier entries should be byte-for-byte unchanged after later logs."""
+        audit = AuditLog("a")
+        audit.log(action="first", details={"key": "value"})
+        snapshot = dict(audit.entries[0])
+        audit.log(action="second")
+        audit.log(action="third")
+        assert audit.entries[0]["action"] == snapshot["action"]
+        assert audit.entries[0]["details"] == snapshot["details"]
+        assert audit.entries[0]["timestamp"] == snapshot["timestamp"]
+
+    def test_no_delete_or_pop_method_exposed(self):
+        """AuditLog should not expose any method to remove entries."""
+        audit = AuditLog("a")
+        assert not hasattr(audit, "delete")
+        assert not hasattr(audit, "remove")
+        assert not hasattr(audit, "clear")
+        assert not hasattr(audit, "pop")
 
 
 # ═══════════════════════════════════════════════════════════════════
