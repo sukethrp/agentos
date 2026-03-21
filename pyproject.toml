@@ -51,6 +51,9 @@ dev = [
 redis = [
     "redis>=5.0.0",
 ]
+mcp = [
+    "mcp>=1.0.0",
+]
 rag = [
     "chromadb>=0.4.0",
     "pinecone-client>=2.2.0",

@@ -283,6 +283,15 @@ class Agent:
                 latency_ms=round(latency, 2),
             )
 
+    def as_mcp_server(self, name: str | None = None):
+        """Return an MCPServer exposing this agent's tools over MCP.
+
+        Requires the ``mcp`` extra: ``pip install 'agentos-platform[mcp]'``
+        """
+        from agentos.mcp import MCPServer
+
+        return MCPServer.from_agent(self, name=name)
+
     def _print_summary(self):
         total_cost = sum(e.cost_usd for e in self.events)
         total_tokens = sum(e.tokens_used for e in self.events)
