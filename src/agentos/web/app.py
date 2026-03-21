@@ -57,6 +57,13 @@ app.add_middleware(ScopeMiddleware)
 for router, prefix in ALL_ROUTERS:
     app.include_router(router, prefix=prefix)
 
+from agentos.demo import is_demo_mode
+
+if is_demo_mode():
+    from agentos.demo.seed import seed_all
+
+    seed_all()
+
 from agentos.scheduler import get_scheduler
 
 _scheduler = get_scheduler()

@@ -62,6 +62,16 @@ def call_model(
     agent_name: str = "agent",
 ) -> tuple[Message, AgentEvent]:
     """Route to the correct provider based on model name."""
+    from agentos.demo import is_demo_mode
+
+    if is_demo_mode():
+        from agentos.providers.demo_provider import call_demo
+
+        return call_demo(
+            messages, tools, model=model, temperature=temperature,
+            max_tokens=max_tokens, agent_name=agent_name,
+        )
+
     provider = detect_provider(model)
 
     if provider == "openai":
@@ -113,6 +123,17 @@ def call_model_stream(
     max_tokens: int = 1024,
     agent_name: str = "agent",
 ) -> Generator[str | tuple[str, Message, AgentEvent], None, None]:
+    from agentos.demo import is_demo_mode
+
+    if is_demo_mode():
+        from agentos.providers.demo_provider import call_demo_stream
+
+        yield from call_demo_stream(
+            messages, tools, model=model, temperature=temperature,
+            max_tokens=max_tokens, agent_name=agent_name,
+        )
+        return
+
     provider = detect_provider(model)
 
     if provider == "openai":
