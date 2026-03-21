@@ -54,6 +54,11 @@ redis = [
 mcp = [
     "mcp>=1.0.0",
 ]
+otel = [
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-exporter-otlp>=1.20.0",
+]
 rag = [
     "chromadb>=0.4.0",
     "pinecone-client>=2.2.0",

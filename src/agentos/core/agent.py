@@ -21,6 +21,13 @@ from agentos.core.tool import Tool
 from agentos.core.memory import Memory
 from agentos.providers.router import call_model as call_llm
 from agentos.providers.router import call_model_stream as call_llm_stream
+from agentos.telemetry import (
+    agent_span,
+    llm_span,
+    record_llm_metrics,
+    record_tool_metrics,
+    tool_span,
+)
 
 _tool_cache: TTLCache[str, str] = TTLCache(maxsize=256, ttl=300)
 
@@ -75,74 +82,79 @@ class Agent:
         print(f"\n🤖 [{self.config.name}] Processing: {user_input}")
         print("-" * 60)
 
-        for i in range(self.config.max_iterations):
-            msg, event = call_llm(
-                model=self.config.model,
-                messages=self.messages,
-                tools=self.tools,
-                temperature=self.config.temperature,
-                agent_name=self.config.name,
-            )
-            self.events.append(event)
-
-            if not msg.tool_calls:
-                print(
-                    f"\n✅ Final Answer (${event.cost_usd:.4f}, {event.latency_ms:.0f}ms):"
-                )
-                print(msg.content)
-                self._print_summary()
-
-                # Store in memory
-                self.memory.add_exchange(user_input, msg.content or "")
-                self.memory.extract_facts_from_response(user_input, msg.content or "")
-
-                return msg
-
-            print(f"\n🔧 Step {i + 1}: Using {len(msg.tool_calls)} tool(s)")
-            self.messages.append(
-                {
-                    "role": "assistant",
-                    "content": msg.content,
-                    "tool_calls": [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.name,
-                                "arguments": str(tc.arguments),
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ],
-                }
-            )
-            budget_remaining = 0.0
-            ctx = ToolExecutionContext(
-                agent_id=self.config.name,
-                session_id=self._session_id,
-                budget_remaining=budget_remaining,
-            )
-            results = self._execute_tools_batch(msg.tool_calls, ctx)
-            for tc, (result_str, latency_ms) in zip(msg.tool_calls, results):
-                print(f"   🔨 {tc.name}({tc.arguments}) → {result_str[:80]}")
-                self.events.append(
-                    AgentEvent(
+        with agent_span(self.config.name, self.config.model, user_input) as _span:
+            for i in range(self.config.max_iterations):
+                with llm_span(self.config.model):
+                    msg, event = call_llm(
+                        model=self.config.model,
+                        messages=self.messages,
+                        tools=self.tools,
+                        temperature=self.config.temperature,
                         agent_name=self.config.name,
-                        event_type="tool_call",
-                        data={
-                            "tool": tc.name,
-                            "args": tc.arguments,
-                            "result": result_str[:200],
-                        },
-                        latency_ms=latency_ms,
                     )
-                )
-                self.messages.append(
-                    {"role": "tool", "tool_call_id": tc.id, "content": result_str}
-                )
+                self.events.append(event)
+                record_llm_metrics(event)
 
-        print("⚠️ Max iterations reached")
-        return Message(role=Role.ASSISTANT, content="Could not complete the task.")
+                if not msg.tool_calls:
+                    print(
+                        f"\n✅ Final Answer (${event.cost_usd:.4f}, {event.latency_ms:.0f}ms):"
+                    )
+                    print(msg.content)
+                    self._print_summary()
+                    if _span is not None:
+                        _span.set_attribute("agentos.agent.output", (msg.content or "")[:500])
+
+                    self.memory.add_exchange(user_input, msg.content or "")
+                    self.memory.extract_facts_from_response(user_input, msg.content or "")
+
+                    return msg
+
+                print(f"\n🔧 Step {i + 1}: Using {len(msg.tool_calls)} tool(s)")
+                self.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": msg.content,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.name,
+                                    "arguments": str(tc.arguments),
+                                },
+                            }
+                            for tc in msg.tool_calls
+                        ],
+                    }
+                )
+                budget_remaining = 0.0
+                ctx = ToolExecutionContext(
+                    agent_id=self.config.name,
+                    session_id=self._session_id,
+                    budget_remaining=budget_remaining,
+                )
+                results = self._execute_tools_batch(msg.tool_calls, ctx)
+                for tc, (result_str, latency_ms) in zip(msg.tool_calls, results):
+                    print(f"   🔨 {tc.name}({tc.arguments}) → {result_str[:80]}")
+                    record_tool_metrics(self.config.name, tc.name, latency_ms)
+                    self.events.append(
+                        AgentEvent(
+                            agent_name=self.config.name,
+                            event_type="tool_call",
+                            data={
+                                "tool": tc.name,
+                                "args": tc.arguments,
+                                "result": result_str[:200],
+                            },
+                            latency_ms=latency_ms,
+                        )
+                    )
+                    self.messages.append(
+                        {"role": "tool", "tool_call_id": tc.id, "content": result_str}
+                    )
+
+            print("⚠️ Max iterations reached")
+            return Message(role=Role.ASSISTANT, content="Could not complete the task.")
 
     def _run_stream(self, user_input: str) -> Generator[str | Message, None, None]:
         for i in range(self.config.max_iterations):
@@ -238,27 +250,28 @@ class Agent:
                 await broadcast_tool_event(ctx.agent_id, tc.name, cached, 0.0)
                 return (cached, 0.0)
             last_err = None
-            for attempt in range(tool.max_retries + 1):
-                try:
-                    result = await asyncio.wait_for(
-                        asyncio.to_thread(self._execute_tool_with_retry, tool, tc),
-                        timeout=tool.timeout_seconds,
-                    )
-                    result_str = result.result
-                    latency_ms = result.latency_ms
-                    _tool_cache[ck] = result_str
-                    await broadcast_tool_event(
-                        ctx.agent_id, tc.name, result_str, latency_ms
-                    )
-                    return (result_str, latency_ms)
-                except asyncio.TimeoutError as e:
-                    last_err = e
-                    if attempt < tool.max_retries:
-                        await asyncio.sleep(2**attempt)
-                except Exception as e:
-                    last_err = e
-                    if attempt < tool.max_retries:
-                        await asyncio.sleep(2**attempt)
+            with tool_span(tc.name):
+                for attempt in range(tool.max_retries + 1):
+                    try:
+                        result = await asyncio.wait_for(
+                            asyncio.to_thread(self._execute_tool_with_retry, tool, tc),
+                            timeout=tool.timeout_seconds,
+                        )
+                        result_str = result.result
+                        latency_ms = result.latency_ms
+                        _tool_cache[ck] = result_str
+                        await broadcast_tool_event(
+                            ctx.agent_id, tc.name, result_str, latency_ms
+                        )
+                        return (result_str, latency_ms)
+                    except asyncio.TimeoutError as e:
+                        last_err = e
+                        if attempt < tool.max_retries:
+                            await asyncio.sleep(2**attempt)
+                    except Exception as e:
+                        last_err = e
+                        if attempt < tool.max_retries:
+                            await asyncio.sleep(2**attempt)
             err_str = str(last_err) if last_err else "Unknown error"
             return (f"ERROR: {err_str}", 0.0)
 
