@@ -8,6 +8,7 @@ Build, Test, Deploy, Monitor, and Govern AI agents — from prototype to product
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/agentos-platform.svg)](https://pypi.org/project/agentos-platform/)
 [![Version](https://img.shields.io/badge/version-0.3.1-green.svg)](#)
+[![codecov](https://codecov.io/gh/sukethrp/agentos/branch/main/graph/badge.svg)](https://codecov.io/gh/sukethrp/agentos)
 
 ---
 
