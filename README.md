@@ -30,12 +30,12 @@
 ---
 
 ## Quick Start
-```bash
+\`\`\`bash
 pip install agentos-platform
-```
+\`\`\`
 
 ### Define a governed agent in 10 lines:
-```python
+\`\`\`python
 from agentos.governed_agent import GovernedAgent
 from agentos.core.tool import tool
 from agentos.governance.budget import BudgetGuard
@@ -53,10 +53,10 @@ agent = GovernedAgent(
 )
 
 result = agent.run("What's 15% tip on $85?")
-```
+\`\`\`
 
 ### Test before deploying:
-```python
+\`\`\`python
 from agentos.sandbox.scenario import Scenario
 
 scenarios = [
@@ -67,19 +67,19 @@ scenarios = [
 ]
 
 report = agent.test(scenarios)
-# Passed: 2/2 | Quality: 9.1/10 | Cost: $0.0003
-```
+# Passed: 2/2 | Quality: 9.1/10 | Cost: \$0.0003
+\`\`\`
 
 ### Launch the web platform:
-```bash
+\`\`\`bash
 python examples/run_web_builder.py
 # Open http://localhost:8000
-```
+\`\`\`
 
 ### Try without API keys (demo mode):
-```bash
+\`\`\`bash
 AGENTOS_DEMO_MODE=true python examples/run_web_builder.py
-```
+\`\`\`
 
 ---
 
@@ -87,7 +87,7 @@ AGENTOS_DEMO_MODE=true python examples/run_web_builder.py
 
 | Module | What it does |
 |--------|-------------|
-| **Agent SDK** | Define agents in 10 lines with `@tool` decorator. Multi-model: OpenAI, Claude, Ollama |
+| **Agent SDK** | Define agents in 10 lines with \`@tool\` decorator. Multi-model: OpenAI, Claude, Ollama |
 | **Simulation Sandbox** | Test agents against 100+ scenarios with LLM-as-judge scoring |
 | **Governance Engine** | Budget controls, permissions, kill switch, and immutable audit trail |
 | **Live Dashboard** | Real-time monitoring of every LLM call, tool use, and cost |
@@ -100,7 +100,7 @@ AGENTOS_DEMO_MODE=true python examples/run_web_builder.py
 | Module | Description |
 |--------|-------------|
 | Agent SDK | Core agent with tool-calling loop, multi-model support |
-| WebSocket Streaming | Real-time token streaming, `/ws/chat` endpoint |
+| WebSocket Streaming | Real-time token streaming, \`/ws/chat\` endpoint |
 | RAG Pipeline | Document ingestion, chunking, embeddings, vector search |
 | Simulation Sandbox | Test scenarios with LLM-as-judge quality scoring |
 | Live Dashboard | Real-time event tracking, cost monitoring, analytics |
@@ -139,16 +139,61 @@ AGENTOS_DEMO_MODE=true python examples/run_web_builder.py
 ---
 
 ## Docker Deployment
-```bash
+\`\`\`bash
 docker-compose up -d
 # Open http://localhost:8000
-```
+\`\`\`
 
 Kubernetes deployment with Helm:
-```bash
+\`\`\`bash
 helm install agentos deploy/helm/agentos/
-```
+\`\`\`
 
 ---
 
 ## Project Structure
+agentos/
+├── src/agentos/       # Core library (15 modules)
+├── frontend/          # React dashboard
+├── dashboard/         # Web platform UI
+├── deploy/helm/       # Kubernetes Helm charts
+├── examples/          # 20+ runnable demos
+├── tests/             # Unit and integration tests
+├── docs/              # Architecture docs and ADRs
+├── plugins/           # User plugin directory
+└── scripts/           # Deployment and utility scripts
+
+---
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and guidelines.
+\`\`\`bash
+git clone https://github.com/sukethrp/agentos.git
+cd agentos
+pip install -e ".[dev]"
+pytest
+\`\`\`
+
+---
+
+## Roadmap
+
+See our [GitHub Issues](https://github.com/sukethrp/agentos/issues) for detailed plans. Key upcoming features:
+
+- 🔜 MCP (Model Context Protocol) server support
+- 🔜 Agent-to-Agent mesh protocol
+- 🔜 SOC2/HIPAA compliance templates
+- 🔜 Kubernetes auto-scaling
+
+---
+
+<p align="center">
+  <strong>⭐ Star this repo if you believe AI agents should be tested before deployed!</strong>
+</p>
+
+<p align="center">
+  Built by <a href="https://github.com/sukethrp">Suketh Reddy Produtoor</a> ·
+  <a href="https://www.linkedin.com/in/sukethprodutoor/">LinkedIn</a> ·
+  <a href="https://x.com/SProdutoor45130">X</a>
+</p>
