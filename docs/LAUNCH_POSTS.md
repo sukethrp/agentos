@@ -1,4 +1,4 @@
-# AgentOS v0.3.0 Launch Day — All Posts
+# AgentOS v0.3.1 Launch Day — All Posts
 
 ---
 
@@ -6,7 +6,7 @@
 
 **Title:**
 ```
-Show HN: AgentOS – Open-source OS for AI agents with testing, governance, marketplace, and embeddable SDK
+Show HN: AgentOS – Open-source OS for AI agents with CLI, MCP support, testing sandbox, and governance
 ```
 
 **First Comment (post immediately after):**
@@ -15,7 +15,12 @@ Hey HN! I built AgentOS because every agent framework helps you build agents, bu
 
 The problem: LangChain, CrewAI, etc. give you tools to build agents. But once you deploy, you're flying blind — no testing, no cost tracking, no kill switch, no way to embed agents in your own product.
 
-AgentOS v0.3.0 gives you the full stack:
+AgentOS v0.3.1 gives you the full stack:
+
+**New in v0.3.1:**
+- CLI: `agentos init my-agent && agentos serve --demo` — scaffold and run in seconds
+- MCP Server: expose agent tools to Claude Desktop and Cursor
+- Demo mode: try everything without API keys (`AGENTOS_DEMO_MODE=true`)
 
 Core:
 - 10 lines to define an agent with @tool decorator
@@ -54,14 +59,16 @@ https://agentos-mocha.vercel.app
 
 **Title:**
 ```
-[P] AgentOS v0.3.0 – Open-source framework with testing sandbox, governance, marketplace, embeddable SDK, and 15+ modules
+[P] AgentOS v0.3.1 – Open-source framework with CLI, MCP support, testing sandbox, governance, and 16+ modules
 ```
 
 **Post:**
 ```
 I built AgentOS after shipping agents to production and hitting the same problems every time: no testing before deploy, no cost visibility, no kill switch, no way for customers to embed agents in their products.
 
-v0.3.0 is the most complete release yet — 15 modules, 20+ demos, one pip install:
+v0.3.1 adds a proper CLI (`agentos init && agentos serve`), MCP server for Claude Desktop/Cursor, and a demo mode that works without API keys.
+
+16 modules, 20+ demos, one pip install:
 
 **Build:**
 - Agent SDK: @tool decorator, 10 lines of code, multi-model (OpenAI/Claude/Ollama)
@@ -107,19 +114,24 @@ Landing page: https://agentos-mocha.vercel.app
 
 **Post:**
 ```
-AgentOS v0.3.0 is live — the most complete open-source framework for AI agents.
+AgentOS v0.3.1 is live — the most complete open-source framework for AI agents.
 
 I've been building AgentOS to solve the problems every team hits after "demo day": How do you test agents before deploy? How do you track costs? How do you let customers embed agents in their own products?
 
-What's new in v0.3.0:
+What's new in v0.3.1:
 
+CLI: `agentos init my-agent && agentos serve --demo` — go from zero to running in seconds
+MCP: Expose agent tools to Claude Desktop and Cursor — zero config
+Demo mode: Try the entire platform without API keys
+
+Plus everything from v0.3.0:
 Build: Agent SDK, RAG pipeline, multi-modal (vision + docs), templates
 Test: Simulation sandbox, A/B testing, conversation branching
 Deploy: WebSocket streaming, scheduler, event bus, workflows, Docker
 Monitor: Live dashboard, analytics (cost trends, leaderboards), governance
 Share: Agent marketplace, plugin system, embeddable chat widget, Python SDK
 
-15 modules. 20+ demo scripts. One pip install. Zero external databases.
+16 modules. 20+ demo scripts. One pip install. Zero external databases.
 
 The embeddable SDK is the feature I'm most excited about — add an AI agent to any website with a single <script> tag. Dark/light theme, customisable colours, WebSocket streaming built in.
 
@@ -144,7 +156,7 @@ The operating system for AI agents — build, test, deploy, govern, and embed
 ```
 AgentOS is an open-source framework for building production-ready AI agents with built-in testing, monitoring, governance, and distribution.
 
-v0.3.0 includes 15 modules:
+v0.3.1 includes 16 modules:
 - Agent SDK: define agents in 10 lines with @tool decorator
 - Simulation Sandbox: test against 100+ scenarios with LLM judge
 - Live Dashboard + Analytics: real-time cost tracking and performance metrics
@@ -172,11 +184,13 @@ pip install agentos-platform
 
 **Thread:**
 ```
-AgentOS v0.3.0 is live.
+AgentOS v0.3.1 is live.
 
 The open-source OS for AI agents — build, test, deploy, govern, embed.
 
-15 modules. 20+ demos. One pip install. Zero external databases.
+New: CLI, MCP server for Claude/Cursor, demo mode (no API keys).
+
+16 modules. 20+ demos. One pip install. Zero external databases.
 
 Thread with highlights:
 ```
@@ -231,10 +245,18 @@ All computed from existing event data. Pure HTML/CSS/JS.
 ```
 
 ```
-6/ Get started:
+6/ New in v0.3.1:
+
+- CLI: agentos init my-agent && agentos serve --demo
+- MCP Server: expose tools to Claude Desktop & Cursor
+- Demo mode: try everything without API keys
+- End-to-end integration tests (CI-ready)
+
+7/ Get started:
 
 pip install agentos-platform
-python examples/run_web_builder.py
+agentos init my-agent
+cd my-agent && agentos serve --demo
 
 GitHub: https://github.com/sukethrp/agentos
 Landing page: https://agentos-mocha.vercel.app
@@ -270,12 +292,15 @@ Apache 2.0. Star if you think agents should be tested before deployed.
 
 ## Key Metrics to Mention
 
-- **15 modules** (core, sandbox, monitor, governance, rag, scheduler, events, plugins, auth, workflows, marketplace, embed, templates, tools, web)
+- **16 modules** (core, sandbox, monitor, governance, rag, scheduler, events, plugins, auth, workflows, marketplace, embed, templates, tools, web, mcp)
+- **CLI** (`agentos init`, `agentos serve`, `agentos mcp`, `agentos version`)
+- **MCP support** (Claude Desktop, Cursor)
+- **Demo mode** (no API keys needed)
 - **20+ example scripts**
 - **3,000+ lines of web UI** (pure HTML/CSS/JS, no React)
 - **Zero external databases** (JSON file storage, in-memory vector store)
 - **One pip install** (`pip install agentos-platform`)
-- **One command to run** (`python examples/run_web_builder.py`)
+- **One command to run** (`agentos serve --demo`)
 - **Apache 2.0 license**
 
 ---
