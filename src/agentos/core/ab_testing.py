@@ -2,20 +2,216 @@
 
 Uses the existing Simulation Sandbox (LLM-as-judge) to compare two agents
 on the same set of queries.
+
+Also includes rigorous statistical testing helpers:
+
+1. Welch's t-test for unequal variances
+2. Mann-Whitney U for non-parametric comparison
+3. Bootstrap confidence intervals
+4. Effect size (Cohen's d)
+5. Sample size estimation
 """
 
 from __future__ import annotations
 
 import copy
 import math
-from typing import List
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
+import numpy as np
 from pydantic import BaseModel, Field
 
 from agentos.core.agent import Agent
 from agentos.core.memory import Memory
 from agentos.sandbox.scenario import Scenario
 from agentos.sandbox.runner import Sandbox
+
+
+@dataclass
+class ABTestResult:
+    """Results of an A/B test between two agent variants."""
+
+    variant_a_name: str
+    variant_b_name: str
+    n_queries: int
+    mean_a: float
+    mean_b: float
+    ci_a: Tuple[float, float]
+    ci_b: Tuple[float, float]
+    welch_t_statistic: float
+    welch_p_value: float
+    mann_whitney_u: float
+    mann_whitney_p: float
+    cohens_d: float
+    effect_interpretation: str
+    winner: Optional[str]
+    confidence: float
+
+    def summary(self) -> str:
+        """Human-readable summary of the A/B test."""
+        if self.winner:
+            return (
+                f"{self.winner} wins with {self.confidence:.1%} confidence "
+                f"(Cohen's d = {self.cohens_d:.2f}, {self.effect_interpretation} effect). "
+                f"Mean scores: {self.mean_a:.2f} vs {self.mean_b:.2f} "
+                f"over {self.n_queries} queries."
+            )
+        return (
+            f"No significant difference (p={self.welch_p_value:.3f}). "
+            f"Mean scores: {self.mean_a:.2f} vs {self.mean_b:.2f}. "
+            "Consider running more queries for statistical power."
+        )
+
+
+def welch_t_test(scores_a: List[float], scores_b: List[float]) -> Tuple[float, float]:
+    """Welch's t-test for unequal variances."""
+    if len(scores_a) < 2 or len(scores_b) < 2:
+        return 0.0, 1.0
+    a = np.array(scores_a, dtype=float)
+    b = np.array(scores_b, dtype=float)
+
+    n_a, n_b = len(a), len(b)
+    mean_a, mean_b = a.mean(), b.mean()
+    var_a, var_b = a.var(ddof=1), b.var(ddof=1)
+
+    se = np.sqrt(var_a / n_a + var_b / n_b)
+    if se == 0:
+        return 0.0, 1.0
+    t_stat = (mean_a - mean_b) / se
+
+    num = (var_a / n_a + var_b / n_b) ** 2
+    denom = (var_a / n_a) ** 2 / (n_a - 1) + (var_b / n_b) ** 2 / (n_b - 1)
+    df = num / denom if denom > 0 else 1.0
+
+    try:
+        from scipy import stats
+
+        p_value = 2 * stats.t.sf(abs(t_stat), df)
+    except ImportError:
+        p_value = 2 * (1 - 0.5 * (1 + math.erf(abs(t_stat) / math.sqrt(2))))
+
+    return float(t_stat), float(max(0.0, min(1.0, p_value)))
+
+
+def cohens_d(scores_a: List[float], scores_b: List[float]) -> Tuple[float, str]:
+    """Cohen's d effect size with interpretation."""
+    if len(scores_a) < 2 or len(scores_b) < 2:
+        return 0.0, "negligible"
+    a = np.array(scores_a, dtype=float)
+    b = np.array(scores_b, dtype=float)
+    n_a, n_b = len(a), len(b)
+
+    pooled_std = np.sqrt(
+        ((n_a - 1) * a.var(ddof=1) + (n_b - 1) * b.var(ddof=1)) / (n_a + n_b - 2)
+    )
+    if pooled_std == 0:
+        return 0.0, "negligible"
+
+    d = abs(a.mean() - b.mean()) / pooled_std
+    if d < 0.2:
+        interpretation = "negligible"
+    elif d < 0.5:
+        interpretation = "small"
+    elif d < 0.8:
+        interpretation = "medium"
+    else:
+        interpretation = "large"
+    return float(d), interpretation
+
+
+def bootstrap_ci(
+    scores: List[float],
+    n_bootstrap: int = 1000,
+    ci: float = 0.95,
+) -> Tuple[float, float]:
+    """Bootstrap confidence interval for the mean."""
+    if not scores:
+        return 0.0, 0.0
+    arr = np.array(scores, dtype=float)
+    means = []
+    for _ in range(n_bootstrap):
+        sample = np.random.choice(arr, size=len(arr), replace=True)
+        means.append(float(sample.mean()))
+
+    alpha = 1 - ci
+    lower = float(np.percentile(means, 100 * alpha / 2))
+    upper = float(np.percentile(means, 100 * (1 - alpha / 2)))
+    return lower, upper
+
+
+def estimate_sample_size(effect_size: float, alpha: float = 0.05, power: float = 0.8) -> int:
+    """Estimate per-variant sample size for two-sample comparisons."""
+    effect_size = abs(effect_size)
+    if effect_size <= 0:
+        return 1000000
+    try:
+        from scipy.stats import norm
+
+        z_alpha = norm.ppf(1 - alpha / 2)
+        z_beta = norm.ppf(power)
+    except ImportError:
+        z_alpha = 1.96
+        z_beta = 0.84
+    n = 2 * ((z_alpha + z_beta) / effect_size) ** 2
+    return max(2, int(math.ceil(n)))
+
+
+def run_ab_test(
+    scores_a: List[float],
+    scores_b: List[float],
+    name_a: str = "Variant A",
+    name_b: str = "Variant B",
+    significance_level: float = 0.05,
+) -> ABTestResult:
+    """Run a complete A/B statistical comparison between two score arrays."""
+    if not scores_a or not scores_b:
+        raise ValueError("scores_a and scores_b must not be empty")
+    if len(scores_a) != len(scores_b):
+        raise ValueError("scores_a and scores_b must have the same length")
+
+    t_stat, t_p = welch_t_test(scores_a, scores_b)
+    try:
+        from scipy.stats import mannwhitneyu
+
+        u_stat, u_p = mannwhitneyu(scores_a, scores_b, alternative="two-sided")
+        u_stat = float(u_stat)
+        u_p = float(u_p)
+    except ImportError:
+        u_stat, u_p = 0.0, 1.0
+
+    d, d_interp = cohens_d(scores_a, scores_b)
+    ci_a = bootstrap_ci(scores_a)
+    ci_b = bootstrap_ci(scores_b)
+
+    mean_a = float(np.mean(scores_a))
+    mean_b = float(np.mean(scores_b))
+
+    # Conservative significance gate: both tests agree and practical effect exists.
+    both_significant = t_p < significance_level and u_p < significance_level
+    winner: Optional[str] = None
+    if both_significant and d >= 0.2:
+        winner = name_a if mean_a > mean_b else name_b
+
+    confidence = max(0.0, 1.0 - max(t_p, u_p))
+
+    return ABTestResult(
+        variant_a_name=name_a,
+        variant_b_name=name_b,
+        n_queries=len(scores_a),
+        mean_a=mean_a,
+        mean_b=mean_b,
+        ci_a=ci_a,
+        ci_b=ci_b,
+        welch_t_statistic=t_stat,
+        welch_p_value=t_p,
+        mann_whitney_u=u_stat,
+        mann_whitney_p=u_p,
+        cohens_d=d,
+        effect_interpretation=d_interp,
+        winner=winner,
+        confidence=confidence,
+    )
 
 
 def clone_agent(agent: Agent, new_name: str) -> Agent:
