@@ -1,7 +1,8 @@
-"""MockProvider — run AgentOS without any API keys.
+"""Mock provider for zero-config demos and testing.
 
-A fully-featured mock LLM provider that implements the same interface as
-OpenAIProvider and returns realistic fake responses.  Useful for:
+A fully-featured mock LLM provider that implements the same
+:class:`~agentos.providers.base.BaseProvider` interface as the real providers
+and returns realistic fake responses **without any API keys**.  Useful for:
 
 - **Local development** without burning API credits
 - **CI/CD pipelines** where secrets aren't available
@@ -16,7 +17,28 @@ Or use ``MockProvider`` directly::
 
     from agentos.providers.mock import MockProvider
     provider = MockProvider()
-    msg, event = provider.call(messages, tools)
+    msg, event = provider.chat_completion(messages, tools)
+
+**Response simulation logic:**
+
+The mock follows a two-phase strategy that mirrors what a real LLM does:
+
+1. **Tool-call phase** — if tools are available and the conversation does
+   not yet contain any ``tool`` messages, the provider scans the last user
+   message for keyword triggers (e.g. "calculate", "weather").  When a
+   trigger matches a registered tool, a synthetic :class:`ToolCall` is
+   returned so the agent's ReAct loop will execute the tool and feed the
+   result back.
+
+2. **Response phase** — once tool results are present (or no tool matched),
+   a template-based response is generated.  Templates are keyed by detected
+   topic (``"calculator"``, ``"weather"``, ``"general"``) and randomly
+   chosen to add variety.  ``{tool_result}`` placeholders are interpolated
+   with actual tool output.
+
+Artificial latency (200-500 ms sync, 10-30 ms per token streaming) is
+injected so the UI behaves realistically.  Token counts are estimated at
+~1 token per 4 characters, and cost is fixed at ``$0.0001`` per response.
 """
 
 from __future__ import annotations
@@ -111,7 +133,20 @@ def _estimate_tokens(text: str) -> int:
 
 
 def _pick_tool_call(user_msg: str, tools: list[Tool]) -> ToolCall | None:
-    """Decide whether to simulate a tool call based on message keywords."""
+    """Decide whether to simulate a tool call based on message keywords.
+
+    Iterates over available tools and checks the user message for keyword
+    triggers defined in ``_TOOL_TRIGGERS``.  The first matching tool wins —
+    we don't attempt multi-tool calls because the mock is meant to exercise
+    the single-tool-call code path, which covers most demo scenarios.
+
+    Args:
+        user_msg: The latest user message text.
+        tools: Tools currently registered on the agent.
+
+    Returns:
+        A synthetic :class:`ToolCall` if a trigger matched, else ``None``.
+    """
     msg_lower = user_msg.lower()
     for tool in tools:
         triggers = _TOOL_TRIGGERS.get(tool.name, [])
@@ -131,7 +166,12 @@ def _has_tool_results(messages: list[dict]) -> bool:
 
 
 def _detect_topic(messages: list[dict]) -> str:
-    """Detect the response topic from the conversation."""
+    """Detect the response topic from the conversation.
+
+    Walks the messages backward to find the most recent assistant tool call
+    and maps the tool name to a topic key (``"calculator"``, ``"weather"``,
+    or ``"general"``).  This determines which response template to use.
+    """
     tool_results = [m for m in messages if m.get("role") == "tool"]
     if tool_results:
         for m in reversed(messages):
@@ -151,7 +191,12 @@ def _detect_topic(messages: list[dict]) -> str:
 
 
 def _synthesize_response(messages: list[dict]) -> str:
-    """Build a final response, incorporating tool results if present."""
+    """Build a final text response, interpolating tool results into templates.
+
+    Picks a random template from ``_TOPIC_RESPONSES`` for the detected topic
+    and fills in ``{tool_result}`` placeholders with any tool-role messages
+    in the conversation.
+    """
     topic = _detect_topic(messages)
     templates = _TOPIC_RESPONSES.get(topic, _TOPIC_RESPONSES["general"])
     template = random.choice(templates)
@@ -221,7 +266,22 @@ class MockProvider(BaseProvider):
         max_tokens: int = 1024,
         agent_name: str = "agent",
     ) -> tuple[Message, AgentEvent]:
-        """Return a mock chat completion, optionally with tool calls."""
+        """Return a mock chat completion, optionally with tool calls.
+
+        Delegates to the module-level :func:`call_mock` so both the class
+        and function APIs share the same simulation logic.
+
+        Args:
+            messages: Conversation history in OpenAI message format.
+            tools: Available tools for keyword-trigger matching.
+            model: Model identifier (ignored).
+            temperature: Ignored.
+            max_tokens: Ignored.
+            agent_name: Attribution label for the ``AgentEvent``.
+
+        Returns:
+            A ``(Message, AgentEvent)`` tuple.
+        """
         msg, event = call_mock(
             messages, tools,
             model=model, temperature=temperature,
@@ -238,7 +298,11 @@ class MockProvider(BaseProvider):
         max_tokens: int = 1024,
         agent_name: str = "agent",
     ) -> AsyncGenerator[str | tuple[str, Message, AgentEvent], None]:
-        """Yield tokens with small delays, then a final (tag, Message, Event)."""
+        """Yield tokens with small delays, then a final ``(tag, Message, Event)``.
+
+        Wraps the synchronous :func:`call_mock_stream` generator so it can
+        be consumed via ``async for`` in the streaming code path.
+        """
         for item in call_mock_stream(
             messages, tools,
             model=model, temperature=temperature,
@@ -260,7 +324,22 @@ def call_mock(
     max_tokens: int = 1024,
     agent_name: str = "agent",
 ) -> tuple[Message, AgentEvent]:
-    """Synchronous mock LLM call — returns (Message, AgentEvent)."""
+    """Synchronous mock LLM call — returns ``(Message, AgentEvent)``.
+
+    Implements the two-phase strategy (tool call → text response) described
+    in the module docstring.  A 200-500 ms sleep simulates network latency.
+
+    Args:
+        messages: Conversation history in OpenAI message format.
+        tools: Available tools; triggers are matched against the last user msg.
+        model: Model identifier (ignored; always behaves the same).
+        temperature: Ignored — responses are template-based.
+        max_tokens: Ignored — response length is fixed by templates.
+        agent_name: Used in the returned ``AgentEvent`` for attribution.
+
+    Returns:
+        A ``(Message, AgentEvent)`` tuple matching the real provider contract.
+    """
     start = time.time()
 
     user_msgs = [m for m in messages if m.get("role") == "user"]
