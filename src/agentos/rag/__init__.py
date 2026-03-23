@@ -21,7 +21,14 @@ As an agent tool:
 
 from agentos.rag.pipeline import RAGPipeline, RetrievalResult
 from agentos.rag.chunker import DocumentChunker, Chunk
-from agentos.rag.embeddings import EmbeddingEngine
+from agentos.rag.embeddings import (
+    BaseEmbeddings,
+    OpenAIEmbeddings,
+    LocalEmbeddings,
+    TFIDFEmbeddings,
+    EmbeddingEngine,
+    get_embeddings,
+)
 from agentos.rag.vector_store import VectorStore, Document
 from agentos.rag.types import SearchResult
 from agentos.rag.config import rag_config
@@ -34,7 +41,12 @@ __all__ = [
     "RetrievalResult",
     "DocumentChunker",
     "Chunk",
+    "BaseEmbeddings",
+    "OpenAIEmbeddings",
+    "LocalEmbeddings",
+    "TFIDFEmbeddings",
     "EmbeddingEngine",
+    "get_embeddings",
     "VectorStore",
     "SearchResult",
     "Document",

@@ -40,6 +40,7 @@ class RAGPipeline:
         chunk_size: int = 512,
         chunk_overlap: int = 64,
         embedding_model: str = "text-embedding-3-small",
+        embedding_backend: str = "auto",
         cache_dir: str | None = None,
         top_k: int = 5,
         similarity_threshold: float = 0.0,
@@ -51,6 +52,7 @@ class RAGPipeline:
         self.embedder = EmbeddingEngine(
             model=embedding_model,
             cache_dir=cache_dir,
+            backend=embedding_backend,
         )
         self.store = VectorStore()
         self.top_k = top_k

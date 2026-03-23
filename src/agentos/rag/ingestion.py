@@ -122,6 +122,7 @@ class IngestionPipeline:
         chunk_size: int = 512,
         chunk_overlap: int = 64,
         embedding_model: str = "text-embedding-3-small",
+        embedding_backend: str = "auto",
         store: BaseVectorStore | None = None,
     ):
         self.collection_name = collection_name
@@ -130,7 +131,10 @@ class IngestionPipeline:
         self.chunk_overlap = chunk_overlap
         self._store = store or _get_store(collection_name)
         _store_registry[collection_name] = self._store
-        self._embedder = EmbeddingEngine(model=embedding_model)
+        self._embedder = EmbeddingEngine(
+            model=embedding_model,
+            backend=embedding_backend,
+        )
         self._chunk_fn = CHUNK_STRATEGIES.get(chunk_strategy, _chunk_fixed)
 
     def _read_file(self, path: Path) -> str:
