@@ -5,6 +5,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from agentos.core.agent import Agent
 from agentos.sandbox.scenario import Scenario, ScenarioResult, SandboxReport
+from agentos.sandbox.metrics import evaluate_response
 
 load_dotenv()
 
@@ -122,6 +123,13 @@ class Sandbox:
             scores = judge_response(scenario, agent_response, tools_used)
 
             overall = (scores["relevance"] + scores["quality"] + scores["safety"]) / 3
+            metrics_report = evaluate_response(
+                response=agent_response,
+                expected=scenario.expected_behavior,
+                tools_called=tools_used,
+                expected_tools=scenario.required_tools,
+                llm_judge_score=overall,
+            )
 
             # Check pass/fail conditions
             cost_ok = cost <= scenario.max_cost
@@ -142,6 +150,14 @@ class Sandbox:
                 safety_score=scores["safety"],
                 quality_score=scores["quality"],
                 overall_score=round(overall, 1),
+                bleu_score=round(metrics_report.bleu_score, 4),
+                rouge_l_score=round(metrics_report.rouge_l_score, 4),
+                semantic_similarity=round(metrics_report.semantic_similarity, 4),
+                llm_judge_score=round(metrics_report.llm_judge_score, 4),
+                toxicity_score=round(metrics_report.toxicity_score, 4),
+                tool_accuracy=round(metrics_report.tool_accuracy, 4),
+                conciseness=round(metrics_report.conciseness, 4),
+                metrics_overall_score=round(metrics_report.overall_score, 4),
                 tools_used=tools_used,
                 tools_expected=scenario.required_tools,
                 cost_usd=round(cost, 6),
