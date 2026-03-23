@@ -24,7 +24,7 @@ from agentos.core.tool import Tool  # noqa: E402
 from agentos.governance.budget import BudgetGuard  # noqa: E402
 from agentos.governance.permissions import PermissionGuard  # noqa: E402
 from agentos.governance.audit import AuditLog  # noqa: E402
-from agentos.sandbox.scenario import Scenario, ScenarioResult, SandboxReport  # noqa: E402
+from agentos.sandbox.scenario import Scenario, ScenarioResult  # noqa: E402
 
 
 class MockProvider:

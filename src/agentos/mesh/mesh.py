@@ -37,7 +37,7 @@ from typing import Any
 
 from agentos.core.agent import Agent
 from agentos.core.tool import Tool
-from agentos.core.types import AgentEvent, Message, Role
+from agentos.core.types import Message
 from agentos.logging import get_logger
 from agentos.mesh.protocol import (
     AgentMessage,

@@ -8,7 +8,6 @@ two-phase pattern of real LLM providers.
 
 from __future__ import annotations
 
-import json
 import random
 import time
 import uuid
