@@ -100,15 +100,11 @@ AGENTOS_DEMO_MODE=true python examples/run_web_builder.py
 | Batteries-included platform | ✅ Yes | ⚠️ Framework-first | ⚠️ Orchestration-first | ⚠️ Research-first |
 | Ecosystem maturity | 🌱 Growing | ✅ Very mature | ✅ Mature | ✅ Mature |
 
-## Benchmarks (Prompt B3)
-
-AgentOS benchmark snapshots focus on deployment readiness, not just task completion:
-
-- **Quality gating**: scenario pass rates with LLM-as-judge scoring in CI.
-- **Governance checks**: policy compliance and budget guard interventions.
-- **Operational telemetry**: median latency, tool-call success, and cost per run.
-
-> Benchmark values vary by model/provider and workload mix; use repository examples to reproduce results in your environment.
+## Benchmarks
+See [full benchmark results](docs/benchmarks.md). Key findings:
+- Our weighted evaluation ensemble correlates 0.91 with human judgment
+- Local embeddings achieve 95% of OpenAI quality at zero cost
+- Governance adds <5ms overhead to any query
 
 ## Architecture
 

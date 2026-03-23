@@ -1,0 +1,9 @@
+{
+  "num_scenarios": 100.0,
+  "avg_bleu": 0.02052163763849676,
+  "avg_rouge_l": 0.06342261904761905,
+  "avg_semantic_similarity": 0.037335542674525726,
+  "avg_toxicity": 0.5,
+  "avg_overall_metrics_score": 0.437728311337243,
+  "avg_latency_ms": 360.2762
+}
