@@ -1,15 +1,38 @@
-"""Budget enforcement for governed agents.
+"""Defense-in-depth budget controls for governed agents.
 
-Defense in depth — multiple budget layers (per-action, hourly, daily, total)
-so no single misconfigured limit can cause a runaway.  Even if the per-action
-limit is set too high, the hourly and daily caps act as safety nets, and the
+This module implements a multi-layered budget enforcement strategy that
+prevents AI agents from incurring runaway costs.  Four independent spending
+limits (per-action, hourly, daily, lifetime) are stacked so that no single
+misconfigured threshold can cause unbounded spend — even if the per-action
+limit is too generous, the hourly and daily caps act as safety nets, and the
 lifetime total provides an absolute ceiling.
 
-Budget checks happen BEFORE the LLM call (fail fast).  This is intentional:
-we don't want to waste tokens on a call that will be rejected once the
-response comes back.  The cost estimate used for pre-checks is based on the
-prompt token count; actual spend is recorded after the call completes via
-``record_spend``.
+**Pre-check vs post-check design:**
+
+Budget enforcement is split into two deliberate phases:
+
+- :meth:`BudgetGuard.check_action` runs **before** the LLM call (pre-check).
+  It uses a cost *estimate* derived from the prompt token count to fail fast
+  and avoid wasting tokens on a call that would be rejected afterward.
+- :meth:`BudgetGuard.record_spend` runs **after** the LLM response arrives
+  (post-check).  It records the *actual* cost, which may differ from the
+  estimate due to variable completion length.
+
+Keeping these as two separate steps avoids double-counting and lets callers
+skip recording if the call failed mid-stream.
+
+**Reset logic — fixed windows, not rolling:**
+
+Hourly and daily accumulators reset on a fixed-window basis (3 600 s and
+86 400 s from the last reset timestamp).  A truly rolling window would need
+to store every individual spend event, adding memory and complexity that
+isn't justified at this stage.  Fixed windows are simpler, predictable, and
+sufficient for budget safety — the worst-case over-spend within a window
+boundary is bounded by ``max_per_action``.
+
+.. todo::
+   TODO(#35): Persist budget state to disk / Redis so totals survive process
+   restarts and can be shared across horizontally-scaled agent replicas.
 """
 
 from __future__ import annotations
@@ -46,6 +69,27 @@ class BudgetGuard:
         max_per_day: float = 50.00,
         max_total: float = 500.00,
     ) -> None:
+        """Initialise budget limits.
+
+        Args:
+            max_per_action: Maximum estimated cost for a single LLM call.
+                Catches prompt-injection attacks or unexpectedly large inputs.
+            max_per_hour: Ceiling for cumulative spend within a 1-hour
+                fixed window.  Prevents short bursts from draining the budget.
+            max_per_day: Ceiling for cumulative spend within a 24-hour
+                fixed window.  Caps sustained usage over a work day.
+            max_total: Absolute lifetime ceiling that is never reset.
+                Acts as the last line of defence if all other limits are
+                misconfigured.
+
+        Example::
+
+            budget = BudgetGuard(
+                max_per_action=0.10,
+                max_per_day=5.00,
+                max_total=100.00,
+            )
+        """
         self.max_per_action = max_per_action
         self.max_per_hour = max_per_hour
         self.max_per_day = max_per_day
@@ -146,6 +190,11 @@ class BudgetGuard:
 
         Resets stale windows first so the returned numbers are always
         up-to-date, even if no actions have been checked recently.
+
+        Returns:
+            A dict with keys ``total_spent``, ``hourly_spent``,
+            ``daily_spent``, their corresponding limits, ``action_count``,
+            ``blocked_count``, and ``budget_remaining``.
         """
         self._reset_windows()
         return {
