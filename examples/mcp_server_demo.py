@@ -1,30 +1,22 @@
+"""Example: Run AgentOS tools as an MCP server.
+
+This allows Claude Desktop, Cursor, or any MCP client to use
+AgentOS tools like calculator, weather, RAG search, etc.
+
+To use:
+1. Run this script: python examples/mcp_server_demo.py
+2. Or add to claude_desktop_config.json:
+     {
+         "mcpServers": {
+             "agentos": {
+                 "command": "python",
+                 "args": ["examples/mcp_server_demo.py"]
+             }
+         }
+     }
 """
-AgentOS MCP Server Demo
-========================
-
-Expose AgentOS @tool functions as an MCP-compatible server so any MCP client
-(Claude Desktop, Cursor, etc.) can discover and invoke them.
-
-Run with:
-    python examples/mcp_server_demo.py
-
-Or point an MCP client at this script via its stdio transport config:
-    {
-      "mcpServers": {
-        "agentos-demo": {
-          "command": "python",
-          "args": ["examples/mcp_server_demo.py"]
-        }
-      }
-    }
-"""
-
-import sys
-
-sys.path.insert(0, "src")
 
 from agentos.core.tool import tool
-from agentos.core.agent import Agent
 from agentos.mcp import MCPServer
 
 
@@ -60,23 +52,12 @@ def company_lookup(company_name: str) -> str:
     return companies.get(company_name.lower(), f"No data for {company_name}")
 
 
-# ── Option A: Build MCPServer directly from tools ───────────────────────
-
 def run_from_tools():
-    server = MCPServer("agentos-demo", tools=[calculator, get_weather, company_lookup])
-    server.run()
-
-
-# ── Option B: Build MCPServer from an existing Agent ────────────────────
-
-def run_from_agent():
-    agent = Agent(
-        name="research-assistant",
-        model="gpt-4o-mini",
+    server = MCPServer(
+        name="agentos-demo",
+        version="0.3.0",
         tools=[calculator, get_weather, company_lookup],
-        system_prompt="You are a helpful research assistant.",
     )
-    server = agent.as_mcp_server()
     server.run()
 
 
