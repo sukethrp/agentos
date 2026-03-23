@@ -13,7 +13,6 @@ Usage:
 
 import argparse
 import os
-import sys
 
 
 def main():
@@ -101,8 +100,8 @@ if __name__ == "__main__":
 
     print(f"Created agent project: {name}/")
     print(f"   cd {name}")
-    print(f"   # Add your API key to .env")
-    print(f"   python agent.py")
+    print("   # Add your API key to .env")
+    print("   python agent.py")
 
 
 if __name__ == "__main__":

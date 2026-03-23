@@ -43,7 +43,6 @@ injected so the UI behaves realistically.  Token counts are estimated at
 
 from __future__ import annotations
 
-import json
 import random
 import time
 import uuid
