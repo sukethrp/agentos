@@ -1,15 +1,41 @@
-"""Core Agent implementation for AgentOS.
+"""ReAct-style tool-calling loop with provider abstraction.
 
-The Agent class implements a ReAct-style tool-calling loop:
-1. Send user query + tool schemas to LLM
-2. If LLM returns a tool call, execute it and feed result back
-3. Repeat until LLM returns a final text response
-4. Track all events (LLM calls, tool calls, costs) via EventStore
+The Agent class is the central execution engine of AgentOS.  It orchestrates
+a **ReAct loop** (Reason → Act → Observe → Repeat):
+
+1. **Query** — the user's natural-language message is combined with the
+   system prompt and conversation history.
+2. **LLM call** — the message list and tool JSON-Schema definitions are sent
+   to the configured provider (OpenAI, Anthropic, Ollama, or Mock).
+3. **Tool dispatch** — if the LLM response contains ``tool_calls``, each
+   tool is executed (concurrently where possible) and the results appended
+   to the conversation as ``tool`` messages.
+4. **Repeat** — steps 2-3 repeat until the LLM produces a final text
+   response with no tool calls, or ``max_iterations`` is reached.
+
+**Why ``max_iterations``?**  Without a cap the loop could spin forever if the
+LLM keeps requesting tools without converging (e.g. hallucinated tool names,
+circular reasoning).  The default of 10 balances complex multi-step tasks
+against runaway cost.
+
+**Cost tracking:**  Every LLM call returns token counts and a USD cost
+estimate in its ``AgentEvent``.  These events are accumulated in
+``self.events`` so callers (the CLI, web dashboard, and ``GovernedAgent``)
+can aggregate total spend.  The per-token price is looked up from a static
+pricing table inside each provider, *not* from a live billing API, so the
+figures are estimates — but accurate enough for budget enforcement.
 
 Design decisions:
-- Provider-agnostic: works with any class implementing BaseProvider
-- Streaming-first: run() supports both sync and streaming modes
-- Observable: every action emits an AgentEvent for monitoring
+- **Provider-agnostic** — works with any class implementing ``BaseProvider``.
+- **Streaming-first** — ``run()`` supports both sync and streaming modes.
+- **Observable** — every action emits an ``AgentEvent`` for monitoring.
+- **Cacheable** — deterministic tool calls are memoised via a TTL cache to
+  avoid redundant executions within a session.
+
+.. todo::
+   TODO(#42): Integrate MCP transport so agents can expose / consume tools
+   over the Model Context Protocol, enabling cross-process tool sharing
+   with Claude Desktop, Cursor, and other MCP-aware clients.
 """
 
 from __future__ import annotations
