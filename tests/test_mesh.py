@@ -1,12 +1,18 @@
 from __future__ import annotations
 import asyncio
+from unittest.mock import AsyncMock
+
 import pytest
 from agentos.mesh.mesh_router import MeshRouter, MeshMessage
 
 
 @pytest.fixture
 def mesh_router():
-    return MeshRouter()
+    mr = MeshRouter()
+    # Avoid real network calls when `REDIS_URL` is configured in CI.
+    # Message delivery is in-memory; we only mock the async Redis publish.
+    mr._publish_redis = AsyncMock(return_value=None)
+    return mr
 
 
 @pytest.mark.asyncio
