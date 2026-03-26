@@ -171,6 +171,83 @@ def run_ab_test(
         raise ValueError("scores_a and scores_b must have the same length")
 
     t_stat, t_p = welch_t_test(scores_a, scores_b)
+
+    def _norm_sf(x: float) -> float:
+        # Survival function for the standard normal distribution.
+        return 0.5 * math.erfc(x / math.sqrt(2.0))
+
+    def _mann_whitney_two_sided_fallback(
+        a: List[float], b: List[float]
+    ) -> Tuple[float, float]:
+        """Compute Mann–Whitney U and a two-sided p-value without SciPy.
+
+        Uses rank-sum + normal approximation (with tie correction).
+        """
+
+        x = np.asarray(a, dtype=float)
+        y = np.asarray(b, dtype=float)
+        n1 = int(x.size)
+        n2 = int(y.size)
+        if n1 == 0 or n2 == 0:
+            return 0.0, 1.0
+
+        # Rank all values combined (average ranks for ties).
+        combined = np.concatenate([x, y])
+        order = np.argsort(combined, kind="mergesort")
+        ranks = np.empty_like(order, dtype=float)
+
+        # Assign average ranks for tied groups.
+        i = 0
+        while i < combined.size:
+            j = i + 1
+            while j < combined.size and combined[order[j]] == combined[order[i]]:
+                j += 1
+            # ranks positions are 1-indexed
+            avg_rank = 0.5 * (i + 1 + j)
+            for k in range(i, j):
+                ranks[order[k]] = avg_rank
+            i = j
+
+        # Rank sum for group A (mask first n1 elements which correspond to `a`).
+        mask_a = np.zeros(combined.size, dtype=bool)
+        mask_a[:n1] = True
+        r1 = float(np.sum(ranks[mask_a]))
+
+        # U statistic for A.
+        u1 = n1 * n2 + n1 * (n1 + 1) / 2.0 - r1
+        mean_u = n1 * n2 / 2.0
+        n = n1 + n2
+
+        # Tie correction: var(U) = n1*n2/12 * ((n+1) - tie_sum/(n*(n-1)))
+        # where tie_sum = sum(t^3 - t) over tie groups.
+        # Compute tie group sizes from the combined sorted values.
+        tie_sum = 0
+        sorted_vals = combined[order]
+        i = 0
+        while i < sorted_vals.size:
+            j = i + 1
+            while j < sorted_vals.size and sorted_vals[j] == sorted_vals[i]:
+                j += 1
+            t = j - i
+            if t > 1:
+                tie_sum += t**3 - t
+            i = j
+
+        if n <= 1:
+            return float(u1), 1.0
+
+        var_u = (n1 * n2 / 12.0) * (n + 1 - tie_sum / (n * (n - 1)))
+        if var_u <= 0:
+            return float(u1), 1.0
+
+        # Continuity correction for normal approximation.
+        z = (u1 - mean_u) / math.sqrt(var_u)
+        # Two-sided p-value from |z|.
+        p = 2.0 * _norm_sf(abs(z))
+        p = max(0.0, min(1.0, float(p)))
+
+        return float(u1), p
+
     try:
         from scipy.stats import mannwhitneyu
 
@@ -178,7 +255,7 @@ def run_ab_test(
         u_stat = float(u_stat)
         u_p = float(u_p)
     except ImportError:
-        u_stat, u_p = 0.0, 1.0
+        u_stat, u_p = _mann_whitney_two_sided_fallback(scores_a, scores_b)
 
     d, d_interp = cohens_d(scores_a, scores_b)
     ci_a = bootstrap_ci(scores_a)
@@ -187,13 +264,13 @@ def run_ab_test(
     mean_a = float(np.mean(scores_a))
     mean_b = float(np.mean(scores_b))
 
-    # Conservative significance gate: both tests agree and practical effect exists.
-    both_significant = t_p < significance_level and u_p < significance_level
+    # Winner gate: use Mann–Whitney significance only. If significant, pick
+    # the variant with the higher mean.
     winner: Optional[str] = None
-    if both_significant and d >= 0.2:
+    if u_p < significance_level:
         winner = name_a if mean_a > mean_b else name_b
 
-    confidence = max(0.0, 1.0 - max(t_p, u_p))
+    confidence = max(0.0, 1.0 - float(u_p))
 
     return ABTestResult(
         variant_a_name=name_a,
