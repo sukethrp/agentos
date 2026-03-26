@@ -40,6 +40,10 @@ class MeshRouter:
         q = self._queues.get(agent_id)
         return q.qsize() if q else 0
 
+    def _has_subscribers(self, agent_id: str, topic: str) -> bool:
+        handlers = self._subscriptions.get((agent_id, topic))
+        return bool(handlers)
+
     def registered_agents(self) -> list[str]:
         return list(self._queues.keys())
 
@@ -87,7 +91,8 @@ class MeshRouter:
         )
         q = self._get_queue(to_id)
         await q.put(msg)
-        self._start_delivery(to_id)
+        if self._has_subscribers(to_id, topic):
+            self._start_delivery(to_id)
         if self._redis_url:
             await self._publish_redis(msg)
         return msg
