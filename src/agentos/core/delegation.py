@@ -89,28 +89,26 @@ class DelegationManager:
         # contextvars allow delegation tools to discover the currently running
         # delegation chain (shared context + cancellation) without requiring
         # the LLM to pass the keys around.
-        self._current_shared_context_key: contextvars.ContextVar[
-            str | None
-        ] = contextvars.ContextVar(
-            "agentos_delegation_shared_context_key", default=None
+        self._current_shared_context_key: contextvars.ContextVar[str | None] = (
+            contextvars.ContextVar(
+                "agentos_delegation_shared_context_key", default=None
+            )
         )
-        self._current_cancel_event: contextvars.ContextVar[
-            threading.Event | None
-        ] = contextvars.ContextVar("agentos_delegation_cancel_event", default=None)
-        self._current_delegation_id: contextvars.ContextVar[
-            str | None
-        ] = contextvars.ContextVar("agentos_delegation_id", default=None)
-        self._current_parent_delegation_id: contextvars.ContextVar[
-            str | None
-        ] = contextvars.ContextVar("agentos_delegation_parent_id", default=None)
-        self._current_delegation_depth: contextvars.ContextVar[int] = contextvars.ContextVar(
-            "agentos_delegation_depth", default=0
+        self._current_cancel_event: contextvars.ContextVar[threading.Event | None] = (
+            contextvars.ContextVar("agentos_delegation_cancel_event", default=None)
+        )
+        self._current_delegation_id: contextvars.ContextVar[str | None] = (
+            contextvars.ContextVar("agentos_delegation_id", default=None)
+        )
+        self._current_parent_delegation_id: contextvars.ContextVar[str | None] = (
+            contextvars.ContextVar("agentos_delegation_parent_id", default=None)
+        )
+        self._current_delegation_depth: contextvars.ContextVar[int] = (
+            contextvars.ContextVar("agentos_delegation_depth", default=0)
         )
 
         # Separate pool so parent agent threads don't block.
-        self._executor = concurrent.futures.ThreadPoolExecutor(
-            max_workers=8
-        )
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
 
     def register_agent(self, name: str, agent: Agent) -> None:
         with self._lock:
@@ -193,9 +191,7 @@ class DelegationManager:
         ev = self._current_cancel_event.get()
         return ev is None or not ev.is_set()
 
-    def _ensure_shared_context_tools_attached(
-        self, agent: Agent
-    ) -> None:
+    def _ensure_shared_context_tools_attached(self, agent: Agent) -> None:
         """Attach read/write tools for the active shared-context chain.
 
         The tools consult manager contextvars at runtime to select the
@@ -206,6 +202,7 @@ class DelegationManager:
         existing = getattr(agent, "_tool_map", {})
 
         if "shared_context_key" not in existing:
+
             def shared_context_key() -> str:
                 key = self._current_shared_context_key.get()
                 return key or ""
@@ -220,6 +217,7 @@ class DelegationManager:
             agent._tool_map[tool.name] = tool
 
         if "shared_context_get" not in existing:
+
             def shared_context_get(key: str) -> str:
                 if not self._can_continue():
                     return json.dumps(
@@ -229,7 +227,9 @@ class DelegationManager:
                     )
                 sc_key = self._current_shared_context_key.get()
                 if not sc_key:
-                    return json.dumps({"error": "no_shared_context"}, ensure_ascii=False)
+                    return json.dumps(
+                        {"error": "no_shared_context"}, ensure_ascii=False
+                    )
                 sc = self._get_or_create_shared_context(sc_key)
                 return json.dumps(
                     {"key": key, "value": sc.get(key)},
@@ -247,6 +247,7 @@ class DelegationManager:
             agent._tool_map[tool.name] = tool
 
         if "shared_context_set" not in existing:
+
             def shared_context_set(key: str, value_json: str) -> str:
                 if not self._can_continue():
                     return json.dumps(
@@ -256,7 +257,9 @@ class DelegationManager:
                     )
                 sc_key = self._current_shared_context_key.get()
                 if not sc_key:
-                    return json.dumps({"error": "no_shared_context"}, ensure_ascii=False)
+                    return json.dumps(
+                        {"error": "no_shared_context"}, ensure_ascii=False
+                    )
                 sc = self._get_or_create_shared_context(sc_key)
                 try:
                     value = json.loads(value_json) if value_json else value_json
@@ -275,12 +278,17 @@ class DelegationManager:
             agent._tool_map[tool.name] = tool
 
         if "shared_context_dump" not in existing:
+
             def shared_context_dump() -> str:
                 if not self._can_continue():
-                    return json.dumps({"error": "delegation_cancelled"}, ensure_ascii=False)
+                    return json.dumps(
+                        {"error": "delegation_cancelled"}, ensure_ascii=False
+                    )
                 sc_key = self._current_shared_context_key.get()
                 if not sc_key:
-                    return json.dumps({"error": "no_shared_context"}, ensure_ascii=False)
+                    return json.dumps(
+                        {"error": "no_shared_context"}, ensure_ascii=False
+                    )
                 sc = self._get_or_create_shared_context(sc_key)
                 return json.dumps(
                     {"shared_context_key": sc_key, "data": sc.dump()},
@@ -353,7 +361,7 @@ class DelegationManager:
             "You have been delegated a structured subtask.\n"
             "Return ONLY the final answer content.\n"
             "Use the shared_context_* tools to read/write rich state.\n"
-            f"DelegationRequest (JSON): {json.dumps(prompt, ensure_ascii=False, separators=(',',':'))}"
+            f"DelegationRequest (JSON): {json.dumps(prompt, ensure_ascii=False, separators=(',', ':'))}"
         )
 
         _log.info(
@@ -571,9 +579,7 @@ class DelegationManager:
     ) -> Tool:
         """Attach a delegation tool to `agent`'s toolset."""
 
-        tool = self.build_delegate_tool(
-            name=tool_name, description=tool_description
-        )
+        tool = self.build_delegate_tool(name=tool_name, description=tool_description)
         agent.tools.append(tool)
         agent._tool_map[tool.name] = tool
 
@@ -589,4 +595,3 @@ __all__ = [
     "DelegationResponse",
     "DelegationManager",
 ]
-

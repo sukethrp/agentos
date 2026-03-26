@@ -33,4 +33,3 @@ def generate_mcp_config(
 
 
 __all__ = ["generate_mcp_config"]
-

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import queue
-import selectors
 import socket
 import subprocess
 import sys
@@ -70,7 +69,9 @@ def _read_json_line(stdout, *, timeout_s: float = 10.0) -> dict[str, Any]:
 
     buf = line.strip()
     if buf == "":
-        raise RuntimeError("Received empty line from MCP server stdout (stdout closed unexpectedly).")
+        raise RuntimeError(
+            "Received empty line from MCP server stdout (stdout closed unexpectedly)."
+        )
     # Buffering correctness check: stdout messages are line-delimited and
     # each line must be a complete JSON-RPC object.
     return json.loads(buf)
@@ -101,7 +102,9 @@ agent = Agent(
     return module.parent
 
 
-def _spawn_stdio_server(*, repo_root: Path, agent_dir: Path, name: str) -> subprocess.Popen:
+def _spawn_stdio_server(
+    *, repo_root: Path, agent_dir: Path, name: str
+) -> subprocess.Popen:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(repo_root / "src") + os.pathsep + env.get("PYTHONPATH", "")
 
@@ -146,7 +149,9 @@ def _send_initialize(*, request_id: int = 1) -> dict[str, Any]:
     }
 
 
-def _stdio_tool_call(*, request_id: int, tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
+def _stdio_tool_call(
+    *, request_id: int, tool_name: str, args: dict[str, Any]
+) -> dict[str, Any]:
     return {
         "jsonrpc": "2.0",
         "id": request_id,
@@ -160,7 +165,9 @@ def _stdio_tools_list(*, request_id: int) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize("transport", ["stdio"])
-def test_mcp_stdio_roundtrip_and_buffering(repo_root: Path, tmp_path: Path, transport: str) -> None:
+def test_mcp_stdio_roundtrip_and_buffering(
+    repo_root: Path, tmp_path: Path, transport: str
+) -> None:
     agent_dir = _make_agent_module(
         tmp_path,
         tool_variants="""
@@ -180,12 +187,16 @@ def echo_no_args() -> str:
 """,
     )
 
-    proc = _spawn_stdio_server(repo_root=repo_root, agent_dir=agent_dir, name="mcp-stdio-test")
+    proc = _spawn_stdio_server(
+        repo_root=repo_root, agent_dir=agent_dir, name="mcp-stdio-test"
+    )
     try:
         _write_json_line(proc.stdin, _send_initialize())
         if proc.poll() is not None:
             err = proc.stderr.read() if proc.stderr is not None else ""
-            raise AssertionError(f"MCP stdio server exited early. stderr tail:\n{err[-2000:]}")
+            raise AssertionError(
+                f"MCP stdio server exited early. stderr tail:\n{err[-2000:]}"
+            )
         try:
             init = _read_json_line(proc.stdout)
         except Exception as e:
@@ -203,7 +214,10 @@ def echo_no_args() -> str:
         tool_names = {t["name"] for t in tools}
         assert {"add", "boom", "echo_no_args"} <= tool_names
 
-        _write_json_line(proc.stdin, _stdio_tool_call(request_id=3, tool_name="add", args={"a": 2, "b": 5}))
+        _write_json_line(
+            proc.stdin,
+            _stdio_tool_call(request_id=3, tool_name="add", args={"a": 2, "b": 5}),
+        )
         call_res = _read_json_line(proc.stdout)
         assert call_res["id"] == 3
         assert call_res["result"]["isError"] is False
@@ -232,12 +246,16 @@ def echo_no_args() -> str:
 """,
     )
 
-    proc = _spawn_stdio_server(repo_root=repo_root, agent_dir=agent_dir, name="mcp-stdio-errors")
+    proc = _spawn_stdio_server(
+        repo_root=repo_root, agent_dir=agent_dir, name="mcp-stdio-errors"
+    )
     try:
         _write_json_line(proc.stdin, _send_initialize())
         if proc.poll() is not None:
             err = proc.stderr.read() if proc.stderr is not None else ""
-            raise AssertionError(f"MCP stdio server exited early. stderr tail:\n{err[-2000:]}")
+            raise AssertionError(
+                f"MCP stdio server exited early. stderr tail:\n{err[-2000:]}"
+            )
         try:
             _ = _read_json_line(proc.stdout)
         except Exception as e:
@@ -295,12 +313,16 @@ def echo_no_args() -> str:
 """,
     )
 
-    proc = _spawn_stdio_server(repo_root=repo_root, agent_dir=agent_dir, name="mcp-stdio-discovery")
+    proc = _spawn_stdio_server(
+        repo_root=repo_root, agent_dir=agent_dir, name="mcp-stdio-discovery"
+    )
     try:
         _write_json_line(proc.stdin, _send_initialize())
         if proc.poll() is not None:
             err = proc.stderr.read() if proc.stderr is not None else ""
-            raise AssertionError(f"MCP stdio server exited early. stderr tail:\n{err[-2000:]}")
+            raise AssertionError(
+                f"MCP stdio server exited early. stderr tail:\n{err[-2000:]}"
+            )
         try:
             _ = _read_json_line(proc.stdout)
         except Exception as e:
@@ -482,7 +504,9 @@ def echo_no_args() -> str:
             raise AssertionError("Did not receive tools/list response over SSE")
 
         # Send tools/call; response should be delivered over SSE.
-        call_req = _stdio_tool_call(request_id=3, tool_name="add", args={"a": 2, "b": 5})
+        call_req = _stdio_tool_call(
+            request_id=3, tool_name="add", args={"a": 2, "b": 5}
+        )
         call_post = client.post(
             f"http://{host}:{port}/messages",
             json=call_req,
@@ -511,4 +535,3 @@ def echo_no_args() -> str:
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=5)
-

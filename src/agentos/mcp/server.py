@@ -158,9 +158,7 @@ class SseTransport:
         max_history: int = 2000,
     ) -> None:
         if FastAPI is None or uvicorn is None:
-            raise RuntimeError(
-                "SSE transport requires FastAPI/uvicorn dependencies."
-            )
+            raise RuntimeError("SSE transport requires FastAPI/uvicorn dependencies.")
 
         self._protocol = protocol
         self._host = host
@@ -353,7 +351,9 @@ class MCPServer:
         sse_port: int = 8080,
         sse_path: str = "/sse",
         messages_path: str = "/messages",
-        supported_protocol_versions: tuple[str, ...] = _DEFAULT_SUPPORTED_PROTOCOL_VERSIONS,
+        supported_protocol_versions: tuple[
+            str, ...
+        ] = _DEFAULT_SUPPORTED_PROTOCOL_VERSIONS,
     ) -> None:
         self.name = name
         self.version = version
@@ -405,7 +405,10 @@ class MCPServer:
         self._agent._tool_map[tool.name] = tool
 
     def _negotiate_protocol_version(self, requested: Any) -> str:
-        if isinstance(requested, str) and requested in self._supported_protocol_versions:
+        if (
+            isinstance(requested, str)
+            and requested in self._supported_protocol_versions
+        ):
             return requested
         return self._supported_protocol_versions[0]
 
@@ -414,9 +417,7 @@ class MCPServer:
         negotiated = self._negotiate_protocol_version(requested_version)
 
         # Capability negotiation: we only advertise what we actually implement.
-        capabilities: dict[str, Any] = {
-            "tools": {"listChanged": False}
-        }
+        capabilities: dict[str, Any] = {"tools": {"listChanged": False}}
 
         return {
             "protocolVersion": negotiated,
@@ -669,4 +670,3 @@ class MCPServer:
 
 
 __all__ = ["MCPServer", "StdioTransport", "SseTransport", "MCPProtocolHandler"]
-
