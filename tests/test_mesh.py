@@ -28,8 +28,13 @@ async def test_register_agent(mesh_router):
 @pytest.mark.asyncio
 async def test_send_message(mesh_router):
     await mesh_router.send_message("agent_a", "agent_b", {"data": "hello"})
+    # In CI (notably Py3.11), using `await q.get()` here has been flaky.
+    # We only need to validate that `send_message` enqueued the message for `agent_b`,
+    # so we yield once and then assert the queue is non-empty.
+    await asyncio.sleep(0)
     q = mesh_router._get_queue("agent_b")
-    msg = await asyncio.wait_for(q.get(), timeout=1.0)
+    assert not q.empty()
+    msg = q.get_nowait()
     assert msg.sender == "agent_a"
     assert msg.receiver == "agent_b"
     assert msg.payload == {"data": "hello"}
