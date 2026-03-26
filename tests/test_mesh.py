@@ -4,14 +4,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 from agentos.mesh.mesh_router import MeshRouter, MeshMessage
-import agentos.mesh.mesh_router as mesh_router_mod
 
 
 @pytest.fixture
 def mesh_router():
     mr = MeshRouter()
-    # Avoid real network calls when `REDIS_URL` is configured in CI.
-    # Message delivery is in-memory; we only mock the async Redis publish.
     mr._publish_redis = AsyncMock(return_value=None)
     return mr
 
@@ -27,17 +24,20 @@ async def test_register_agent(mesh_router):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Async queue mismatch in CI Python 3.11 — see issue #23")
 async def test_send_message(mesh_router):
-    # The queue-based assertion has been flaky in CI (Py3.11).
-    # Validate the public contract: `send_message` returns the message it sent.
     msg = await mesh_router.send_message("agent_a", "agent_b", {"data": "hello"})
+    assert isinstance(msg, MeshMessage)
     assert msg.sender == "agent_a"
     assert msg.receiver == "agent_b"
     assert msg.payload == {"data": "hello"}
+    assert msg.topic == "default"
 
-    # Diagnostics for CI: ensure tests are importing the expected module path.
-    assert hasattr(mesh_router_mod, "__file__")
+    q = mesh_router._get_queue("agent_b")
+    assert not q.empty()
+    queued_msg = q.get_nowait()
+    assert queued_msg.payload == {"data": "hello"}
+    assert queued_msg.sender == "agent_a"
+    assert queued_msg.receiver == "agent_b"
 
 
 @pytest.mark.asyncio
