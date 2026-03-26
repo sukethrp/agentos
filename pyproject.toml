@@ -52,6 +52,8 @@ redis = [
 ]
 mcp = [
     "mcp>=1.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
 ]
 otel = [
     "opentelemetry-api>=1.20.0",

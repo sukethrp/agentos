@@ -56,6 +56,77 @@ Demo mode:
 AGENTOS_DEMO_MODE=true python examples/run_web_builder.py
 ```
 
+## MCP Setup (Claude Desktop + Cursor)
+
+Install the MCP extra:
+
+```bash
+pip install 'agentos-platform[mcp]'
+```
+
+### 1) Start the MCP server
+
+Expose built-in AgentOS tools (stdio transport is the safest choice for MCP clients like Claude Desktop and Cursor):
+
+```bash
+agentos mcp serve --transport stdio
+```
+
+Expose tools from a specific agent module (example `./my_agent/agent.py`):
+
+```bash
+agentos mcp serve --transport stdio --agent ./my_agent
+```
+
+Optional: run the HTTP SSE transport for clients that support it:
+
+```bash
+agentos mcp serve --transport sse --host 127.0.0.1 --port 8080
+```
+
+### 2) Configure Claude Desktop
+
+Add the following snippet to your `claude_desktop_config.json` (restart Claude Desktop after editing):
+
+```json
+{
+  "mcpServers": {
+    "agentos": {
+      "command": "agentos",
+      "args": ["mcp", "serve", "--transport", "stdio"]
+    }
+  }
+}
+```
+
+If you want a specific agent module:
+
+```json
+{
+  "mcpServers": {
+    "agentos": {
+      "command": "agentos",
+      "args": ["mcp", "serve", "--transport", "stdio", "--agent", "/absolute/path/to/agent.py"]
+    }
+  }
+}
+```
+
+### 3) Configure Cursor
+
+Add to Cursor `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "agentos": {
+      "command": "agentos",
+      "args": ["mcp", "serve", "--transport", "stdio"]
+    }
+  }
+}
+```
+
 ## Core Modules
 
 | Module | What it does |
