@@ -56,7 +56,9 @@ Demo mode:
 AGENTOS_DEMO_MODE=true python examples/run_web_builder.py
 ```
 
-## MCP Setup (Claude Desktop + Cursor)
+## Features
+
+### MCP server with stdio/SSE transport (Claude Desktop + Cursor)
 
 Install the MCP extra:
 
@@ -126,6 +128,45 @@ Add to Cursor `.cursor/mcp.json`:
   }
 }
 ```
+
+### Agent delegation (delegate tool + SharedContext + chaining)
+
+AgentOS includes a structured delegation system that lets a “parent” agent offload subtasks to “child” agents while propagating rich context through a shared, in-memory key/value store.
+
+Key pieces:
+
+- `delegate_subtask` tool: LLM-facing tool that accepts structured fields like `task`, `context_json`, `constraints_json`, `expected_output_schema_json`, and `timeout`.
+- `SharedContext`: a key/value store child agents can read/write during the delegation chain (avoids lossy prompt compression).
+- Delegation chaining: if a child agent delegates again, the same shared context key is reused automatically.
+
+Minimal wiring example:
+
+```python
+from agentos.core.agent import Agent
+from agentos.core.delegation import DelegationManager
+
+# Define your child agents however you like.
+child_agent_a = Agent(name="child-a", model="gpt-4o-mini", tools=[])
+child_agent_b = Agent(name="child-b", model="gpt-4o-mini", tools=[])
+
+manager = DelegationManager()
+manager.register_agent("child-a", child_agent_a)
+manager.register_agent("child-b", child_agent_b)
+
+# Create your parent agent and attach the delegate tool.
+parent = Agent(name="parent", model="gpt-4o-mini", tools=[])
+manager.attach_delegate_tool(parent)  # adds `delegate_subtask` to the toolset
+
+# Now the parent agent can call `delegate_subtask`.
+parent.run("Delegate a subtask and use shared context for details.")
+```
+
+SharedContext tools available to delegated agents:
+
+- `shared_context_key()`
+- `shared_context_get(key)`
+- `shared_context_set(key, value_json)`
+- `shared_context_dump()`
 
 ## Core Modules
 
@@ -201,3 +242,7 @@ Contributions are welcome: [CONTRIBUTING.md](CONTRIBUTING.md)
 ## Roadmap
 
 Roadmap and upcoming work are tracked in [GitHub Issues](https://github.com/sukethrp/agentos/issues).
+
+- [ ] Agent-to-Agent mesh protocol
+- [x] MCP server with stdio/SSE transport
+- [x] Agent-to-agent delegation with shared context
