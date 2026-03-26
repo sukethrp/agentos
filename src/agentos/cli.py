@@ -30,7 +30,16 @@ def main():
                               help="Run in demo mode without API keys")
 
     # agentos mcp
-    subparsers.add_parser("mcp", help="Start MCP server")
+    mcp_parser = subparsers.add_parser("mcp", help="Start MCP server")
+    mcp_parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse"],
+        default="stdio",
+        help="MCP transport to use",
+    )
+    mcp_parser.add_argument("--host", default="127.0.0.1")
+    mcp_parser.add_argument("--port", type=int, default=8080)
+    mcp_parser.add_argument("--name", default="agentos")
 
     # agentos version
     subparsers.add_parser("version", help="Show version")
@@ -49,11 +58,20 @@ def main():
         uvicorn.run(app, host=args.host, port=args.port)
 
     elif args.command == "mcp":
-        from agentos.mcp.adapter import toolspec_to_input_schema  # noqa: F401
         from agentos.tools import get_builtin_tools
+        from agentos.mcp import MCPServer
+
         tools = get_builtin_tools()
-        print(f"MCP server ready with {len(tools)} tools")
-        print("Note: full MCP server requires the 'mcp' extra — pip install agentos-platform[mcp]")
+        print(f"MCP server ready with {len(tools)} tools (transport={args.transport})")
+
+        server = MCPServer(
+            name=args.name,
+            tools=tools,
+            transport=args.transport,
+            sse_host=args.host,
+            sse_port=args.port,
+        )
+        server.run()
 
     elif args.command == "version":
         from agentos import __version__
