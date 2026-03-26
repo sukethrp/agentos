@@ -139,8 +139,11 @@ def main():
                 sse_port=args.port,
             )
 
+        # MCP stdio requires stdout to contain only JSON-RPC messages.
+        # Send human-readable logs to stderr instead.
         print(
-            f"MCP server ready (name={server.name}, transport={args.transport})"
+            f"MCP server ready (name={server.name}, transport={args.transport})",
+            file=sys.stderr,
         )
         server.run()
 
