@@ -23,8 +23,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from agentos.core.agent import Agent
-from agentos.simulation import (
+from agentos.core.agent import Agent  # noqa: E402
+from agentos.simulation import (  # noqa: E402
     SimulatedWorld,
     WorldConfig,
     TrafficPattern,

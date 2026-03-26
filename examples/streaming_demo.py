@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     query = "Write a short haiku about programming."
     print(f"💬 Query: {query}")
-    print(f"🤖 Response: ", end="", flush=True)
+    print("🤖 Response: ", end="", flush=True)
 
     start = time.time()
     token_count = 0
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     query2 = "What's 42 * 17? Show me the answer."
     print(f"💬 Query: {query2}")
-    print(f"🤖 Response: ", end="", flush=True)
+    print("🤖 Response: ", end="", flush=True)
 
     for token in agent.stream_sync(query2):
         print(token, end="", flush=True)

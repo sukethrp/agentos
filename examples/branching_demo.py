@@ -160,7 +160,7 @@ def main():
     # Show the merge summary
     merge_msg = tree.get_messages()[-1]
     if merge_msg.role == "system":
-        print(f"\n   Merge context preview:")
+        print("\n   Merge context preview:")
         for line in merge_msg.content.split("\n")[:8]:
             print(f"      {line}")
         print("      ...")

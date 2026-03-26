@@ -66,7 +66,7 @@ if __name__ == "__main__":
     print(f"   ✓ Job 2: '{job2.agent_name}' every 60s (max 2 runs) — ID: {job2.job_id}")
 
     # ── Start scheduler ──
-    print(f"\n🚀 Starting scheduler... (will run for ~2 minutes)")
+    print("\n🚀 Starting scheduler... (will run for ~2 minutes)")
     print(f"   Active jobs: {scheduler.active_jobs}")
     print(f"   Max concurrent: {scheduler.max_concurrent}")
     print("-" * 60)

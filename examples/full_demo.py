@@ -152,7 +152,7 @@ if __name__ == "__main__":
     # Print final stats
     stats = agent.get_stats()
     print(f"\n{'='*60}")
-    print(f"📊 Final Agent Stats")
+    print("📊 Final Agent Stats")
     print(f"{'='*60}")
     print(f"   Agent:       {stats['name']}")
     print(f"   Model:       {stats['model']}")

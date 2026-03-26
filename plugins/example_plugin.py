@@ -10,7 +10,8 @@ Usage:
     tools = pm.get_tools_list()  # includes "translate"
 """
 
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from agentos.core.tool import Tool

@@ -140,5 +140,5 @@ if __name__ == "__main__":
     print(f"   Tools available: {len(all_tools)} (built-in: {len(builtin_tools)}, plugins: {len(plugin_tools)})")
     print()
     print(f"{'=' * 60}")
-    print(f"  ✅ Plugin demo complete")
+    print("  ✅ Plugin demo complete")
     print(f"{'=' * 60}")

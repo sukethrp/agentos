@@ -107,7 +107,7 @@ if __name__ == "__main__":
     print(f"   Queries run:     {len(DEMO_QUERIES)}")
     print(f"   Total tokens:    {total_tokens:,}")
     print(f"   Total cost:      ${total_cost:.4f} (simulated)")
-    print(f"   Provider:        MockProvider (no API keys)")
+    print("   Provider:        MockProvider (no API keys)")
     print(f"{'=' * 60}")
     print()
     print("💡 To start the full web platform in demo mode:")

@@ -45,7 +45,7 @@ def main() -> None:
     print("=" * 60)
 
     # Use in-memory store (temp dir) so we don't pollute the real data
-    import tempfile, os
+    import tempfile
     tmp = tempfile.mkdtemp()
     store = FeedbackStore(data_dir=tmp)
 
@@ -155,7 +155,7 @@ def main() -> None:
         for line in p.instruction.split("\n")[:4]:
             print(f"     {line}")
         if len(p.instruction.split("\n")) > 4:
-            print(f"     …")
+            print("     …")
 
     # Show the optimised prompt
     base_prompt = "You are a helpful customer support assistant."

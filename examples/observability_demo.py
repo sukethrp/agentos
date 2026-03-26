@@ -23,7 +23,6 @@ from agentos.observability.tracer import (
     Trace,
     TraceBuilder,
     TraceStore,
-    StepType,
 )
 from agentos.observability.diagnostics import diagnose, diagnose_batch
 from agentos.observability.alerts import AlertEngine
@@ -264,8 +263,8 @@ def main() -> None:
     print(f"   Traces: {len(store.list_all())}")
     print(f"   Diagnoses: {len(all_diags)}")
     print(f"   Alerts: {len(alerts)}")
-    print(f"   5-point diagnostic checks: context, tool selection,")
-    print(f"     tool execution, interpretation, faithfulness")
+    print("   5-point diagnostic checks: context, tool selection,")
+    print("     tool execution, interpretation, faithfulness")
     print(f"{'=' * 60}")
 
 

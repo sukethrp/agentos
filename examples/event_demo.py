@@ -16,7 +16,6 @@ from agentos.core.agent import Agent
 from agentos.tools import get_builtin_tools
 from agentos.events import (
     event_bus,
-    WebhookTrigger,
     TimerTrigger,
     AgentCompleteTrigger,
 )
@@ -219,9 +218,15 @@ if __name__ == "__main__":
 
     print()
     print("   Registered listeners:")
-    for l in event_bus.list_listeners():
-        agent_name = getattr(l.agent, "config", None) and l.agent.config.name or "callback"
-        print(f"     • {l.event_pattern:25s} → {agent_name} (ran {l.execution_count}x)")
+    for listener in event_bus.list_listeners():
+        agent_name = (
+            getattr(listener.agent, "config", None)
+            and listener.agent.config.name
+            or "callback"
+        )
+        print(
+            f"     • {listener.event_pattern:25s} → {agent_name} (ran {listener.execution_count}x)"
+        )
 
     # Clean up
     event_bus.clear()
