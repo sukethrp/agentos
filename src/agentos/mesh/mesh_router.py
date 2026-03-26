@@ -50,6 +50,20 @@ class MeshRouter:
     def queue_depths(self) -> dict[str, int]:
         return {aid: self._queue_depth(aid) for aid in self._queues}
 
+    def _notify_subscribers(self, msg: MeshMessage) -> None:
+        if not msg.receiver:
+            return
+        handlers = self._subscriptions.get((msg.receiver, msg.topic), [])
+        if not handlers:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+
+        for h in handlers:
+            loop.create_task(h(msg))
+
     async def _delivery_loop(self, agent_id: str) -> None:
         q = self._queues[agent_id]
         while True:
@@ -91,8 +105,7 @@ class MeshRouter:
         )
         q = self._get_queue(to_id)
         await q.put(msg)
-        if self._has_subscribers(to_id, topic):
-            self._start_delivery(to_id)
+        self._notify_subscribers(msg)
         if self._redis_url:
             await self._publish_redis(msg)
         return msg
@@ -128,7 +141,6 @@ class MeshRouter:
             self._subscriptions[key] = []
         self._subscriptions[key].append(handler)
         self._get_queue(agent_id)
-        self._start_delivery(agent_id)
 
     async def _publish_redis(self, msg: MeshMessage) -> None:
         try:
@@ -160,13 +172,13 @@ class MeshRouter:
                         if msg.receiver:
                             q = self._get_queue(msg.receiver)
                             await q.put(msg)
-                            self._start_delivery(msg.receiver)
+                            self._notify_subscribers(msg)
                         else:
                             for aid in self.registered_agents():
                                 if aid != msg.sender:
                                     q = self._get_queue(aid)
                                     await q.put(msg)
-                                    self._start_delivery(aid)
+                                    self._notify_subscribers(msg)
                     except Exception:
                         pass
         except Exception:
