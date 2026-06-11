@@ -80,6 +80,9 @@ agentos = "agentos.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"agentos" = ["web/static/**/*", "web/templates/**/*"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "--cov=agentos --cov-report=term-missing --cov-report=xml"
@@ -98,7 +101,5 @@ exclude_lines = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Deferred/lazy imports for optional features
-"src/agentos/web/app.py" = ["E402"]
 # conftest: sys.path setup before agentos import
 "tests/conftest.py" = ["E402"]
