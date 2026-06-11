@@ -12,8 +12,8 @@ Hand-labeled agent responses (N=50) across math, information, safety, multi-tool
 |--------|-------------|-----------|
 | BLEU | 0.406 | 0.321 |
 | ROUGE-L | 0.477 | 0.377 |
-| Semantic Similarity | 0.485 | 0.373 |
-| Combined (overall_score) | 0.507 | 0.399 |
+| Embedding Similarity | 0.600 | 0.568 |
+| Combined (overall_score) | 0.562 | 0.508 |
 
 ## Governance Overhead
 
@@ -21,7 +21,7 @@ Measured with `time.perf_counter` over 10000 iterations per feature.
 
 | Feature | Median (ms) | P95 (ms) |
 |---------|------------|----------|
-| Budget guard | 0.000167 | 0.000208 |
+| Budget guard | 0.000167 | 0.000209 |
 | Permission guard | 0.000084 | 0.000125 |
-| Audit trail logging | 0.000625 | 0.000792 |
+| Audit trail logging | 0.000791 | 0.000875 |
 | Full governance | 0.02 | 0.03 |

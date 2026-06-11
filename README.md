@@ -170,32 +170,38 @@ SharedContext tools available to delegated agents:
 
 ## Core Modules
 
+Tested in CI (`pytest`); see `tests/` for coverage.
+
 | Module | What it does |
 |--------|---------------|
 | Agent SDK | Define agents and tools with provider-agnostic model routing |
 | Simulation Sandbox | Test scenarios with LLM-as-judge quality and pass/fail scoring |
 | Governance Engine | Budget controls, permissions, kill switch, and audit logging |
-| Live Dashboard | Real-time traces for prompts, tool calls, latency, and spend |
-| RAG Pipeline | Ingest, chunk, embed, and retrieve knowledge sources |
-| Workflow Engine | Compose repeatable multi-step agent workflows |
+| Event Monitor | Capture agent runs, tool calls, latency, and spend (store + API) |
+| A/B Testing | Statistical comparison for variants and prompt changes |
+| MCP Server | Expose AgentOS tools via stdio/SSE (Claude Desktop, Cursor) |
 
 <details>
-<summary><strong>📋 Full 15-module list (click to expand)</strong></summary>
+<summary><strong>Additional modules (click to expand)</strong></summary>
+
+**Tested in CI**
 
 | Module | Description |
 |--------|-------------|
-| Agent SDK | Core governed agent runtime and tool-calling loop |
-| WebSocket Streaming | Token streaming and low-latency interactive sessions |
+| Observability | Tracing, alerting, and run replay |
+| Embeddings | TF-IDF, OpenAI, and local embedding backends |
+
+**Shipped, limited automated test coverage**
+
+| Module | Description |
+|--------|-------------|
 | RAG Pipeline | Ingestion, chunking, embeddings, retrieval, and reranking |
-| Simulation Sandbox | Scenario simulation, scoring, and comparison reports |
-| Live Dashboard | Event stream, usage analytics, and operational visibility |
-| Governance Engine | Guardrails, budget caps, permission checks, and audits |
+| Workflow Engine | Multi-step execution with retries and branching |
+| WebSocket Streaming | Token streaming wrapper for interactive sessions |
 | Agent Scheduler | Interval and cron scheduling with execution history |
 | Event Bus | Trigger-driven orchestration via internal and external events |
 | Plugin System | Runtime-extensible tools, providers, and adapters |
 | Authentication | API key auth, org and user usage tracking, and middleware |
-| A/B Testing | Side-by-side evaluation for variants and prompt changes |
-| Workflow Engine | DAG-based execution with retries and branching |
 | Multimodal | Vision and document flows for image and file-aware agents |
 | Marketplace | Template registry for reusable agents and workflows |
 | Embed SDK | Embeddable widget and integration surface for web apps |
@@ -208,14 +214,14 @@ SharedContext tools available to delegated agents:
 |------------|---------|-----------|--------|---------|
 | Built-in testing sandbox | ✅ Native | ❌ External setup | ❌ External setup | ❌ External setup |
 | Governance (budget/kill switch) | ✅ Native | ⚠️ Custom code | ⚠️ Custom code | ⚠️ Custom code |
-| Real-time ops dashboard | ✅ Native | ⚠️ LangSmith add-on | ❌ | ❌ |
+| Built-in event monitoring | ✅ Native (store + API) | ⚠️ LangSmith add-on | ❌ | ❌ |
 | Batteries-included platform | ✅ Yes | ⚠️ Framework-first | ⚠️ Orchestration-first | ⚠️ Research-first |
 | Ecosystem maturity | 🌱 Growing | ✅ Very mature | ✅ Mature | ✅ Mature |
 
 ## Benchmarks
 See [full benchmark results](docs/benchmarks.md). Key findings:
-- Combined (overall_score) achieves Spearman rho 0.507 with human judgment (N=50)
-- Semantic Similarity achieves Spearman rho 0.485 with human judgment (N=50)
+- Combined (overall_score) achieves Spearman rho 0.562 with human judgment (N=50)
+- Embedding Similarity achieves Spearman rho 0.600 with human judgment (N=50)
 - Full governance check median latency is 0.02 ms (P95 0.03 ms)
 
 ## Architecture

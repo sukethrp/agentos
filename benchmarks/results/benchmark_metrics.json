@@ -11,20 +11,20 @@
         "spearman_rho": 0.477366854098184,
         "pearson_r": 0.37705867196646414
       },
-      "semantic_similarity": {
-        "spearman_rho": 0.4850228868615522,
-        "pearson_r": 0.37270498716910566
+      "embedding_similarity": {
+        "spearman_rho": 0.5998385186207043,
+        "pearson_r": 0.5681026915001772
       },
       "overall_score": {
-        "spearman_rho": 0.506780306767143,
-        "pearson_r": 0.3991229952701555
+        "spearman_rho": 0.5615416942154162,
+        "pearson_r": 0.5084231763242109
       }
     }
   },
   "governance_overhead": {
     "budget_guard": {
       "median_ms": 0.00016693957149982452,
-      "p95_ms": 0.00020815059542655945,
+      "p95_ms": 0.00020908191800117493,
       "iterations": 10000.0
     },
     "permission_guard": {
@@ -33,13 +33,13 @@
       "iterations": 10000.0
     },
     "audit_trail_logging": {
-      "median_ms": 0.0006249174475669861,
-      "p95_ms": 0.0007920898497104645,
+      "median_ms": 0.000791158527135849,
+      "p95_ms": 0.0008749775588512421,
       "iterations": 10000.0
     },
     "full_governance": {
-      "median_ms": 0.022124964743852615,
-      "p95_ms": 0.03158394247293472,
+      "median_ms": 0.022166874259710312,
+      "p95_ms": 0.025290995836257935,
       "iterations": 10000.0
     }
   }
