@@ -13,6 +13,7 @@ from agentos.governance.audit import AuditLog
 from agentos.governance.budget import BudgetGuard
 from agentos.governance.guardrails import GovernanceEngine
 from agentos.governance.permissions import PermissionGuard
+from agentos.rag.embeddings import get_embeddings
 from agentos.sandbox.metrics import evaluate_response
 
 
@@ -55,22 +56,24 @@ def _measure_latency(fn, iterations: int) -> dict[str, float]:
 
 
 def compute_metric_correlations(examples: list[dict]) -> dict:
+    embedder = get_embeddings(backend="auto")
     human_labels: list[float] = []
     bleu_scores: list[float] = []
     rouge_scores: list[float] = []
-    semantic_scores: list[float] = []
+    embedding_scores: list[float] = []
     overall_scores: list[float] = []
 
     for example in examples:
         report = evaluate_response(
             response=example["response"],
             expected=example["reference"],
+            embedder=embedder,
             llm_judge_score=0.0,
         )
         human_labels.append(float(example["human_label_0_to_10"]))
         bleu_scores.append(report.bleu_score)
         rouge_scores.append(report.rouge_l_score)
-        semantic_scores.append(report.semantic_similarity)
+        embedding_scores.append(report.embedding_similarity or 0.0)
         overall_scores.append(report.overall_score)
 
     n = len(examples)
@@ -78,7 +81,7 @@ def compute_metric_correlations(examples: list[dict]) -> dict:
     for name, values in (
         ("bleu", bleu_scores),
         ("rouge_l", rouge_scores),
-        ("semantic_similarity", semantic_scores),
+        ("embedding_similarity", embedding_scores),
         ("overall_score", overall_scores),
     ):
         spearman = spearmanr(human_labels, values)
@@ -160,8 +163,8 @@ def build_markdown(correlations: dict, governance: dict, n: int) -> str:
         f"{_fmt_corr(metric_rows['bleu']['pearson_r'])} |",
         f"| ROUGE-L | {_fmt_corr(metric_rows['rouge_l']['spearman_rho'])} | "
         f"{_fmt_corr(metric_rows['rouge_l']['pearson_r'])} |",
-        f"| Semantic Similarity | {_fmt_corr(metric_rows['semantic_similarity']['spearman_rho'])} | "
-        f"{_fmt_corr(metric_rows['semantic_similarity']['pearson_r'])} |",
+        f"| Embedding Similarity | {_fmt_corr(metric_rows['embedding_similarity']['spearman_rho'])} | "
+        f"{_fmt_corr(metric_rows['embedding_similarity']['pearson_r'])} |",
         f"| Combined (overall_score) | {_fmt_corr(metric_rows['overall_score']['spearman_rho'])} | "
         f"{_fmt_corr(metric_rows['overall_score']['pearson_r'])} |",
         "",

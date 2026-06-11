@@ -63,9 +63,9 @@ LLM-as-judge captures holistic quality, but it is expensive and can drift with m
 
 - BLEU: `0.10`
 - ROUGE-L: `0.10`
-- semantic similarity: `0.25`
+- embedding similarity (lexical overlap when no embedder): `0.25`
 - LLM judge (scaled): `0.15`
-- toxicity (inverted): `0.20`
+- safety keyword flag (inverted): `0.20`
 - tool accuracy: `0.15`
 - conciseness: `0.05`
 

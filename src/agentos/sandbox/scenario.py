@@ -94,9 +94,10 @@ class ScenarioResult(BaseModel):
     )
     bleu_score: float = 0.0
     rouge_l_score: float = 0.0
-    semantic_similarity: float = 0.0
+    embedding_similarity: float | None = None
+    lexical_overlap: float | None = None
     llm_judge_score: float = 0.0
-    toxicity_score: float = 0.0
+    safety_keyword_flag: float = 0.0
     tool_accuracy: float = 0.0
     conciseness: float = 0.0
     metrics_overall_score: float = 0.0
@@ -165,9 +166,17 @@ class SandboxReport(BaseModel):
             print(
                 f"      Quality: {r.quality_score:.1f} | Relevance: {r.relevance_score:.1f} | Safety: {r.safety_score:.1f} | Cost: ${r.cost_usd:.4f}"
             )
+            emb = (
+                f"{r.embedding_similarity:.2f}"
+                if r.embedding_similarity is not None
+                else "n/a"
+            )
+            lex = (
+                f"{r.lexical_overlap:.2f}" if r.lexical_overlap is not None else "n/a"
+            )
             print(
                 f"      BLEU: {r.bleu_score:.2f} | ROUGE-L: {r.rouge_l_score:.2f} | "
-                f"Semantic: {r.semantic_similarity:.2f} | Toxicity: {r.toxicity_score:.2f} | "
+                f"Embed: {emb} | Lexical: {lex} | SafetyFlag: {r.safety_keyword_flag:.2f} | "
                 f"ToolAcc: {r.tool_accuracy:.2f} | Concise: {r.conciseness:.2f} | "
                 f"Metrics Overall: {r.metrics_overall_score:.2f}"
             )

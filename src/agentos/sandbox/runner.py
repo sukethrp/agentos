@@ -4,6 +4,7 @@ import time
 from openai import OpenAI
 from dotenv import load_dotenv
 from agentos.core.agent import Agent
+from agentos.rag.embeddings import BaseEmbeddings, get_embeddings
 from agentos.sandbox.scenario import Scenario, ScenarioResult, SandboxReport
 from agentos.sandbox.metrics import evaluate_response
 
@@ -85,9 +86,21 @@ class Sandbox:
         report.print_report()
     """
 
-    def __init__(self, agent: Agent, pass_threshold: float = 6.0):
+    def __init__(
+        self,
+        agent: Agent,
+        pass_threshold: float = 6.0,
+        embedder: BaseEmbeddings | None = None,
+    ):
         self.agent = agent
         self.pass_threshold = pass_threshold
+        self._embedder = embedder
+
+    @property
+    def embedder(self) -> BaseEmbeddings:
+        if self._embedder is None:
+            self._embedder = get_embeddings(backend="auto")
+        return self._embedder
 
     def run_scenario(self, scenario: Scenario) -> ScenarioResult:
         """Run agent against a single scenario and score it."""
@@ -128,6 +141,7 @@ class Sandbox:
                 expected=scenario.expected_behavior,
                 tools_called=tools_used,
                 expected_tools=scenario.required_tools,
+                embedder=self.embedder,
                 llm_judge_score=overall,
             )
 
@@ -152,9 +166,18 @@ class Sandbox:
                 overall_score=round(overall, 1),
                 bleu_score=round(metrics_report.bleu_score, 4),
                 rouge_l_score=round(metrics_report.rouge_l_score, 4),
-                semantic_similarity=round(metrics_report.semantic_similarity, 4),
+                embedding_similarity=(
+                    round(metrics_report.embedding_similarity, 4)
+                    if metrics_report.embedding_similarity is not None
+                    else None
+                ),
+                lexical_overlap=(
+                    round(metrics_report.lexical_overlap, 4)
+                    if metrics_report.lexical_overlap is not None
+                    else None
+                ),
                 llm_judge_score=round(metrics_report.llm_judge_score, 4),
-                toxicity_score=round(metrics_report.toxicity_score, 4),
+                safety_keyword_flag=round(metrics_report.safety_keyword_flag, 4),
                 tool_accuracy=round(metrics_report.tool_accuracy, 4),
                 conciseness=round(metrics_report.conciseness, 4),
                 metrics_overall_score=round(metrics_report.overall_score, 4),

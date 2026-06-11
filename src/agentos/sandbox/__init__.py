@@ -6,8 +6,9 @@ from agentos.sandbox.metrics import (
     MetricsReport,
     bleu_score,
     rouge_l_score,
-    semantic_similarity,
-    toxicity_score,
+    embedding_similarity,
+    lexical_overlap,
+    safety_keyword_flag,
     evaluate_response,
 )
 from agentos.sandbox.simulation_runner import SimulationRunner, get_run_report
@@ -23,8 +24,9 @@ __all__ = [
     "MetricsReport",
     "bleu_score",
     "rouge_l_score",
-    "semantic_similarity",
-    "toxicity_score",
+    "embedding_similarity",
+    "lexical_overlap",
+    "safety_keyword_flag",
     "evaluate_response",
     "SimulationRunner",
     "get_run_report",
