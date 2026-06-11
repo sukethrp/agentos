@@ -178,8 +178,8 @@ Entries are append-only in memory and exportable as JSON for downstream complian
 
 Current benchmark claims are documented in `docs/benchmarks.md`:
 
-- Governance adds `<5ms` overhead in typical guarded execution paths.
-- Local embeddings achieve ~95% of OpenAI retrieval quality at zero API cost.
-- Evaluation ensemble reports `0.91` Spearman correlation with human judgment.
+- Combined evaluation ensemble (`overall_score`) reports `0.562` Spearman correlation with human judgment (N=50).
+- Embedding similarity alone reports `0.600` Spearman correlation with human judgment (N=50).
+- Full governance stack adds `0.02` ms median / `0.03` ms P95 overhead (measured over 10000 iterations).
 
 These values should be treated as reproducible baselines and periodically revalidated as providers/models evolve.

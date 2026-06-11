@@ -179,12 +179,13 @@
           </button>
         </div>
         <div class="stats" id="heroStats">
-          <div class="stat"><div class="stat-num" data-target="0.91" data-decimals="2">0</div><div class="stat-label">Eval ρ</div></div>
+          <div class="stat"><div class="stat-num" data-target="0.562" data-decimals="3">0</div><div class="stat-label">Combined ρ, N=50</div></div>
           <div class="stat"><div class="stat-num" data-target="3">0</div><div class="stat-label">Embedding Backends</div></div>
-          <div class="stat"><div class="stat-num" data-target="5" data-prefix="<">0</div><div class="stat-label">Governance Overhead</div></div>
-          <div class="stat"><div class="stat-num" data-target="95" data-suffix="%">0</div><div class="stat-label">Local vs API Quality</div></div>
+          <div class="stat"><div class="stat-num" data-target="0.02" data-decimals="2" data-suffix="ms">0</div><div class="stat-label">Gov. Overhead (median)</div></div>
+          <div class="stat"><div class="stat-num" data-target="0.600" data-decimals="3">0</div><div class="stat-label">Embedding ρ, N=50</div></div>
           <div class="stat"><div class="stat-num" data-target="100" data-suffix="+">0</div><div class="stat-label">Commits</div></div>
         </div>
+        <p style="margin-top:14px;font-size:.85rem;color:var(--muted);text-align:center">Measured over a 50-example hand-labeled set. Reproduce with <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">benchmarks/run_benchmarks.py</code>.</p>
       </div>
     </section>
 
@@ -197,15 +198,15 @@
             <div class="label">Testing</div>
             <svg class="icon" viewBox="0 0 24 24" fill="none" aria-label="Testing flask icon"><path d="M9 3h6M10 3v5l-5 8a3 3 0 0 0 2.5 5h9a3 3 0 0 0 2.5-5l-5-8V3" stroke="currentColor" stroke-width="1.8"/></svg>
             <h3>Test before you deploy</h3>
-            <p>Simulation sandbox with multi-metric evaluation — BLEU, ROUGE-L, semantic similarity, and LLM-as-judge combined into a weighted ensemble that correlates 0.91 with human judgment.</p>
-            <div class="mini-stat">0.91 Spearman ρ</div>
+            <p>Simulation sandbox with multi-metric evaluation — BLEU, ROUGE-L, embedding similarity, and LLM-as-judge combined into a weighted ensemble measured at 0.562 Spearman ρ against human judgment (N=50).</p>
+            <div class="mini-stat">0.562 Combined ρ, N=50</div>
           </article>
           <article class="card">
             <div class="label">Governance</div>
             <svg class="icon" viewBox="0 0 24 24" fill="none" aria-label="Shield icon"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z" stroke="currentColor" stroke-width="1.8"/></svg>
             <h3>Govern what agents can do</h3>
-            <p>Budget limits, permission controls, kill switch, and immutable audit trails. Enterprise-grade safety that adds less than 5ms overhead to any query.</p>
-            <div class="mini-stat">&lt;5ms overhead</div>
+            <p>Budget limits, permission controls, kill switch, and immutable audit trails. Enterprise-grade safety with 0.02 ms median overhead for the full governance stack.</p>
+            <div class="mini-stat">0.02 ms median · 0.03 ms P95</div>
           </article>
           <article class="card">
             <div class="label">Monitoring</div>
@@ -224,9 +225,9 @@
         <h2>Measured, not claimed</h2>
         <p>Every capability is benchmarked with quantitative results.</p>
         <div class="grid-3">
-          <article class="card"><h3>Evaluation Accuracy</h3><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Spearman ρ</th></tr></thead><tbody><tr><td>LLM-as-Judge</td><td class="mono">0.87</td></tr><tr><td>BLEU</td><td class="mono">0.42</td></tr><tr><td>ROUGE-L</td><td class="mono">0.51</td></tr><tr><td>Semantic Similarity</td><td class="mono">0.79</td></tr><tr class="hl"><td>Combined (Ours)</td><td class="mono">0.91</td></tr></tbody></table></div><p>Weighted ensemble outperforms LLM-as-judge alone by 4.6%, while reducing LLM costs 60%.</p></article>
-          <article class="card"><h3>RAG Embeddings</h3><div class="table-wrap"><table><thead><tr><th>Backend</th><th>Recall@5</th><th>Latency</th><th>Cost</th></tr></thead><tbody><tr><td>OpenAI ada-3-small</td><td class="mono">0.89</td><td class="mono">120ms</td><td class="mono">$0.02</td></tr><tr class="hl"><td>MiniLM-L6-v2</td><td class="mono">0.85</td><td class="mono">15ms</td><td class="mono">Free</td></tr><tr><td>TF-IDF + SVD</td><td class="mono">0.71</td><td class="mono">2ms</td><td class="mono">Free</td></tr></tbody></table></div><p>Local embeddings: 95% of API quality, 8× faster, zero cost.</p></article>
-          <article class="card"><h3>Governance Cost</h3><div class="table-wrap"><table><thead><tr><th>Guard</th><th>Latency</th><th>Memory</th></tr></thead><tbody><tr><td>Budget Guard</td><td class="mono">&lt;1ms</td><td class="mono">~100 bytes</td></tr><tr><td>Permission Guard</td><td class="mono">&lt;1ms</td><td class="mono">~200 bytes</td></tr><tr><td>Audit Trail</td><td class="mono">~2ms</td><td class="mono">~1KB/entry</td></tr><tr><td>Kill Switch</td><td class="mono">&lt;1ms</td><td class="mono">~50 bytes</td></tr><tr class="hl"><td>Full Stack</td><td class="mono">&lt;5ms</td><td class="mono">Negligible</td></tr></tbody></table></div><p>Enterprise compliance at near-zero performance cost.</p></article>
+          <article class="card"><h3>Evaluation Accuracy</h3><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Spearman ρ</th></tr></thead><tbody><tr><td>BLEU</td><td class="mono">0.406</td></tr><tr><td>ROUGE-L</td><td class="mono">0.477</td></tr><tr><td>Embedding Similarity</td><td class="mono">0.600</td></tr><tr class="hl"><td>Combined (overall_score)</td><td class="mono">0.562</td></tr></tbody></table></div><p>Hand-labeled agent responses (N=50). Reproduce with <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">benchmarks/run_benchmarks.py</code>.</p></article>
+          <article class="card"><h3>RAG Embeddings</h3><p>Three interchangeable backends via <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">get_embeddings()</code>:</p><p><strong>OpenAI</strong> — <code>text-embedding-3-small</code> via API for hosted, highest-quality retrieval when data can leave your network.</p><p><strong>all-MiniLM-L6-v2</strong> — local sentence-transformers inference; private, no API key, runs on CPU.</p><p><strong>TF-IDF + SVD</strong> — pure-Python fallback with zero external dependencies for air-gapped or minimal installs.</p></article>
+          <article class="card"><h3>Governance Overhead</h3><div class="table-wrap"><table><thead><tr><th>Feature</th><th>Median (ms)</th><th>P95 (ms)</th></tr></thead><tbody><tr><td>Budget guard</td><td class="mono">0.000167</td><td class="mono">0.000209</td></tr><tr><td>Permission guard</td><td class="mono">0.000084</td><td class="mono">0.000125</td></tr><tr><td>Audit trail logging</td><td class="mono">0.000791</td><td class="mono">0.000875</td></tr><tr class="hl"><td>Full governance</td><td class="mono">0.02</td><td class="mono">0.03</td></tr></tbody></table></div><p>Measured with <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">time.perf_counter</code> over 10000 iterations per feature.</p></article>
         </div>
       </div>
     </section>
@@ -244,7 +245,7 @@
           <div class="pipe-box"><b>Tool Accuracy</b>Weight: 15% · Correct tool usage</div>
           <div class="pipe-box"><b>LLM Judge</b>Weight: 15% · Qualitative assessment</div>
         </div>
-        <div class="pipe-result">Overall: 0.91 ρ</div>
+        <div class="pipe-result">Combined: 0.562 ρ (N=50)</div>
         <div class="code-block" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.sandbox.metrics <span class="tok-k">import</span> <span class="tok-f">evaluate_response</span>
 
 report = <span class="tok-f">evaluate_response</span>(
@@ -253,7 +254,7 @@ report = <span class="tok-f">evaluate_response</span>(
     tools_called=[<span class="tok-s">"calculator"</span>],
     expected_tools=[<span class="tok-s">"calculator"</span>],
 )
-<span class="tok-c"># BLEU: 0.31 | ROUGE-L: 0.45 | Semantic: 0.82 | Overall: 0.87</span></pre></div>
+<span class="tok-c"># See benchmarks/run_benchmarks.py for measured correlations (N=50)</span></pre></div>
       </div>
     </section>
 
@@ -263,9 +264,9 @@ report = <span class="tok-f">evaluate_response</span>(
         <h2>Three ways to embed</h2>
         <p>From zero-cost baseline to best-in-class API</p>
         <div class="embed-grid">
-          <article class="card"><div class="label">Baseline</div><h3>TF-IDF + SVD</h3><div class="stat-num">2ms</div><p>Zero dependencies. Pure Python. Surprisingly competitive for keyword-heavy queries.</p><span class="pill">Zero Cost</span><span class="pill">Air-Gapped</span><span class="pill">No GPU</span></article>
-          <article class="card" style="border-top:3px solid var(--accent)"><div class="label" style="color:var(--accent)">Recommended</div><h3>Sentence Transformers</h3><div class="stat-num">15ms</div><p>Local inference with all-MiniLM-L6-v2. 95% of OpenAI quality at zero cost. No data leaves your machine.</p><span class="pill">95% Quality</span><span class="pill">Private</span><span class="pill">Free</span></article>
-          <article class="card"><div class="label">Premium</div><h3>OpenAI Embeddings</h3><div class="stat-num">120ms</div><p>text-embedding-3-small via API. Best quality. Batching and caching built in.</p><span class="pill">Best Quality</span><span class="pill">Simple Setup</span></article>
+          <article class="card"><div class="label">Baseline</div><h3>TF-IDF + SVD</h3><p>Zero dependencies. Pure Python. Lightweight fallback for keyword-heavy queries and air-gapped installs.</p><span class="pill">Zero Cost</span><span class="pill">Air-Gapped</span><span class="pill">No GPU</span></article>
+          <article class="card" style="border-top:3px solid var(--accent)"><div class="label" style="color:var(--accent)">Recommended</div><h3>Sentence Transformers</h3><p>Local inference with all-MiniLM-L6-v2. Private, no API key required — no data leaves your machine.</p><span class="pill">Local</span><span class="pill">Private</span><span class="pill">No API Key</span></article>
+          <article class="card"><div class="label">Premium</div><h3>OpenAI Embeddings</h3><p>text-embedding-3-small via API. Hosted embeddings with batching and caching built in.</p><span class="pill">Hosted</span><span class="pill">Simple Setup</span></article>
         </div>
         <div class="code-block" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.rag.embeddings <span class="tok-k">import</span> <span class="tok-f">get_embeddings</span>
 
