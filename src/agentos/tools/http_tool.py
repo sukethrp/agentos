@@ -35,7 +35,6 @@ def create_api_tool(
 
     The agent provides parameter values, and the tool makes the HTTP request.
     """
-    # Build parameter list from templates
     params = []
     all_placeholders = set()
 
@@ -68,7 +67,6 @@ def create_api_tool(
 
     def api_caller(**kwargs) -> str:
         try:
-            # Fill in templates
             final_params = {}
             if params_template:
                 for k, v in params_template.items():
@@ -88,7 +86,6 @@ def create_api_tool(
                     else:
                         final_body[k] = v
 
-            # Make request
             with httpx.Client(timeout=timeout) as client:
                 if method.upper() == "GET":
                     resp = client.get(url, params=final_params, headers=headers or {})
@@ -108,13 +105,11 @@ def create_api_tool(
                 resp.raise_for_status()
                 data = resp.json()
 
-                # Parse response if parser specified
                 if response_parser:
                     for key in response_parser.split("."):
                         if isinstance(data, dict):
                             data = data.get(key, data)
 
-                # Return readable response
                 if isinstance(data, dict):
                     return json.dumps(data, indent=2)[:1000]
                 elif isinstance(data, list):

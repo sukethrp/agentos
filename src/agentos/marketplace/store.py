@@ -22,7 +22,6 @@ class MarketplaceStore:
         self._load()
 
     # ------------------------------------------------------------------
-    # Persistence
     # ------------------------------------------------------------------
 
     def _load(self) -> None:
@@ -46,7 +45,6 @@ class MarketplaceStore:
             )
 
     # ------------------------------------------------------------------
-    # Publish
     # ------------------------------------------------------------------
 
     def publish(
@@ -56,7 +54,7 @@ class MarketplaceStore:
         author: str = "anonymous",
         version: str = "1.0.0",
         category: str = "general",
-        icon: str = "🤖",
+        icon: str = "",
         tags: list[str] | None = None,
         price: float = 0.0,
         config: AgentConfig | dict | None = None,
@@ -83,7 +81,6 @@ class MarketplaceStore:
         return agent
 
     # ------------------------------------------------------------------
-    # Query
     # ------------------------------------------------------------------
 
     def get(self, agent_id: str) -> MarketplaceAgent | None:
@@ -164,7 +161,6 @@ class MarketplaceStore:
         return agent
 
     # ------------------------------------------------------------------
-    # Reviews
     # ------------------------------------------------------------------
 
     def review(
@@ -183,7 +179,6 @@ class MarketplaceStore:
         return r
 
     # ------------------------------------------------------------------
-    # Delete
     # ------------------------------------------------------------------
 
     def delete(self, agent_id: str) -> bool:
@@ -194,7 +189,6 @@ class MarketplaceStore:
         return False
 
     # ------------------------------------------------------------------
-    # Stats
     # ------------------------------------------------------------------
 
     def stats(self) -> dict:

@@ -200,7 +200,7 @@ class Agent:
         Returns:
             The LLM's final ``Message`` once it stops requesting tools.
         """
-        print(f"\n🤖 [{self.config.name}] Processing: {user_input}")
+        print(f"\n[{self.config.name}] Processing: {user_input}")
         print("-" * 60)
 
         with (
@@ -239,7 +239,7 @@ class Agent:
 
                 if not msg.tool_calls:
                     print(
-                        f"\n✅ Final Answer (${event.cost_usd:.4f}, {event.latency_ms:.0f}ms):"
+                        f"\nFinal Answer (${event.cost_usd:.4f}, {event.latency_ms:.0f}ms):"
                     )
                     print(msg.content)
                     self._print_summary()
@@ -261,7 +261,7 @@ class Agent:
 
                 # LLM wants to call tool(s) — append its response to the
                 # conversation so the next LLM call sees its own reasoning.
-                print(f"\n🔧 Step {i + 1}: Using {len(msg.tool_calls)} tool(s)")
+                print(f"\nStep {i + 1}: Using {len(msg.tool_calls)} tool(s)")
                 self.messages.append(
                     {
                         "role": "assistant",
@@ -287,7 +287,7 @@ class Agent:
                 )
                 results = self._execute_tools_batch(msg.tool_calls, exec_ctx)
                 for tc, (result_str, latency_ms) in zip(msg.tool_calls, results):
-                    print(f"   🔨 {tc.name}({tc.arguments}) → {result_str[:80]}")
+                    print(f"   {tc.name}({tc.arguments}) → {result_str[:80]}")
                     record_tool_metrics(self.config.name, tc.name, latency_ms)
                     _log.info(
                         "tool.execute",
@@ -314,7 +314,7 @@ class Agent:
                     )
 
             _log.warning("agent.run.max_iterations", extra=ctx())
-            print("⚠️ Max iterations reached")
+            print("Max iterations reached")
             return Message(role=Role.ASSISTANT, content="Could not complete the task.")
 
     def _run_stream(self, user_input: str) -> Generator[str | Message, None, None]:
@@ -576,7 +576,7 @@ class Agent:
         llm_calls = sum(1 for e in self.events if e.event_type == "llm_call")
 
         print(f"\n{'=' * 60}")
-        print("📊 Agent Run Summary")
+        print("Agent Run Summary")
         print(f"{'=' * 60}")
         print(f"   LLM calls:    {llm_calls}")
         print(f"   Tool calls:   {tool_calls}")

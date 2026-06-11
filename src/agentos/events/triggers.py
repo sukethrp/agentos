@@ -173,7 +173,6 @@ class AgentCompleteTrigger(BaseTrigger):
 
             def run(self, user_input: str, **kwargs):
                 result = self._inner.run(user_input, **kwargs)
-                # Fire the trigger
                 content = result.content if hasattr(result, "content") else str(result)
                 cost = (
                     sum(e.cost_usd for e in self._inner.events)
@@ -229,7 +228,6 @@ class FileTrigger(BaseTrigger):
 
     def start(self) -> None:
         self._running = True
-        # Seed known files
         self._known_files = self._scan()
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
@@ -255,7 +253,6 @@ class FileTrigger(BaseTrigger):
                 break
             current = self._scan()
 
-            # New files
             for path, mtime in current.items():
                 if path not in self._known_files:
                     self.bus.emit(
@@ -278,7 +275,6 @@ class FileTrigger(BaseTrigger):
                         source=f"file:{self.name}",
                     )
 
-            # Deleted files
             for path in set(self._known_files) - set(current):
                 self.bus.emit(
                     self.event_name,

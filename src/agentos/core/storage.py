@@ -11,7 +11,6 @@ Usage:
     customers = store.get("customer_list")
     report = store.get("last_report")
 
-    # List all keys
     store.list_keys()
 
     # Search
@@ -212,7 +211,7 @@ class AgentStorage:
     def print_status(self):
         s = self.stats()
         print(f"\n{'=' * 60}")
-        print(f"💾 Storage: {s['agent']} ({s['backend']})")
+        print(f"Storage: {s['agent']} ({s['backend']})")
         print(f"{'=' * 60}")
         print(f"   Keys stored: {s['total_keys']}")
         if s["keys"]:

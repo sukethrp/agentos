@@ -196,13 +196,11 @@ class EventBus:
         event = Event(name=event_name, data=data or {}, source=source)
         log = EventLog(event=event)
 
-        # Find matching listeners
         with self._lock:
             matching = [
                 lst for lst in self._listeners if lst.matches(event_name)
             ]
 
-        # Run raw callbacks
         for pattern, cb in self._callbacks:
             if pattern == event_name or fnmatch.fnmatch(event_name, pattern):
                 try:
@@ -210,7 +208,6 @@ class EventBus:
                 except Exception:
                     pass
 
-        # Run agent listeners in background threads
         for listener in matching:
             log.listeners_triggered += 1
             thread = threading.Thread(

@@ -95,8 +95,8 @@ DASHBOARD_HTML = """
 <body>
 
 <div class="header">
-  <h1>🤖 AgentOS Monitor</h1>
-  <div class="status">● Live — Auto-refreshing every 3s</div>
+  <h1>AgentOS Monitor</h1>
+  <div class="status"> Live — Auto-refreshing every 3s</div>
 </div>
 
 <div class="grid" id="overview">

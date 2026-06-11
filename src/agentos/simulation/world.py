@@ -100,7 +100,7 @@ class SimulatedWorld:
         )
 
         if not cfg.quiet:
-            print("\n🌐 Simulation World Starting")
+            print("\nSimulation World Starting")
             print(f"   Agent: {getattr(self.agent, 'config', {})}")
             print(f"   {describe_pattern(traffic_cfg)}")
             print(f"   Concurrency: {cfg.concurrency}")
@@ -112,7 +112,6 @@ class SimulatedWorld:
         self._running = True
         start = time.time()
 
-        # Build the work queue: (delay, interaction_id, persona, query)
         work_items: list[tuple[float, int, Persona, str]] = []
         traffic = list(generate_traffic(traffic_cfg))
         for delay, idx in traffic:
@@ -120,7 +119,6 @@ class SimulatedWorld:
             query = persona.generate_query()
             work_items.append((delay, idx, persona, query))
 
-        # Dispatch with concurrency limit
         with ThreadPoolExecutor(max_workers=cfg.concurrency) as pool:
             futures = {}
             for delay, idx, persona, query in work_items:
@@ -133,12 +131,11 @@ class SimulatedWorld:
                     fut.result()
                 except Exception as exc:
                     if not cfg.quiet:
-                        print(f"  ⚠️  Interaction error: {exc}")
+                        print(f"  Interaction error: {exc}")
 
         elapsed = time.time() - start
         self._running = False
 
-        # Build difficulty map for the report
         diff_map = {p.name: p.difficulty for p in ALL_PERSONAS}
 
         report = build_report(
@@ -187,7 +184,6 @@ class SimulatedWorld:
                 result.response = (
                     msg.content or "" if hasattr(msg, "content") else str(msg)
                 )
-                # Gather cost/token info from agent events
                 if hasattr(self.agent, "events"):
                     for ev in self.agent.events:
                         result.tokens_used += getattr(ev, "tokens_used", 0)
@@ -199,7 +195,6 @@ class SimulatedWorld:
 
         result.latency_ms = (time.time() - t0) * 1000
 
-        # Evaluate
         self.evaluator.evaluate(result)
 
         with self._lock:
@@ -213,7 +208,7 @@ class SimulatedWorld:
                 pass
 
         if not self.config.quiet:
-            status = "✅" if result.passed else ("❌" if result.error else "⚠️")
+            status = "" if result.passed else ("" if result.error else "")
             print(
                 f"  {status} [{idx:3d}] {persona.name:<28} "
                 f"quality={result.overall:.1f}  "

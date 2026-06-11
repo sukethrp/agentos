@@ -74,7 +74,7 @@ class Diagnosis:
         }
 
     def summary_text(self) -> str:
-        icon = {"pass": "✅", "warn": "⚠️", "fail": "❌"}
+        icon = {"pass": "", "warn": "", "fail": ""}
         lines = [
             "=" * 60,
             f"  DIAGNOSIS — Trace {self.trace_id}",
@@ -111,7 +111,6 @@ def _check_context(trace: Trace) -> CheckResult:
         cr.evidence = {"system_prompt_length": 0}
         return cr
 
-    # Check the first LLM call's message snapshot
     llm_steps = [s for s in trace.steps if s.step_type == StepType.LLM_CALL]
     if not llm_steps:
         cr.severity = Severity.FAIL
@@ -174,7 +173,6 @@ def _check_tool_selection(trace: Trace) -> CheckResult:
             cr.title = "No tools available or needed"
         return cr
 
-    # Check for not-found tools
     missing = [s for s in tool_steps if s.tool_not_found]
     if missing:
         cr.severity = Severity.FAIL
@@ -265,7 +263,6 @@ def _check_interpretation(trace: Trace) -> CheckResult:
     # any of it appears in the final answer
     data_fragments: list[str] = []
     for s in tool_steps:
-        # Extract numbers and capitalized words from tool results as "facts"
         numbers = re.findall(r"\d+\.?\d*", s.tool_result)
         data_fragments.extend(numbers[:5])
         caps = re.findall(r"[A-Z][a-z]+(?:\s[A-Z][a-z]+)*", s.tool_result)
@@ -312,7 +309,6 @@ def _check_faithfulness(trace: Trace) -> CheckResult:
 
     response = final_steps[-1].response_text
 
-    # Check for obvious hallucination markers
     hallucination_markers = [
         "I don't have access",
         "I cannot",
@@ -324,7 +320,6 @@ def _check_faithfulness(trace: Trace) -> CheckResult:
         1 for m in hallucination_markers if m.lower() in response.lower()
     )
 
-    # Check response quality
     if not response.strip():
         cr.severity = Severity.FAIL
         cr.title = "Empty response"
@@ -382,7 +377,6 @@ def diagnose(trace: Trace) -> Diagnosis:
         result = check_fn(trace)
         diag.checks.append(result)
 
-    # Determine overall severity and root cause
     fails = [c for c in diag.checks if c.severity == Severity.FAIL]
     warns = [c for c in diag.checks if c.severity == Severity.WARN]
 

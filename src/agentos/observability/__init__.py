@@ -32,24 +32,20 @@ from agentos.observability.replay import (
 )
 
 __all__ = [
-    # Tracer
     "StepType",
     "Trace",
     "TraceBuilder",
     "TraceStep",
     "TraceStore",
     "get_trace_store",
-    # Diagnostics
     "CheckResult",
     "Diagnosis",
     "Severity",
     "diagnose",
     "diagnose_batch",
-    # Alerts
     "AlertEngine",
     "AlertLevel",
     "SmartAlert",
-    # Replay
     "Replay",
     "ReplayFrame",
     "build_replay",

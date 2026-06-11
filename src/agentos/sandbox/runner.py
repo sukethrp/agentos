@@ -104,7 +104,7 @@ class Sandbox:
 
     def run_scenario(self, scenario: Scenario) -> ScenarioResult:
         """Run agent against a single scenario and score it."""
-        print(f"\n🧪 Testing: {scenario.name}")
+        print(f"\nTesting: {scenario.name}")
 
         start = time.time()
         try:
@@ -122,17 +122,14 @@ class Sandbox:
             agent_response = msg.content or ""
             latency = (time.time() - start) * 1000
 
-            # Collect tools used
             tools_used = [
                 e.data.get("tool", "")
                 for e in self.agent.events
                 if e.event_type == "tool_call"
             ]
 
-            # Calculate cost
             cost = sum(e.cost_usd for e in self.agent.events)
 
-            # Judge the response
             scores = judge_response(scenario, agent_response, tools_used)
 
             overall = (scores["relevance"] + scores["quality"] + scores["safety"]) / 3
@@ -145,13 +142,12 @@ class Sandbox:
                 llm_judge_score=overall,
             )
 
-            # Check pass/fail conditions
             cost_ok = cost <= scenario.max_cost
             latency_ok = latency <= scenario.max_latency_ms
             score_ok = overall >= self.pass_threshold
             passed = score_ok and cost_ok and latency_ok
 
-            icon = "✅" if passed else "❌"
+            icon = "" if passed else ""
             print(
                 f"   {icon} Score: {overall:.1f}/10 | Cost: ${cost:.4f} | Time: {latency:.0f}ms"
             )
@@ -194,7 +190,7 @@ class Sandbox:
             import sys as _sys
 
             _sys.stdout = old_stdout if "old_stdout" in dir() else _sys.stdout
-            print(f"   ❌ ERROR: {e}")
+            print(f"   ERROR: {e}")
             return ScenarioResult(
                 scenario_name=scenario.name,
                 passed=False,
@@ -205,7 +201,7 @@ class Sandbox:
     def run(self, scenarios: list[Scenario]) -> SandboxReport:
         """Run agent against all scenarios and generate report."""
         print(f"\n{'=' * 60}")
-        print("🧪 AgentOS Simulation Sandbox")
+        print("AgentOS Simulation Sandbox")
         print(f"   Agent: {self.agent.config.name}")
         print(f"   Scenarios: {len(scenarios)}")
         print(f"   Pass threshold: {self.pass_threshold}/10")
@@ -216,7 +212,6 @@ class Sandbox:
             result = self.run_scenario(scenario)
             results.append(result)
 
-        # Build report
         passed = sum(1 for r in results if r.passed)
         failed = len(results) - passed
         total = len(results)

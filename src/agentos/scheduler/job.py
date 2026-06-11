@@ -63,7 +63,6 @@ class Job:
     max_executions: int = 0  # 0 = unlimited
     created_at: float = field(default_factory=time.time)
 
-    # Runtime state
     execution_count: int = 0
     last_run: float = 0.0
     next_run: float = 0.0

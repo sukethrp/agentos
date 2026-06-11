@@ -82,7 +82,6 @@ class LearningReport:
     declining_topics: list[str] = field(default_factory=list)
     stable_topics: list[str] = field(default_factory=list)
 
-    # Chart-ready data
     quality_chart: list[dict] = field(default_factory=list)
     positive_rate_chart: list[dict] = field(default_factory=list)
 
@@ -119,9 +118,9 @@ class LearningReport:
             f"  Change             : {self.quality_change:+.2f}  {arrow}  ({self.direction})",
         ]
         if self.improving_topics:
-            lines.append(f"\n  📈 Improving: {', '.join(self.improving_topics)}")
+            lines.append(f"\n  Improving: {', '.join(self.improving_topics)}")
         if self.declining_topics:
-            lines.append(f"  📉 Declining: {', '.join(self.declining_topics)}")
+            lines.append(f"  Declining: {', '.join(self.declining_topics)}")
 
         lines.append("\n  Weekly timeline:")
         for p in self.timeline:
@@ -169,12 +168,10 @@ def build_learning_report(
     if not entries:
         return report
 
-    # Determine period length
     period_len = WEEK if period == "week" else DAY
     oldest = min(e.timestamp for e in entries)
     newest = max(e.timestamp for e in entries)
 
-    # Build timeline snapshots
     cursor = oldest
     period_num = 1
     snapshots: list[PeriodSnapshot] = []
@@ -189,7 +186,6 @@ def build_learning_report(
 
     report.timeline = snapshots
 
-    # Current vs previous period quality
     if len(snapshots) >= 2:
         report.current_avg_quality = snapshots[-1].avg_quality
         report.previous_avg_quality = snapshots[-2].avg_quality
@@ -204,7 +200,6 @@ def build_learning_report(
         report.current_avg_quality = snapshots[-1].avg_quality
         report.previous_avg_quality = snapshots[-1].avg_quality
 
-    # Chart data
     report.quality_chart = [
         {"label": s.label, "avg_quality": round(s.avg_quality, 2)} for s in snapshots
     ]
@@ -213,7 +208,6 @@ def build_learning_report(
         for s in snapshots
     ]
 
-    # Per-topic trends
     topics: set[str] = {e.topic for e in entries if e.topic}
     for topic in topics:
         topic_entries = [e for e in entries if e.topic == topic]

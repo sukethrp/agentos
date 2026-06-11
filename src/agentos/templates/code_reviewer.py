@@ -11,44 +11,41 @@ def code_analyzer(code: str) -> str:
     issues = []
     code_lower = code.lower()
 
-    # Security checks
     if "eval(" in code_lower:
         issues.append(
-            "🔴 SECURITY: Use of eval() detected — potential code injection risk"
+            "SECURITY: Use of eval() detected — potential code injection risk"
         )
     if "exec(" in code_lower:
         issues.append(
-            "🔴 SECURITY: Use of exec() detected — potential code execution risk"
+            "SECURITY: Use of exec() detected — potential code execution risk"
         )
     if "password" in code_lower and ("=" in code_lower):
-        issues.append("🔴 SECURITY: Hardcoded password detected")
+        issues.append("SECURITY: Hardcoded password detected")
     if "api_key" in code_lower and ("=" in code_lower):
-        issues.append("🟡 SECURITY: Possible hardcoded API key")
+        issues.append("SECURITY: Possible hardcoded API key")
     if "import os" in code_lower and "system(" in code_lower:
-        issues.append("🔴 SECURITY: os.system() call — potential command injection")
+        issues.append("SECURITY: os.system() call — potential command injection")
     if "sql" in code_lower and "+" in code_lower:
-        issues.append("🔴 SECURITY: Possible SQL injection via string concatenation")
+        issues.append("SECURITY: Possible SQL injection via string concatenation")
 
-    # Best practice checks
     if "except:" in code and "except Exception" not in code:
-        issues.append("🟡 PRACTICE: Bare except clause — catch specific exceptions")
+        issues.append("PRACTICE: Bare except clause — catch specific exceptions")
     if "# TODO" in code or "# FIXME" in code:
-        issues.append("🟡 PRACTICE: TODO/FIXME comments found — address before merge")
+        issues.append("PRACTICE: TODO/FIXME comments found — address before merge")
     if "print(" in code_lower and "debug" in code_lower:
-        issues.append("🟡 PRACTICE: Debug print statements — remove before production")
+        issues.append("PRACTICE: Debug print statements — remove before production")
 
-    # Code quality
     lines = code.strip().split("\n")
     if len(lines) > 50:
         issues.append(
-            f"🟡 QUALITY: Function is {len(lines)} lines — consider breaking into smaller functions"
+            f"QUALITY: Function is {len(lines)} lines — consider breaking into smaller functions"
         )
     long_lines = [i + 1 for i, line in enumerate(lines) if len(line) > 120]
     if long_lines:
-        issues.append(f"🟡 QUALITY: Lines exceeding 120 chars: {long_lines[:5]}")
+        issues.append(f"QUALITY: Lines exceeding 120 chars: {long_lines[:5]}")
 
     if not issues:
-        return "✅ No issues detected. Code looks clean!"
+        return "No issues detected. Code looks clean!"
 
     return "Code Review Results:\n" + "\n".join(issues)
 

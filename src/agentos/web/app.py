@@ -288,35 +288,35 @@ def get_templates():
                 "name": "Customer Support",
                 "description": "Handle inquiries, complaints, tickets",
                 "category": "support",
-                "icon": "🎧",
+                "icon": "",
             },
             {
                 "id": "research-assistant",
                 "name": "Research Assistant",
                 "description": "Research topics, gather data, analyze",
                 "category": "research",
-                "icon": "🔬",
+                "icon": "",
             },
             {
                 "id": "sales-agent",
                 "name": "Sales Agent",
                 "description": "Qualify leads, answer product questions",
                 "category": "sales",
-                "icon": "💼",
+                "icon": "",
             },
             {
                 "id": "code-reviewer",
                 "name": "Code Reviewer",
                 "description": "Review code for bugs and security",
                 "category": "engineering",
-                "icon": "👨‍💻",
+                "icon": "",
             },
             {
                 "id": "custom",
                 "name": "Custom Agent",
                 "description": "Build your own from scratch",
                 "category": "custom",
-                "icon": "🛠️",
+                "icon": "",
             },
         ]
     }
@@ -338,7 +338,6 @@ def run_agent(req: RunRequest, current_user: User | None = Depends(get_optional_
         temperature=req.temperature,
     )
 
-    # Capture output
     import io
     import sys
 
@@ -348,7 +347,6 @@ def run_agent(req: RunRequest, current_user: User | None = Depends(get_optional_
     terminal_output = sys.stdout.getvalue()
     sys.stdout = old
 
-    # Log events to store
     for e in agent.events:
         store.log_event(e)
 
@@ -358,7 +356,6 @@ def run_agent(req: RunRequest, current_user: User | None = Depends(get_optional_
         e.data.get("tool", "") for e in agent.events if e.event_type == "tool_call"
     ]
 
-    # Track per-user usage (only if authenticated)
     if current_user:
         usage_tracker.log_usage(current_user.id, tokens=tokens, cost=cost)
 
@@ -542,7 +539,6 @@ async def upload_file(file: UploadFile = File(...)):
             400,
         )
 
-    # Save to temp directory with a unique name
     unique_name = f"{_uuid.uuid4().hex[:8]}_{file.filename}"
     dest = _UPLOAD_DIR / unique_name
     content = await file.read()
@@ -575,7 +571,6 @@ def analyze_uploaded_file(req: AnalyzeFileRequest):
     """
     question = req.question.strip() or "Describe or summarize this content in detail."
 
-    # Handle URL-based image analysis
     from agentos.core.multimodal import is_url
 
     if is_url(req.file_path):
@@ -596,7 +591,6 @@ def analyze_uploaded_file(req: AnalyzeFileRequest):
     ext = path.suffix.lower()
 
     if ext in ALLOWED_IMAGE_EXTS:
-        # Image analysis via Vision API
         try:
             result = analyze_image(
                 image_path_or_url=str(path),
@@ -607,7 +601,6 @@ def analyze_uploaded_file(req: AnalyzeFileRequest):
         except Exception as e:
             return JSONResponse({"status": "error", "message": str(e)}, 500)
     else:
-        # Document analysis — read content, then use an LLM to answer
         try:
             content = read_document(str(path), max_chars=30_000)
             from agentos.core.agent import Agent
@@ -752,10 +745,8 @@ def chat_on_branch(req: BranchMessageRequest):
         except KeyError as e:
             return JSONResponse({"status": "error", "message": str(e)}, 404)
 
-    # Add user message
     tree.add_message("user", req.content)
 
-    # Run agent with branch history
     from agentos.core.agent import Agent
 
     agent = Agent(
@@ -763,7 +754,6 @@ def chat_on_branch(req: BranchMessageRequest):
         model="gpt-4o-mini",
         system_prompt="You are a helpful assistant.",
     )
-    # Feed the branch history into the agent's messages
     agent.messages = tree.get_messages_openai()
     agent.events = []
 
@@ -932,7 +922,7 @@ class PublishRequest(BaseModel):
     author: str = "anonymous"
     version: str = "1.0.0"
     category: str = "general"
-    icon: str = "🤖"
+    icon: str = ""
     tags: list[str] = []
     price: float = 0.0
     config: dict = {}
@@ -1266,7 +1256,6 @@ async def obs_replay(trace_id: str):
 async def obs_seed_demo():
     """Seed example traces for demonstration."""
     ts = _obs_trace_store()
-    # Healthy trace
     b = TraceBuilder(
         "demo-agent", "gpt-4o-mini", "You are a helpful assistant with tools."
     )
@@ -1300,7 +1289,6 @@ async def obs_seed_demo():
     )
     b.add_final_answer("It is currently 22C and sunny in Tokyo.")
     ts.add(b.finish())
-    # Tool error trace
     b2 = TraceBuilder(
         "demo-agent", "gpt-4o-mini", "You are a helpful assistant with tools."
     )
@@ -1320,7 +1308,6 @@ async def obs_seed_demo():
     )
     b2.add_error("Tool returned error — unreliable response")
     ts.add(b2.finish())
-    # Missing tool trace
     b3 = TraceBuilder("support-bot", "gpt-4o-mini", "You are a customer support agent.")
     b3.set_query("Check order #12345")
     b3.add_llm_call(
@@ -1693,7 +1680,6 @@ def analytics_model_comparison():
         m["total_cost"] += ev.get("cost_usd", 0.0)
         m["total_tokens"] += ev.get("tokens_used", 0)
         m["total_latency_ms"] += ev.get("latency_ms", 0.0)
-    # Attach quality scores from agent data
     for agent_data in store.agents.values():
         for qs in agent_data.get("quality_scores", []):
             # Attempt to attribute to last-used model (best effort)
@@ -1730,11 +1716,9 @@ def analytics_agent_leaderboard():
                 "total_events": a["total_events"],
             }
         )
-    # Sort: quality first (desc), then by queries (desc)
     leaderboard.sort(
         key=lambda x: (x["avg_quality"] or 0, x["total_queries"]), reverse=True
     )
-    # Compute summary totals
     total_spend = round(sum(a["total_cost"] for a in store.agents.values()), 6)
     total_queries = sum(a.get("total_llm_calls", 0) for a in store.agents.values())
     avg_cost = round(total_spend / max(total_queries, 1), 6)
@@ -2031,32 +2015,32 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 </div>
 <div class="sidebar">
 <h3>Build</h3>
-<div class="nav-item active" onclick="showPanel('builder',this)">🛠️ Agent Builder</div>
-<div class="nav-item" onclick="showPanel('templates',this)">📦 Templates</div>
+<div class="nav-item active" onclick="showPanel('builder',this)">Agent Builder</div>
+<div class="nav-item" onclick="showPanel('templates',this)">Templates</div>
 <h3>Operate</h3>
-<div class="nav-item" onclick="showPanel('chat',this)">💬 Chat</div>
-<div class="nav-item" onclick="showPanel('branching',this)">🌿 Branching</div>
-<div class="nav-item" onclick="showPanel('monitor',this)">📊 Monitor</div>
-<div class="nav-item" onclick="showPanel('analytics',this)">📈 Analytics</div>
-<div class="nav-item" onclick="showPanel('scheduler',this)">⏰ Scheduler</div>
-<div class="nav-item" onclick="showPanel('events',this)">⚡ Events</div>
-<div class="nav-item" onclick="showPanel('abtest',this)">🧪 A/B Testing</div>
-<div class="nav-item" onclick="showPanel('multimodal',this)">👁️ Multi-modal</div>
+<div class="nav-item" onclick="showPanel('chat',this)">Chat</div>
+<div class="nav-item" onclick="showPanel('branching',this)">Branching</div>
+<div class="nav-item" onclick="showPanel('monitor',this)">Monitor</div>
+<div class="nav-item" onclick="showPanel('analytics',this)">Analytics</div>
+<div class="nav-item" onclick="showPanel('scheduler',this)">Scheduler</div>
+<div class="nav-item" onclick="showPanel('events',this)">Events</div>
+<div class="nav-item" onclick="showPanel('abtest',this)">A/B Testing</div>
+<div class="nav-item" onclick="showPanel('multimodal',this)">Multi-modal</div>
 <h3>Manage</h3>
-<div class="nav-item" onclick="showPanel('auth',this)">🔑 Account & Usage</div>
-<div class="nav-item" onclick="showPanel('marketplace',this)">🏪 Marketplace</div>
-<div class="nav-item" onclick="showPanel('embed',this)">🔌 Embed SDK</div>
-<div class="nav-item" onclick="showPanel('mesh',this)">🔗 Agent Mesh</div>
-<div class="nav-item" onclick="showPanel('simulation',this)">🌐 Simulation</div>
-<div class="nav-item" onclick="showPanel('learning',this)">🧠 Learning</div>
-<div class="nav-item" onclick="showPanel('observability',this)">🔍 RCA</div>
+<div class="nav-item" onclick="showPanel('auth',this)">Account & Usage</div>
+<div class="nav-item" onclick="showPanel('marketplace',this)">Marketplace</div>
+<div class="nav-item" onclick="showPanel('embed',this)">Embed SDK</div>
+<div class="nav-item" onclick="showPanel('mesh',this)">Agent Mesh</div>
+<div class="nav-item" onclick="showPanel('simulation',this)">Simulation</div>
+<div class="nav-item" onclick="showPanel('learning',this)">Learning</div>
+<div class="nav-item" onclick="showPanel('observability',this)">RCA</div>
 </div>
 <div class="main">
 
 <!-- AGENT BUILDER -->
 <div class="panel active" id="panel-builder">
 <div class="card">
-<h2>🛠️ Build Your Agent</h2>
+<h2>Build Your Agent</h2>
 <label>Agent Name</label>
 <input type="text" id="b-name" value="my-agent" placeholder="my-agent">
 <label>Model</label>
@@ -2070,12 +2054,12 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <textarea id="b-prompt" placeholder="You are a helpful assistant...">You are a helpful assistant. Use tools when needed to answer accurately.</textarea>
 <label>Tools (click to enable)</label>
 <div class="tools-grid">
-<div class="tool-tag selected" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
-<div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
-<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
-<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">👁️ Vision</div>
-<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">📄 Doc Reader</div>
-<div class="tool-tag" data-tool="analyze_document" onclick="toggleTool(this)">📑 Doc Q&A</div>
+<div class="tool-tag selected" data-tool="calculator" onclick="toggleTool(this)">Calculator</div>
+<div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">Weather</div>
+<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">Web Search</div>
+<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">Vision</div>
+<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">Doc Reader</div>
+<div class="tool-tag" data-tool="analyze_document" onclick="toggleTool(this)">Doc Q&A</div>
 </div>
 <label>Temperature (creativity: 0=focused, 1=creative)</label>
 <input type="range" id="b-temp" min="0" max="1" step="0.1" value="0.7" oninput="document.getElementById('temp-val').textContent=this.value">
@@ -2085,7 +2069,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <div style="margin-top:24px">
 <label>Try Your Agent</label>
 <input type="text" id="b-query" placeholder="Ask your agent something..." onkeydown="if(event.key==='Enter')runBuilder()">
-<button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="runBuilder()" id="run-btn">▶️ Run Agent</button>
+<button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="runBuilder()" id="run-btn">Run Agent</button>
 </div>
 <div id="b-response" style="display:none">
 <label>Response</label>
@@ -2098,7 +2082,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <!-- TEMPLATES -->
 <div class="panel" id="panel-templates">
 <div class="card">
-<h2>📦 Agent Templates</h2>
+<h2>Agent Templates</h2>
 <p style="color:#888;margin-bottom:16px">Pre-built agents ready to deploy. Click one to load it into the builder.</p>
 <div class="templates-grid" id="templates-list"></div>
 </div>
@@ -2107,7 +2091,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <!-- CHAT -->
 <div class="panel" id="panel-chat">
 <div class="card" style="height:calc(100vh - 140px);display:flex;flex-direction:column">
-<h2>💬 Agent Chat</h2>
+<h2>Agent Chat</h2>
 <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px 0"></div>
 <div style="display:flex;gap:8px">
 <input type="text" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()" style="flex:1">
@@ -2120,7 +2104,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <div class="panel" id="panel-branching">
 <div class="card" style="height:calc(100vh - 140px);display:flex;flex-direction:column">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-<h2>🌿 Branching Chat</h2>
+<h2>Branching Chat</h2>
 <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="brNewTree()">+ New Conversation</button>
 </div>
 <p style="color:#888;font-size:13px;margin-bottom:8px">Explore "what if" scenarios by forking conversations. Click the fork icon on any message to create a branch.</p>
@@ -2254,7 +2238,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 </div>
 <!-- Publish form -->
 <div class="card">
-<h2>➕ Publish Your Agent</h2>
+<h2>Publish Your Agent</h2>
 <p style="color:#888;margin-bottom:12px">Share your agent configuration with the community.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
@@ -2278,7 +2262,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <option value="productivity">Productivity</option>
 </select>
 <label>Icon (emoji)</label>
-<input type="text" id="mp-pub-icon" value="🤖" style="width:60px">
+<input type="text" id="mp-pub-icon" value="" style="width:60px">
 <label>Tags (comma-separated)</label>
 <input type="text" id="mp-pub-tags" placeholder="ai, chatbot, support">
 <label>Price ($0 = free)</label>
@@ -2296,13 +2280,13 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 </select>
 <label>Tools</label>
 <div class="tools-grid" id="mp-pub-tools">
-<div class="tool-tag" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
-<div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
-<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
-<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">👁️ Vision</div>
-<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">📄 Doc Reader</div>
+<div class="tool-tag" data-tool="calculator" onclick="toggleTool(this)">Calculator</div>
+<div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">Weather</div>
+<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">Web Search</div>
+<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">Vision</div>
+<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">Doc Reader</div>
 </div>
-<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="mpPublish()">🚀 Publish to Marketplace</button>
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="mpPublish()">Publish to Marketplace</button>
 <div id="mp-pub-status" style="margin-top:8px;font-size:13px;color:#888"></div>
 </div>
 <!-- Detail / review overlay (hidden) -->
@@ -2327,7 +2311,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <!-- EMBED SDK -->
 <div class="panel" id="panel-embed">
 <div class="card">
-<h2>🔌 Embeddable Chat Widget</h2>
+<h2>Embeddable Chat Widget</h2>
 <p style="color:#888;margin-bottom:16px">Generate an embeddable widget so other companies can add AgentOS agents to their websites with a single script tag.</p>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -2366,15 +2350,15 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 </div>
 
 <div class="card" id="emb-output" style="display:none">
-<h2>📋 Embed Code</h2>
+<h2>Embed Code</h2>
 <p style="color:#888;margin-bottom:8px">Copy this snippet and paste it into any HTML page, just before <code>&lt;/body&gt;</code>:</p>
 <pre id="emb-snippet" style="background:rgba(6,6,14,0.6);padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;border:1px solid rgba(255,255,255,0.06);color:#10b981;max-height:260px;overflow-y:auto"></pre>
-<button class="btn btn-secondary" style="margin-top:8px" onclick="embCopy()">📋 Copy to Clipboard</button>
+<button class="btn btn-secondary" style="margin-top:8px" onclick="embCopy()">Copy to Clipboard</button>
 <span id="emb-copy-status" style="margin-left:8px;font-size:13px;color:#888"></span>
 </div>
 
 <div class="card">
-<h2>🐍 Python SDK</h2>
+<h2>Python SDK</h2>
 <p style="color:#888;margin-bottom:8px">Use the Python SDK to integrate AgentOS into any backend:</p>
 <pre style="background:rgba(6,6,14,0.6);padding:16px;border-radius:8px;font-size:13px;overflow-x:auto;white-space:pre-wrap;border:1px solid rgba(255,255,255,0.06);color:#e0e0e0">from agentos.embed import AgentOSClient
 
@@ -2401,7 +2385,7 @@ for a in agents:
 <!-- AGENT MESH -->
 <div class="panel" id="panel-mesh">
 <div class="card">
-<h2>🔗 Agent-to-Agent Mesh</h2>
+<h2>Agent-to-Agent Mesh</h2>
 <p style="color:#888;margin-bottom:16px">Discover, authenticate, negotiate, and transact with agents across organisations using the mesh protocol.</p>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
@@ -2427,7 +2411,7 @@ for a in agents:
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <!-- Registry -->
 <div class="card">
-<h2>📡 Registry</h2>
+<h2>Registry</h2>
 <p style="color:#888;margin-bottom:12px;font-size:13px">Agents registered in the mesh network.</p>
 <div style="display:flex;gap:8px;margin-bottom:12px">
 <input type="text" id="mesh-search" placeholder="Search agents…" style="flex:1" oninput="meshSearchRegistry()">
@@ -2438,7 +2422,7 @@ for a in agents:
 
 <!-- Register -->
 <div class="card">
-<h2>➕ Register Agent</h2>
+<h2>Register Agent</h2>
 <p style="color:#888;margin-bottom:12px;font-size:13px">Add a new agent to the mesh network.</p>
 <label>Mesh ID</label>
 <input type="text" id="mesh-reg-id" placeholder="sales-bot@acme.com">
@@ -2457,7 +2441,7 @@ for a in agents:
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
 <!-- Ping / Negotiate -->
 <div class="card">
-<h2>💬 Send Message</h2>
+<h2>Send Message</h2>
 <p style="color:#888;margin-bottom:12px;font-size:13px">Send a mesh protocol message to another agent.</p>
 <label>Sender Mesh ID</label>
 <input type="text" id="mesh-msg-sender" placeholder="my-bot@myorg.com">
@@ -2480,7 +2464,7 @@ for a in agents:
 
 <!-- Transactions -->
 <div class="card">
-<h2>📜 Transactions</h2>
+<h2>Transactions</h2>
 <p style="color:#888;margin-bottom:12px;font-size:13px">Ledger of all mesh transactions.</p>
 <div id="mesh-tx-list" style="max-height:300px;overflow-y:auto"></div>
 </div>
@@ -2488,7 +2472,7 @@ for a in agents:
 
 <!-- Message log -->
 <div class="card" style="margin-top:16px">
-<h2>📋 Message Log</h2>
+<h2>Message Log</h2>
 <div id="mesh-log" style="background:rgba(6,6,14,0.6);padding:16px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);max-height:300px;overflow-y:auto;font-family:monospace;font-size:12px;white-space:pre-wrap;color:#e0e0e0">No messages yet.</div>
 </div>
 </div>
@@ -2496,7 +2480,7 @@ for a in agents:
 <!-- SIMULATION WORLD -->
 <div class="panel" id="panel-simulation">
 <div class="card">
-<h2>🌐 Agent Simulation World</h2>
+<h2>Agent Simulation World</h2>
 <p style="color:#888;margin-bottom:16px">Stress-test your agent with realistic simulated customers. Generate 50-100 concurrent interactions from different personas, then review quality scores and failure analysis.</p>
 
 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
@@ -2526,7 +2510,7 @@ for a in agents:
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <!-- Config -->
 <div class="card">
-<h2>⚙️ Configure Simulation</h2>
+<h2>Configure Simulation</h2>
 <label>Total Interactions</label>
 <input type="number" id="sim-total" value="50" min="10" max="200">
 <label>Concurrency (threads)</label>
@@ -2544,7 +2528,7 @@ for a in agents:
 <label>Pass Threshold (1-10)</label>
 <input type="number" id="sim-threshold" value="6" min="1" max="10" step="0.5">
 <div style="display:flex;gap:8px;margin-top:16px">
-<button class="btn btn-primary" style="flex:1" id="sim-run-btn" onclick="simRun()">▶ Run Simulation</button>
+<button class="btn btn-primary" style="flex:1" id="sim-run-btn" onclick="simRun()"> Run Simulation</button>
 </div>
 <div id="sim-progress-wrap" style="display:none;margin-top:12px">
 <div style="background:#1e1e3a;border-radius:6px;height:8px;overflow:hidden">
@@ -2556,7 +2540,7 @@ for a in agents:
 
 <!-- Persona Breakdown -->
 <div class="card">
-<h2>👥 Persona Breakdown</h2>
+<h2>Persona Breakdown</h2>
 <div id="sim-persona-list" style="max-height:380px;overflow-y:auto">
 <div style="color:#888;font-size:13px">Run a simulation to see per-persona results.</div>
 </div>
@@ -2566,20 +2550,20 @@ for a in agents:
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
 <!-- Score Distribution -->
 <div class="card">
-<h2>📊 Score Distribution</h2>
+<h2>Score Distribution</h2>
 <div id="sim-score-dist" style="min-height:120px"><div style="color:#888;font-size:13px">No data yet.</div></div>
 </div>
 
 <!-- Failure Analysis -->
 <div class="card">
-<h2>🔍 Failure Analysis</h2>
+<h2>Failure Analysis</h2>
 <div id="sim-failures" style="max-height:200px;overflow-y:auto"><div style="color:#888;font-size:13px">No failures yet.</div></div>
 </div>
 </div>
 
 <!-- Worst interactions -->
 <div class="card" style="margin-top:16px">
-<h2>⚠️ Worst Interactions</h2>
+<h2>Worst Interactions</h2>
 <div id="sim-worst" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">Run a simulation to see results.</div></div>
 </div>
 </div>
@@ -2587,7 +2571,7 @@ for a in agents:
 <!-- LEARNING SYSTEM -->
 <div class="panel" id="panel-learning">
 <div class="card">
-<h2>🧠 Agent Learning System</h2>
+<h2>Agent Learning System</h2>
 <p style="color:#888;margin-bottom:16px">Collect user feedback, analyze failure patterns, auto-optimise prompts, and build few-shot examples — all without fine-tuning.</p>
 
 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
@@ -2617,18 +2601,18 @@ for a in agents:
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <!-- Submit Feedback -->
 <div class="card">
-<h2>📝 Submit Feedback</h2>
+<h2>Submit Feedback</h2>
 <label>Query (what the user asked)</label>
 <input type="text" id="lrn-query" placeholder="How do I get a refund?">
 <label>Agent Response</label>
 <textarea id="lrn-response" rows="2" placeholder="The agent's response…"></textarea>
 <label>Feedback Type</label>
 <select id="lrn-type" onchange="document.getElementById('lrn-extra').style.display=['correction','rating','comment'].includes(this.value)?'block':'none'">
-<option value="thumbs_up">👍 Thumbs Up</option>
-<option value="thumbs_down">👎 Thumbs Down</option>
-<option value="rating">⭐ Star Rating</option>
-<option value="correction">✏️ Correction</option>
-<option value="comment">💬 Comment</option>
+<option value="thumbs_up">Thumbs Up</option>
+<option value="thumbs_down">Thumbs Down</option>
+<option value="rating"> Star Rating</option>
+<option value="correction">Correction</option>
+<option value="comment">Comment</option>
 </select>
 <div id="lrn-extra" style="display:none;margin-top:8px">
 <label id="lrn-extra-label">Detail</label>
@@ -2639,34 +2623,34 @@ for a in agents:
 
 <!-- Topic Analysis -->
 <div class="card">
-<h2>📊 Topic Analysis</h2>
+<h2>Topic Analysis</h2>
 <p style="color:#888;font-size:13px;margin-bottom:8px">Which topics does the agent handle well (or poorly)?</p>
 <div id="lrn-topics" style="max-height:320px;overflow-y:auto"><div style="color:#888;font-size:13px">Submit feedback or click Analyze to see results.</div></div>
-<button class="btn btn-secondary" style="margin-top:8px;width:100%" onclick="lrnAnalyze()">🔍 Analyze Patterns</button>
+<button class="btn btn-secondary" style="margin-top:8px;width:100%" onclick="lrnAnalyze()">Analyze Patterns</button>
 </div>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
 <!-- Prompt Patches -->
 <div class="card">
-<h2>🔧 Prompt Patches</h2>
+<h2>Prompt Patches</h2>
 <p style="color:#888;font-size:13px;margin-bottom:8px">Auto-generated prompt improvements for weak areas.</p>
 <div id="lrn-patches" style="max-height:320px;overflow-y:auto"><div style="color:#888;font-size:13px">Run analysis to generate patches.</div></div>
-<button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="lrnOptimize()">⚡ Generate Patches</button>
+<button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="lrnOptimize()">Generate Patches</button>
 </div>
 
 <!-- Few-Shot Examples -->
 <div class="card">
-<h2>📚 Few-Shot Examples</h2>
+<h2>Few-Shot Examples</h2>
 <p style="color:#888;font-size:13px;margin-bottom:8px">Best interactions auto-selected as in-context examples.</p>
 <div id="lrn-fewshot" style="max-height:320px;overflow-y:auto"><div style="color:#888;font-size:13px">Build examples from positive feedback.</div></div>
-<button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="lrnBuildFewShot()">📖 Build Examples</button>
+<button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="lrnBuildFewShot()">Build Examples</button>
 </div>
 </div>
 
 <!-- Learning Progress -->
 <div class="card" style="margin-top:16px">
-<h2>📈 Learning Progress</h2>
+<h2>Learning Progress</h2>
 <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
 <span id="lrn-direction" style="font-size:18px;font-weight:700;color:#888">-</span>
 <span id="lrn-change" style="font-size:14px;color:#888"></span>
@@ -2679,7 +2663,7 @@ for a in agents:
 
 <!-- Recent Feedback -->
 <div class="card" style="margin-top:16px">
-<h2>🕐 Recent Feedback</h2>
+<h2>Recent Feedback</h2>
 <div id="lrn-recent" style="max-height:250px;overflow-y:auto"><div style="color:#888;font-size:13px">No feedback yet.</div></div>
 </div>
 </div>
@@ -2687,7 +2671,7 @@ for a in agents:
 <!-- OBSERVABILITY / RCA -->
 <div class="panel" id="panel-observability">
 <div class="card">
-<h2>🔍 Root Cause Analysis</h2>
+<h2>Root Cause Analysis</h2>
 <p style="color:#888;margin-bottom:16px">Deep tracing, 5-point diagnostics, smart causal alerts, and step-by-step replay of agent interactions.</p>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
@@ -2708,34 +2692,34 @@ for a in agents:
 <div style="font-size:11px;color:#888;margin-top:2px">Alerts</div>
 </div>
 </div>
-<button class="btn btn-secondary" onclick="rcaRefresh()" style="margin-bottom:8px">🔄 Refresh</button>
+<button class="btn btn-secondary" onclick="rcaRefresh()" style="margin-bottom:8px">Refresh</button>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <!-- Alerts -->
 <div class="card">
-<h2>🚨 Smart Alerts</h2>
+<h2>Smart Alerts</h2>
 <p style="color:#888;font-size:13px;margin-bottom:8px">Causal alerts that explain WHY something is wrong.</p>
 <div id="rca-alerts" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">Click Refresh to check for alerts.</div></div>
 </div>
 
 <!-- Recent Traces -->
 <div class="card">
-<h2>📋 Recent Traces</h2>
+<h2>Recent Traces</h2>
 <div id="rca-traces" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">No traces yet.</div></div>
 </div>
 </div>
 
 <!-- Replay Viewer -->
 <div class="card" style="margin-top:16px">
-<h2>🔄 Interaction Replay</h2>
+<h2>Interaction Replay</h2>
 <p style="color:#888;font-size:13px;margin-bottom:8px">Click a failed trace above to replay it step-by-step.</p>
 <div id="rca-replay" style="min-height:80px"><div style="color:#888;font-size:13px">Select a trace to replay.</div></div>
 </div>
 
 <!-- Diagnosis Detail -->
 <div class="card" style="margin-top:16px">
-<h2>🩺 5-Point Diagnosis</h2>
+<h2>5-Point Diagnosis</h2>
 <div id="rca-diagnosis" style="min-height:60px"><div style="color:#888;font-size:13px">Select a trace to see its diagnosis.</div></div>
 </div>
 </div>
@@ -2743,7 +2727,7 @@ for a in agents:
 <!-- SCHEDULER -->
 <div class="panel" id="panel-scheduler">
 <div class="card">
-<h2>⏰ Agent Scheduler</h2>
+<h2>Agent Scheduler</h2>
 <p style="color:#888;margin-bottom:16px">Schedule agents to run automatically at intervals or cron times.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
@@ -2781,17 +2765,17 @@ for a in agents:
 </div>
 <label>Tools</label>
 <div class="tools-grid">
-<div class="tool-tag" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
-<div class="tool-tag selected" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
-<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
-<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">👁️ Vision</div>
-<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">📄 Doc Reader</div>
+<div class="tool-tag" data-tool="calculator" onclick="toggleTool(this)">Calculator</div>
+<div class="tool-tag selected" data-tool="weather" onclick="toggleTool(this)">Weather</div>
+<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">Web Search</div>
+<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">Vision</div>
+<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">Doc Reader</div>
 </div>
 <label>Max Executions (0 = unlimited)</label>
 <input type="number" id="sc-max" value="0" min="0">
 </div>
 </div>
-<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="createScheduledJob()">⏰ Create Scheduled Job</button>
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="createScheduledJob()">Create Scheduled Job</button>
 </div>
 <div class="card">
 <h2>Active Jobs</h2>
@@ -2802,7 +2786,7 @@ for a in agents:
 <!-- EVENTS -->
 <div class="panel" id="panel-events">
 <div class="card">
-<h2>⚡ Event Bus</h2>
+<h2>Event Bus</h2>
 <p style="color:#888;margin-bottom:16px">Fire events and see which agents react. Supports webhooks, timers, agent-to-agent chains, and custom events.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
@@ -2827,7 +2811,7 @@ POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
 </div>
 </div>
 </div>
-<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="emitEvent()">⚡ Emit Event</button>
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="emitEvent()">Emit Event</button>
 <div id="ev-result" style="display:none;margin-top:12px;background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;font-size:13px"></div>
 </div>
 <div class="card">
@@ -2843,7 +2827,7 @@ POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
 <!-- AUTH / ACCOUNT -->
 <div class="panel" id="panel-auth">
 <div class="card">
-<h2>🔑 Account</h2>
+<h2>Account</h2>
 <p style="color:#888;margin-bottom:12px">Register or log in to get an API key. This key is used to track your usage.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
@@ -2866,7 +2850,7 @@ POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
 <div id="auth-message" style="margin-top:12px;font-size:13px;color:#888"></div>
 </div>
 <div class="card">
-<h2>📊 Your Usage</h2>
+<h2>Your Usage</h2>
 <div id="auth-usage"><p style="color:#555">Log in to see your usage.</p></div>
 </div>
 </div>
@@ -2874,7 +2858,7 @@ POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
 <!-- A/B TESTING -->
 <div class="panel" id="panel-abtest">
 <div class="card">
-<h2>🧪 A/B Testing</h2>
+<h2>A/B Testing</h2>
 <p style="color:#888;margin-bottom:16px">Compare two agent configurations on the same set of queries using an LLM-as-judge.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
@@ -2908,11 +2892,11 @@ POST <span style="color:#00d4ff">/api/webhook/{event_name}</span>
 </div>
 <label style="margin-top:16px">Tools (applied to both agents)</label>
 <div class="tools-grid" id="ab-tools">
-<div class="tool-tag selected" data-tool="calculator" onclick="toggleTool(this)">🔢 Calculator</div>
-<div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">🌤️ Weather</div>
-<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">🔍 Web Search</div>
-<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">👁️ Vision</div>
-<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">📄 Doc Reader</div>
+<div class="tool-tag selected" data-tool="calculator" onclick="toggleTool(this)">Calculator</div>
+<div class="tool-tag" data-tool="weather" onclick="toggleTool(this)">Weather</div>
+<div class="tool-tag" data-tool="web_search" onclick="toggleTool(this)">Web Search</div>
+<div class="tool-tag" data-tool="analyze_image" onclick="toggleTool(this)">Vision</div>
+<div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">Doc Reader</div>
 </div>
 <label style="margin-top:16px">Test Queries (one per line)</label>
 <textarea id="ab-queries" style="min-height:100px">Summarize the benefits of AgentOS in one paragraph.
@@ -2922,7 +2906,7 @@ Help me debug why my Python script might be slow.
 Write a short product description for an AI agent platform.</textarea>
 <label style="margin-top:16px">Number of runs (repeats full query set)</label>
 <input type="number" id="ab-runs" value="3" min="1" max="10">
-<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="runAbTest()">🧪 Run A/B Test</button>
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="runAbTest()">Run A/B Test</button>
 <div id="ab-status" style="margin-top:8px;font-size:13px;color:#888"></div>
 </div>
 <div class="card">
@@ -2934,10 +2918,10 @@ Write a short product description for an AI agent platform.</textarea>
 <!-- MULTI-MODAL -->
 <div class="panel" id="panel-multimodal">
 <div class="card">
-<h2>👁️ Multi-modal Analysis</h2>
+<h2>Multi-modal Analysis</h2>
 <p style="color:#888;margin-bottom:16px">Upload an image or document and ask questions about it. Supports images (PNG, JPG, GIF, WebP) and documents (TXT, MD, PDF, CSV, JSON).</p>
 <div class="mm-upload-zone" id="mm-dropzone" onclick="document.getElementById('mm-file-input').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleDrop(event)">
-<div class="icon">📁</div>
+<div class="icon"></div>
 <p>Click to upload or drag &amp; drop</p>
 <p class="sub">Images: PNG, JPG, GIF, WebP &middot; Documents: TXT, MD, PDF, CSV, JSON</p>
 </div>
@@ -2960,7 +2944,7 @@ Write a short product description for an AI agent platform.</textarea>
 </select>
 </div>
 </div>
-<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="analyzeFile()" id="mm-analyze-btn">👁️ Analyze</button>
+<button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="analyzeFile()" id="mm-analyze-btn">Analyze</button>
 <div id="mm-status" style="margin-top:8px;font-size:13px;color:#888"></div>
 <div class="mm-result" id="mm-result"></div>
 </div>
@@ -2971,7 +2955,7 @@ Write a short product description for an AI agent platform.</textarea>
 <input type="text" id="mm-url" placeholder="https://example.com/photo.jpg">
 <label>Question</label>
 <input type="text" id="mm-url-question" placeholder="What is in this image?" onkeydown="if(event.key==='Enter')analyzeUrl()">
-<button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="analyzeUrl()">👁️ Analyze URL</button>
+<button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="analyzeUrl()">Analyze URL</button>
 <div id="mm-url-status" style="margin-top:8px;font-size:13px;color:#888"></div>
 <div class="mm-result" id="mm-url-result"></div>
 </div>
@@ -3036,7 +3020,7 @@ document.getElementById('b-stats').innerHTML=`
 document.getElementById('b-response').style.display='block';
 document.getElementById('b-response-text').textContent='Error: '+e.message;
 }
-btn.disabled=false;btn.innerHTML='▶️ Run Agent';
+btn.disabled=false;btn.innerHTML='Run Agent';
 }
 
 async function sendChat(){
@@ -3197,7 +3181,7 @@ h+=`<div style="margin-bottom:12px;display:flex;gap:12px">
 <div class="stat-chip">Total Cost: <span>$${d.overview.total_cost.toFixed(4)}</span></div>
 </div>`;
 d.jobs.forEach(j=>{
-const status=j.status==='running'?'🟢 Running':j.status==='pending'?'🔵 Pending':j.status==='paused'?'⏸️ Paused':j.status==='completed'?'✅ Done':'⭕ '+j.status;
+const status=j.status==='running'?'Running':j.status==='pending'?'Pending':j.status==='paused'?'Paused':j.status==='completed'?'Done':j.status;
 const next=j.next_run?new Date(j.next_run*1000).toLocaleTimeString():'—';
 const last=j.last_run?new Date(j.last_run*1000).toLocaleTimeString():'never';
 const sched=j.interval_seconds>0?(j.interval_seconds<60?j.interval_seconds+'s':j.interval_seconds<3600?Math.round(j.interval_seconds/60)+'m':Math.round(j.interval_seconds/3600)+'h'):j.cron_expression;
@@ -3205,14 +3189,14 @@ h+=`<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.
 <div style="display:flex;justify-content:space-between;align-items:center">
 <div><strong style="color:#fff">${j.agent_name}</strong> <span style="color:#555;font-size:12px">· ${j.job_id}</span></div>
 <div style="display:flex;gap:6px">
-<button onclick="fetch('/api/scheduler/${j.status==='paused'?'resume':'pause'}/${j.job_id}',{method:'POST'}).then(()=>refreshScheduler())" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">${j.status==='paused'?'▶️ Resume':'⏸️ Pause'}</button>
-<button onclick="if(confirm('Delete this job?'))fetch('/api/scheduler/delete/${j.job_id}',{method:'DELETE'}).then(()=>refreshScheduler())" style="background:#2a1a1a;border:1px solid #4a2a2a;color:#ff6666;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">🗑️ Delete</button>
+<button onclick="fetch('/api/scheduler/${j.status==='paused'?'resume':'pause'}/${j.job_id}',{method:'POST'}).then(()=>refreshScheduler())" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">${j.status==='paused'?'Resume':'Pause'}</button>
+<button onclick="if(confirm('Delete this job?'))fetch('/api/scheduler/delete/${j.job_id}',{method:'DELETE'}).then(()=>refreshScheduler())" style="background:#2a1a1a;border:1px solid #4a2a2a;color:#ff6666;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">Delete</button>
 </div>
 </div>
 <div style="color:#888;font-size:13px;margin-top:6px">${j.query}</div>
 <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:#666">
 <span>${status}</span>
-<span>⏱️ ${sched}</span>
+<span>${sched}</span>
 <span>Runs: ${j.execution_count}${j.max_executions>0?'/'+j.max_executions:''}</span>
 <span>Next: ${next}</span>
 <span>Last: ${last}</span>
@@ -3221,7 +3205,7 @@ if(j.history&&j.history.length>0){
 h+=`<div style="margin-top:8px;font-size:11px;color:#555">`;
 j.history.slice(-3).reverse().forEach(e=>{
 const t=new Date(e.started_at*1000).toLocaleTimeString();
-const st=e.status==='completed'?'✅':'❌';
+const st=e.status==='completed'?'':'';
 h+=`<div style="padding:3px 0;border-top:1px solid rgba(255,255,255,0.04)">${st} ${t} · ${e.result.slice(0,100)}${e.result.length>100?'...':''} · $${e.cost_usd.toFixed(4)} · ${e.duration_ms.toFixed(0)}ms</div>`;
 });
 h+=`</div>`;}
@@ -3241,7 +3225,7 @@ const r=await fetch('/api/events/emit',{method:'POST',headers:{'Content-Type':'a
 const d=await r.json();
 const el=document.getElementById('ev-result');
 el.style.display='block';
-el.innerHTML=`<span style="color:#00ff88">✓ Emitted</span> <strong>${d.event_name}</strong> — ${d.listeners_triggered} listener(s) triggered`;
+el.innerHTML=`<span style="color:#00ff88">Emitted</span> <strong>${d.event_name}</strong> — ${d.listeners_triggered} listener(s) triggered`;
 refreshEvents();
 }catch(e){
 document.getElementById('ev-result').style.display='block';
@@ -3514,7 +3498,7 @@ async function rcaLoadTraces(){
     if(!traces.length){el.innerHTML='<div style="color:#888;font-size:13px">No traces.</div>';return;}
     el.innerHTML=traces.map(t=>{
       const color=t.success?'#10b981':'#e74c3c';
-      const icon=t.success?'✅':'❌';
+      const icon=t.success?'':'';
       return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;cursor:pointer" onclick="rcaReplay(&quot;'+t.trace_id+'&quot;)">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<span>'+icon+' <strong style="color:#6c5ce7">'+t.agent_name+'</strong></span>'+
@@ -3534,7 +3518,7 @@ async function rcaLoadAlerts(){
     if(!alerts.length){el.innerHTML='<div style="color:#10b981;font-size:13px">No alerts — all clear!</div>';return;}
     el.innerHTML=alerts.map(a=>{
       const colors={critical:'#e74c3c',warning:'#fdcb6e',info:'#6c5ce7'};
-      const icons={critical:'🚨',warning:'⚠️',info:'ℹ️'};
+      const icons={critical:'',warning:'',info:''};
       return '<div style="background:rgba(6,6,14,0.6);padding:10px;border-radius:6px;border:1px solid '+(colors[a.level]||'#1e1e3a')+';margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between">'+
         '<strong style="color:'+(colors[a.level]||'#ccc')+'">'+icons[a.level]+' '+a.title+'</strong>'+
@@ -3555,11 +3539,11 @@ async function rcaReplay(traceId){
     const frames=d.frames||[];
     el.innerHTML=frames.map(f=>{
       const colors={ok:'#1e1e3a',warn:'#fdcb6e33',fail:'#e74c3c33'};
-      const icons={ok:'▶',warn:'⚠️',fail:'❌'};
+      const icons={ok:'',warn:'',fail:''};
       const border=f.is_failure_point?'2px solid #e74c3c':'1px solid #1e1e3a';
       return '<div style="background:rgba(6,6,14,0.6);padding:10px;border-radius:6px;border:'+border+';margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<strong style="color:#6c5ce7">'+(icons[f.severity]||'▶')+' '+f.label+'</strong>'+
+        '<strong style="color:#6c5ce7">'+(icons[f.severity]||'')+' '+f.label+'</strong>'+
         (f.is_failure_point?'<span style="color:#e74c3c;font-size:11px;font-weight:700">← FAILURE POINT</span>':'')+
         '</div>'+
         '<pre style="font-size:11px;color:#aaa;margin:6px 0 0;white-space:pre-wrap;max-height:100px;overflow-y:auto">'+
@@ -3570,7 +3554,7 @@ async function rcaReplay(traceId){
     const diag=d.diagnosis;
     if(diag){
       const del2=document.getElementById('rca-diagnosis');
-      const sevIcons={pass:'✅',warn:'⚠️',fail:'❌'};
+      const sevIcons={pass:'',warn:'',fail:''};
       del2.innerHTML='<div style="margin-bottom:8px"><strong>Root cause:</strong> <span style="color:#e74c3c">'+diag.root_cause+'</span></div>'+
         (diag.checks||[]).map(c=>
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
@@ -3674,7 +3658,7 @@ async function lrnProgress(){
     const r=await fetch('/api/learning/progress');
     const d=await r.json();
     const dir=d.direction||'stable';
-    const arrows={improving:'📈 Improving',declining:'📉 Declining',stable:'→ Stable'};
+    const arrows={improving:'Improving',declining:'Declining',stable:'→ Stable'};
     const colors={improving:'#10b981',declining:'#e74c3c',stable:'#fdcb6e'};
     document.getElementById('lrn-direction').textContent=arrows[dir]||dir;
     document.getElementById('lrn-direction').style.color=colors[dir]||'#888';
@@ -3703,7 +3687,7 @@ async function lrnLoadRecent(){
     const el=document.getElementById('lrn-recent');
     if(!entries.length){el.innerHTML='<div style="color:#888">No feedback yet.</div>';return;}
     el.innerHTML=entries.map(e=>{
-      const icon={thumbs_up:'👍',thumbs_down:'👎',rating:'⭐',correction:'✏️',comment:'💬'}[e.feedback_type]||'📝';
+      const icon={thumbs_up:'',thumbs_down:'',rating:'',correction:'',comment:''}[e.feedback_type]||'';
       return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;font-size:12px">'+
         '<span>'+icon+'</span> <strong style="color:#6c5ce7">'+e.query.slice(0,60)+'</strong>'+
         (e.topic?' <span style="color:#888;font-size:10px">['+e.topic+']</span>':'')+
@@ -3721,7 +3705,7 @@ async function simRun(){
   if(_simRunning){return;}
   _simRunning=true;
   const btn=document.getElementById('sim-run-btn');
-  btn.textContent='⏳ Running…';btn.disabled=true;
+  btn.textContent='Running…';btn.disabled=true;
   document.getElementById('sim-progress-wrap').style.display='block';
   document.getElementById('sim-progress-bar').style.width='0%';
   document.getElementById('sim-progress-text').textContent='Starting simulation…';
@@ -3833,7 +3817,7 @@ async function simLoadReport(){
 function simResetBtn(){
   _simRunning=false;
   const btn=document.getElementById('sim-run-btn');
-  btn.textContent='▶ Run Simulation';btn.disabled=false;
+  btn.textContent=' Run Simulation';btn.disabled=false;
   document.getElementById('sim-progress-bar').style.width='100%';
   document.getElementById('sim-progress-text').textContent='Complete!';
 }
@@ -3868,7 +3852,7 @@ async function meshRefreshRegistry(){
     const el=document.getElementById('mesh-registry-list');
     if(!agents.length){el.innerHTML='<div style="color:#888;font-size:13px">No agents registered.</div>';return;}
     el.innerHTML=agents.map(a=>{
-      const online=a.online?'<span style="color:#10b981">● online</span>':'<span style="color:#888">○ offline</span>';
+      const online=a.online?'<span style="color:#10b981"> online</span>':'<span style="color:#888"> offline</span>';
       return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<strong style="color:#6c5ce7">'+a.mesh_id+'</strong>'+online+'</div>'+
@@ -3986,7 +3970,7 @@ function mpRenderGrid(agents){
   const g=document.getElementById('mp-grid');
   if(!agents.length){g.innerHTML='<p style="color:#555;padding:20px;text-align:center">No agents found. Be the first to publish!</p>';return;}
   g.innerHTML=agents.map(a=>{
-    const stars='★'.repeat(Math.round(a.rating))+'☆'.repeat(5-Math.round(a.rating));
+    const stars=''.repeat(Math.round(a.rating))+''.repeat(5-Math.round(a.rating));
     const priceLabel=a.price===0?'Free':'$'+a.price;
     return '<div class="template-card" style="cursor:pointer" onclick="mpShowDetail(&quot;'+a.id+'&quot;)">'+
       '<div class="icon">'+a.icon+'</div>'+
@@ -4044,7 +4028,7 @@ async function mpShowDetail(id){
     // reviews
     let rhtml='';
     (d.reviews||[]).forEach(rv=>{
-      const st='★'.repeat(Math.round(rv.rating))+'☆'.repeat(5-Math.round(rv.rating));
+      const st=''.repeat(Math.round(rv.rating))+''.repeat(5-Math.round(rv.rating));
       rhtml+='<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06)"><span style="color:#f0b429">'+st+'</span> <strong>'+rv.user+'</strong> — '+rv.comment+'</div>';
     });
     document.getElementById('mp-reviews').innerHTML=rhtml;
@@ -4077,7 +4061,7 @@ async function mpPublish(){
     description:document.getElementById('mp-pub-desc').value,
     author:document.getElementById('mp-pub-author').value||'anonymous',
     category:document.getElementById('mp-pub-cat').value,
-    icon:document.getElementById('mp-pub-icon').value||'🤖',
+    icon:document.getElementById('mp-pub-icon').value||'',
     tags:(document.getElementById('mp-pub-tags').value||'').split(',').map(s=>s.trim()).filter(Boolean),
     price:parseFloat(document.getElementById('mp-pub-price').value)||0,
     version:document.getElementById('mp-pub-ver').value||'1.0.0',
@@ -4127,7 +4111,7 @@ let h='';
 _brBranches.forEach((b,i)=>{
 const c=colors[i%colors.length];
 const cls=b.branch_id===_brActiveBranch?'active':'';
-const icon=b.is_main?'●':'◆';
+const icon=b.is_main?'':'◆';
 h+=`<div class="br-chip ${cls}" onclick="brSwitch('${b.branch_id}')" title="${b.message_count} messages">`;
 h+=`<span class="dot" style="background:${c}"></span>${icon} ${b.label} (${b.message_count})</div>`;
 });
@@ -4185,7 +4169,7 @@ let h='';
 msgs.forEach((m,i)=>{
 const align=m.role==='user'?'right':'';
 const cls=m.role;
-const forkBtn=`<span class="br-fork-btn" onclick="brForkAt(${i})" title="Fork conversation here">🌿 fork</span>`;
+const forkBtn=`<span class="br-fork-btn" onclick="brForkAt(${i})" title="Fork conversation here">fork</span>`;
 h+=`<div class="br-row ${align}">`;
 h+=`<span class="br-idx">${i}</span>`;
 h+=`<span class="br-msg ${cls}">${escHtml(m.content)}</span>`;
@@ -4341,7 +4325,7 @@ const url=URL.createObjectURL(file);
 contentEl.innerHTML='<img src="'+url+'" alt="Preview">';
 document.getElementById('mm-question').placeholder='What is in this image? Describe the details...';
 }else{
-contentEl.innerHTML='<div style="font-size:36px;text-align:center;padding:20px">📄</div>';
+contentEl.innerHTML='<div style="font-size:36px;text-align:center;padding:20px"></div>';
 document.getElementById('mm-question').placeholder='Summarize this document... / What are the key points?';
 }
 infoEl.textContent=d.file_name+' · '+d.file_type+' · '+formatBytes(d.size_bytes);
@@ -4403,7 +4387,7 @@ statusEl.textContent='Error: '+(d.message||'Analysis failed');
 statusEl.style.color='#ff6666';
 statusEl.textContent='Error: '+e.message;
 }
-btn.disabled=false;btn.innerHTML='👁️ Analyze';
+btn.disabled=false;btn.innerHTML='Analyze';
 }
 
 async function analyzeUrl(){

@@ -65,7 +65,7 @@ class SmartAlert:
         }
 
     def summary(self) -> str:
-        icon = {"info": "ℹ️", "warning": "⚠️", "critical": "🚨"}.get(
+        icon = {"info": "", "warning": "", "critical": ""}.get(
             self.level.value, "?"
         )
         return f"{icon} [{self.level.value.upper()}] {self.title} — {self.cause}"
@@ -133,7 +133,6 @@ def _check_quality_drop(
     )
 
     if second_fail > first_fail + 0.15 and second_fail > 0.2:
-        # Quality dropped — find the cause from diagnoses
         recent_diag = [d for d in diagnoses if d.overall_severity == Severity.FAIL]
         cause_counts: Counter = Counter()
         for d in recent_diag:
@@ -186,7 +185,6 @@ def _check_latency_regression(traces: list[Trace]) -> list[SmartAlert]:
     second_avg = statistics.mean(second_latencies)
 
     if second_avg > first_avg * 2 and second_avg > 5000:
-        # Find which step type got slower
         step_latencies: dict[str, list[float]] = defaultdict(list)
         for t in sorted_traces[mid:]:
             for s in t.steps:
@@ -266,12 +264,10 @@ class AlertEngine:
         new_alerts.extend(_check_latency_regression(traces))
         new_alerts.extend(_check_missing_tools(traces))
 
-        # Tag alerts with agent name
         for a in new_alerts:
             if not a.agent_name and agent_name:
                 a.agent_name = agent_name
 
-        # Fire callbacks
         for a in new_alerts:
             for cb in self._callbacks:
                 try:

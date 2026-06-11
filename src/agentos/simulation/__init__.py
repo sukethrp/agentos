@@ -29,7 +29,6 @@ from agentos.simulation.report import (
 from agentos.simulation.world import SimulatedWorld, WorldConfig
 
 __all__ = [
-    # Personas
     "ALL_PERSONAS",
     "PERSONA_MAP",
     "Mood",
@@ -37,19 +36,15 @@ __all__ = [
     "get_persona",
     "get_random_persona",
     "get_weighted_personas",
-    # Traffic
     "TrafficConfig",
     "TrafficPattern",
     "describe_pattern",
     "generate_traffic",
-    # Evaluation
     "Evaluator",
     "InteractionResult",
-    # Report
     "PersonaStats",
     "SimulationReport",
     "build_report",
-    # World
     "SimulatedWorld",
     "WorldConfig",
 ]

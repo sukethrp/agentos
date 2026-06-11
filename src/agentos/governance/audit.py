@@ -60,17 +60,17 @@ class AuditLog:
     def print_report(self):
         summary = self.get_summary()
         print(f"\n{'=' * 60}")
-        print(f"📋 Audit Report: {self.agent_name}")
+        print(f"Audit Report: {self.agent_name}")
         print(f"{'=' * 60}")
         print(f"   Total actions:  {summary['total_actions']}")
-        print(f"   ✅ Allowed:      {summary['allowed']}")
-        print(f"   🚫 Blocked:      {summary['blocked']}")
+        print(f"   Allowed:      {summary['allowed']}")
+        print(f"   Blocked:      {summary['blocked']}")
         print(f"   Block rate:     {summary['block_rate']}")
         print(f"{'=' * 60}")
 
         blocked = self.get_blocked()
         if blocked:
-            print("\n   🚫 Blocked Actions:")
+            print("\n   Blocked Actions:")
             for e in blocked:
                 print(f"      [{e['time_readable']}] {e['action']}")
                 print(f"         Rule: {e['governance_rule']}")

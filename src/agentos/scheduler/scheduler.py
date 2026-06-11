@@ -36,7 +36,6 @@ class AgentScheduler:
         self._lock = threading.Lock()
         self._active_count = 0
 
-        # Callbacks
         self.on_execution: list = []  # called with (job, execution)
 
     # ── Schedule ──

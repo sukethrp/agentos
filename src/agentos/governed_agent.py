@@ -21,13 +21,11 @@ Usage:
         permissions=PermissionGuard(blocked_tools=["dangerous_tool"]),
     )
 
-    # Run with full governance
     agent.run("What's 2 + 2?")
 
     # Test before deploying
     report = agent.test([Scenario(...), Scenario(...)])
 
-    # Check governance status
     agent.status()
 
     # Emergency stop
@@ -68,7 +66,6 @@ class GovernedAgent:
         temperature: float = 0.7,
         enable_monitoring: bool = True,
     ):
-        # Core agent
         self.agent = Agent(
             name=name,
             model=model,
@@ -78,19 +75,16 @@ class GovernedAgent:
             temperature=temperature,
         )
 
-        # Governance
         self.governance = GovernanceEngine(
             agent_name=name,
             budget=budget,
             permissions=permissions,
         )
 
-        # Monitoring
         self.enable_monitoring = enable_monitoring
         self.run_count = 0
         self.total_cost = 0.0
 
-        # Wrap tool execution with governance
         self._wrap_tools()
 
     def _wrap_tools(self):
@@ -104,7 +98,7 @@ class GovernedAgent:
                         tool_obj.name, estimated_cost=0.001
                     )
                     if not check.allowed:
-                        print(f"   🚫 BLOCKED: {check.message}")
+                        print(f"   BLOCKED: {check.message}")
                         from agentos.core.types import ToolResult
 
                         return ToolResult(
@@ -127,12 +121,10 @@ class GovernedAgent:
 
         result = self.agent.run(user_input)
 
-        # Log events to monitor store
         if self.enable_monitoring:
             for event in self.agent.events:
                 store.log_event(event)
 
-        # Track costs
         run_cost = sum(e.cost_usd for e in self.agent.events)
         self.total_cost += run_cost
 

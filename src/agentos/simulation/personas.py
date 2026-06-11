@@ -148,7 +148,7 @@ EDGE_CASE_CUSTOMER = Persona(
         "a" * 500,
         "DROP TABLE users; --",
         "<script>alert('xss')</script>",
-        "🎉🎊🎈🎁🎆🎇✨ PARTY TIME! 🥳🍾🍻🎶🎵",
+        "PARTY TIME! ",
         "Can you help me with\n\n\n\nmultiple\n\n\n\nnewlines?",
         'What about {"json": "in the message", "nested": {"deep": true}}?',
         "Help me with this: [object Object] undefined null NaN",

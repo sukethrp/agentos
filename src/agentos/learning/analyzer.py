@@ -201,13 +201,13 @@ class AnalysisReport:
             f"  Avg quality     : {self.avg_quality:.2f} / 10",
         ]
         if self.worst_topics:
-            lines.append(f"\n  ⚠️  Weakest topics: {', '.join(self.worst_topics)}")
+            lines.append(f"\n  Weakest topics: {', '.join(self.worst_topics)}")
         if self.best_topics:
-            lines.append(f"  ✅ Strongest topics: {', '.join(self.best_topics)}")
+            lines.append(f"  Strongest topics: {', '.join(self.best_topics)}")
         if self.worst_tools:
-            lines.append(f"  🔧 Problematic tools: {', '.join(self.worst_tools)}")
+            lines.append(f"  Problematic tools: {', '.join(self.worst_tools)}")
         if self.trending_issues:
-            lines.append("\n  📈 Trending issues:")
+            lines.append("\n  Trending issues:")
             for issue in self.trending_issues[:5]:
                 lines.append(f"     • {issue}")
 
@@ -243,12 +243,10 @@ class FeedbackAnalyzer:
         if not entries:
             return report
 
-        # Global
         pos = sum(1 for e in entries if e.is_positive)
         report.positive_rate = pos / len(entries) * 100
         report.avg_quality = statistics.mean(e.quality_score for e in entries)
 
-        # Topic analysis
         report.topics = self._analyze_topics(entries)
         report.worst_topics = [
             t.topic
@@ -265,7 +263,6 @@ class FeedbackAnalyzer:
             if t.avg_quality >= 7
         ]
 
-        # Tool analysis
         report.tools = self._analyze_tools(entries)
         report.worst_tools = [
             t.tool_name
@@ -275,13 +272,10 @@ class FeedbackAnalyzer:
             if t.failure_rate > 30
         ]
 
-        # Time trend (weekly windows)
         report.time_trend = self._analyze_time_trend(entries)
 
-        # Trending issues (topics getting worse recently)
         report.trending_issues = self._detect_trending_issues(entries)
 
-        # Top corrections
         corrections = [e for e in entries if e.feedback_type == FeedbackType.CORRECTION]
         report.top_corrections = [
             {"query": e.query[:100], "correction": e.correction[:200], "topic": e.topic}
@@ -370,7 +364,6 @@ class FeedbackAnalyzer:
         if len(entries) < 4:
             return []
 
-        # Split into first half vs second half
         sorted_entries = sorted(entries, key=lambda e: e.timestamp)
         mid = len(sorted_entries) // 2
         first_half = sorted_entries[:mid]

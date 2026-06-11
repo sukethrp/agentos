@@ -126,7 +126,7 @@ var fab = el("div",{style:{
   display:"flex",alignItems:"center",justifyContent:"center",
   cursor:"pointer",boxShadow:"0 4px 16px "+T.shadow,zIndex:"99999",
   transition:"transform .2s",fontSize:"26px",color:"#fff",userSelect:"none"
-},onclick:toggle},["💬"]);
+},onclick:toggle},[""]);
 document.body.appendChild(fab);
 
 // Chat window
@@ -145,7 +145,7 @@ var hdr = el("div",{style:{
 }},[
   LOGO ? el("img",{src:LOGO,style:{width:"28px",height:"28px",borderRadius:"6px"}}) : null,
   el("span",{style:{flex:"1",fontWeight:"600",fontSize:"15px",color:"#fff"}},[AGENT]),
-  el("span",{style:{cursor:"pointer",fontSize:"18px",color:"rgba(255,255,255,.7)",lineHeight:"1"},onclick:toggle},["✕"])
+  el("span",{style:{cursor:"pointer",fontSize:"18px",color:"rgba(255,255,255,.7)",lineHeight:"1"},onclick:toggle},[""])
 ]);
 win.appendChild(hdr);
 

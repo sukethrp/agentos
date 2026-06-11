@@ -96,5 +96,4 @@ class AgentStore:
         return None
 
 
-# Global store instance
 store = AgentStore()

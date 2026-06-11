@@ -32,24 +32,19 @@ from agentos.learning.report import (
 )
 
 __all__ = [
-    # Feedback
     "FeedbackEntry",
     "FeedbackStore",
     "FeedbackType",
     "get_feedback_store",
-    # Analysis
     "AnalysisReport",
     "FeedbackAnalyzer",
     "TopicAnalysis",
     "ToolAnalysis",
     "detect_topic",
-    # Prompt optimisation
     "PromptOptimizer",
     "PromptPatch",
-    # Few-shot
     "FewShotBuilder",
     "FewShotExample",
-    # Report
     "LearningReport",
     "build_learning_report",
 ]

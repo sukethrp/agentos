@@ -19,7 +19,6 @@ Usage:
     messages = memory.get_messages()
     name = memory.get_fact("user_name")  # "Suketh"
 
-    # Get context for the agent
     context = memory.get_context()  # Injects known facts into system prompt
 """
 
@@ -51,14 +50,11 @@ class Memory:
         self.enable_knowledge = enable_knowledge
         self.enable_summary = enable_summary
 
-        # Conversation memory
         self.messages: list[dict] = []
         self.conversation_count = 0
 
-        # Knowledge memory (persistent facts)
         self.facts: dict[str, MemoryEntry] = {}
 
-        # Conversation summaries
         self.summaries: list[str] = []
 
     # ── Conversation Memory ──
@@ -110,7 +106,6 @@ class Memory:
     ):
         """Store a persistent fact."""
         if len(self.facts) >= self.max_facts and key not in self.facts:
-            # Remove oldest fact
             oldest_key = min(self.facts, key=lambda k: self.facts[k].timestamp)
             del self.facts[oldest_key]
 
@@ -155,7 +150,6 @@ class Memory:
 
         lines = ["Here is what you know from previous conversations:"]
 
-        # Group by category
         categories: dict[str, list[MemoryEntry]] = {}
         for entry in self.facts.values():
             cat = entry.category
@@ -172,22 +166,18 @@ class Memory:
 
     def build_messages(self, system_prompt: str, user_input: str) -> list[dict]:
         """Build the full message list with memory context injected."""
-        # Inject knowledge into system prompt
         context = self.get_context()
         if context:
             full_system = f"{system_prompt}\n\n{context}"
         else:
             full_system = system_prompt
 
-        # Start with system prompt
         messages = [{"role": "system", "content": full_system}]
 
-        # Add conversation history (skip old system messages)
         for msg in self.messages:
             if msg.get("role") != "system":
                 messages.append(msg)
 
-        # Add current user input
         messages.append({"role": "user", "content": user_input})
 
         return messages
@@ -200,7 +190,6 @@ class Memory:
         """
         user_lower = user_msg.lower()
 
-        # Extract name
         name_triggers = ["my name is", "i'm called", "call me", "i am"]
         for trigger in name_triggers:
             if trigger in user_lower:
@@ -211,7 +200,6 @@ class Memory:
                         "user_name", name, category="personal", source="extracted"
                     )
 
-        # Extract location
         location_triggers = ["i live in", "i'm from", "i'm based in", "located in"]
         for trigger in location_triggers:
             if trigger in user_lower:
@@ -225,7 +213,6 @@ class Memory:
                         source="extracted",
                     )
 
-        # Extract company
         company_triggers = ["i work at", "i work for", "my company is", "i'm at"]
         for trigger in company_triggers:
             if trigger in user_lower:
@@ -236,7 +223,6 @@ class Memory:
                         "user_company", company, category="work", source="extracted"
                     )
 
-        # Extract preferences
         pref_triggers = ["i like", "i love", "i prefer", "my favorite"]
         for trigger in pref_triggers:
             if trigger in user_lower:
@@ -265,7 +251,7 @@ class Memory:
     def print_memory(self):
         stats = self.get_stats()
         print(f"\n{'=' * 60}")
-        print("🧠 Agent Memory")
+        print("Agent Memory")
         print(f"{'=' * 60}")
         print(f"   Messages:     {stats['total_messages']}")
         print(f"   Exchanges:    {stats['conversation_count']}")
@@ -275,7 +261,7 @@ class Memory:
         )
 
         if self.facts:
-            print("\n   📚 Stored Knowledge:")
+            print("\n   Stored Knowledge:")
             for key, entry in self.facts.items():
                 print(f"      [{entry.category}] {key}: {entry.value}")
         print(f"{'=' * 60}")

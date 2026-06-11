@@ -40,7 +40,6 @@ class UserStore:
 
     def __post_init__(self) -> None:
         self._lock = threading.Lock()
-        # Ensure directory exists
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         if not os.path.exists(self.path):
             self._write({"users": []})

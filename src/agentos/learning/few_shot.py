@@ -136,7 +136,6 @@ class FewShotBuilder:
         for c in candidates:
             by_topic[c.topic].append(c)
 
-        # Sort each topic bucket by quality descending
         for topic in by_topic:
             by_topic[topic].sort(key=lambda x: -x.quality_score)
 

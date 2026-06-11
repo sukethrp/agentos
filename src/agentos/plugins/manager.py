@@ -145,7 +145,6 @@ class PluginManager:
             except Exception:
                 pass
 
-        # Remove tools registered by this plugin
         plugin_prefix = f"{name}:"
         to_remove = [
             k for k in self._ctx.tools if k.startswith(plugin_prefix) or k == name
@@ -240,7 +239,6 @@ class PluginManager:
         try:
             register_fn(self._ctx)
 
-            # Create a synthetic BasePlugin to hold metadata
             instance = BasePlugin()
             # Try to read metadata from the module
             module = sys.modules.get(f"agentos_plugin_{info.name}")

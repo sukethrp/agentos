@@ -77,7 +77,7 @@ class Replay:
 
         for f in self.frames:
             icon = (
-                "❌" if f.is_failure_point else ("⚠️" if f.severity == "warn" else "▶")
+                "" if f.is_failure_point else ("" if f.severity == "warn" else "")
             )
             pointer = " ← FAILURE POINT" if f.is_failure_point else ""
             lines.append(f"  {icon} Frame {f.frame_index}: {f.label}{pointer}")
@@ -90,7 +90,7 @@ class Replay:
             lines.append("  ─── Diagnosis ───")
             lines.append(f"  Root cause: {self.diagnosis.root_cause}")
             for c in self.diagnosis.checks:
-                sev_icon = {"pass": "✅", "warn": "⚠️", "fail": "❌"}.get(
+                sev_icon = {"pass": "", "warn": "", "fail": ""}.get(
                     c.severity.value, "?"
                 )
                 lines.append(f"    {sev_icon} {c.check_name}: {c.title}")
@@ -115,7 +115,6 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
 
     frame_idx = 0
 
-    # Frame 0: Setup
     setup_detail = (
         f"Agent: {trace.agent_name}\n"
         f"Model: {trace.model}\n"
@@ -134,7 +133,6 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
     )
     frame_idx += 1
 
-    # Frame 1: User query
     replay.frames.append(
         ReplayFrame(
             frame_index=frame_idx,
@@ -144,7 +142,6 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
     )
     frame_idx += 1
 
-    # Build frames for each step
     for step in trace.steps:
         frame = _step_to_frame(step, frame_idx, diag, include_messages)
         replay.frames.append(frame)
@@ -152,7 +149,6 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
             replay.failure_frame = frame_idx
         frame_idx += 1
 
-    # Final outcome frame
     if trace.success:
         replay.frames.append(
             ReplayFrame(
@@ -226,9 +222,9 @@ def _step_to_frame(
             f"Result: {step.tool_result[:200]}",
         ]
         if step.tool_not_found:
-            detail_lines.append("⚠️ Tool NOT FOUND — LLM hallucinated this tool name")
+            detail_lines.append("Tool NOT FOUND — LLM hallucinated this tool name")
         if step.is_error:
-            detail_lines.append(f"❌ Error: {step.error_message[:200]}")
+            detail_lines.append(f"Error: {step.error_message[:200]}")
 
         return ReplayFrame(
             frame_index=frame_idx,

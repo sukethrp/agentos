@@ -11,7 +11,6 @@ Usage:
     for token in client.stream("Tell me a story"):
         print(token, end="", flush=True)
 
-    # List marketplace agents
     agents = client.list_agents()
 """
 

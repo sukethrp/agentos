@@ -245,7 +245,6 @@ class PromptOptimizer:
         report = self.analyzer.analyze()
         new_patches: list[PromptPatch] = []
 
-        # Patch each weak topic
         for topic in report.worst_topics:
             topic_data = next((t for t in report.topics if t.topic == topic), None)
             complaints = topic_data.common_complaints if topic_data else []
@@ -261,13 +260,11 @@ class PromptOptimizer:
             if patch:
                 new_patches.append(patch)
 
-        # Correction-based patch
         if report.top_corrections:
             corr_patch = _generate_correction_patch(report.top_corrections)
             if corr_patch:
                 new_patches.append(corr_patch)
 
-        # Tone patches for topics with lots of angry/confused feedback
         negative = [e for e in self.store.all() if not e.is_positive]
         for mood, template in _TONE_PATCHES.items():
             mood_hits = sum(

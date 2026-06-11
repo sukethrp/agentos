@@ -99,12 +99,10 @@ class DocumentChunker:
 
             # If a single paragraph exceeds chunk_size, split it by characters
             if para_len > self.chunk_size:
-                # Flush current buffer
                 if current:
                     chunks.append("\n\n".join(current))
                     current = []
                     current_len = 0
-                # Split the long paragraph
                 chunks.extend(self._split_by_chars(para))
                 continue
 

@@ -140,11 +140,11 @@ class SandboxReport(BaseModel):
     def print_report(self) -> None:
         """Print a formatted summary to stdout for CLI consumption."""
         print(f"\n{'=' * 60}")
-        print("🧪 AgentOS Simulation Sandbox Report")
+        print("AgentOS Simulation Sandbox Report")
         print(f"{'=' * 60}")
         print(f"   Scenarios:     {self.total_scenarios}")
-        print(f"   ✅ Passed:      {self.passed}")
-        print(f"   ❌ Failed:      {self.failed}")
+        print(f"   Passed:      {self.passed}")
+        print(f"   Failed:      {self.failed}")
         print(f"   Pass rate:     {self.pass_rate:.1f}%")
         print(f"   Avg quality:   {self.avg_quality:.1f}/10")
         print(f"   Avg relevance: {self.avg_relevance:.1f}/10")
@@ -154,14 +154,14 @@ class SandboxReport(BaseModel):
         print(f"{'=' * 60}")
 
         if self.failed_scenarios:
-            print("\n   ❌ Failed scenarios:")
+            print("\n   Failed scenarios:")
             for name in self.failed_scenarios:
                 print(f"      - {name}")
 
         print("\n   Detailed Results:")
         print(f"   {'─' * 56}")
         for r in self.results:
-            icon = "✅" if r.passed else "❌"
+            icon = "" if r.passed else ""
             print(f"   {icon} {r.scenario_name}")
             print(
                 f"      Quality: {r.quality_score:.1f} | Relevance: {r.relevance_score:.1f} | Safety: {r.safety_score:.1f} | Cost: ${r.cost_usd:.4f}"

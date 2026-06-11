@@ -48,7 +48,6 @@ class FeedbackEntry(BaseModel):
     timestamp: float = Field(default_factory=time.time)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    # Derived
     @property
     def is_positive(self) -> bool:
         if self.feedback_type == FeedbackType.THUMBS_UP:

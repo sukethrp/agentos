@@ -348,7 +348,7 @@ class ABTestReport(BaseModel):
 
     def print_report(self) -> None:
         print(f"\n{'=' * 60}")
-        print("🧪 AgentOS A/B Test Report")
+        print("AgentOS A/B Test Report")
         print(f"{'=' * 60}")
         print(f"   Agent A: {self.agent_a_name}")
         print(f"   Agent B: {self.agent_b_name}")
@@ -403,7 +403,6 @@ class ABTest:
         if not queries:
             raise ValueError("queries must not be empty")
 
-        # Build scenarios
         scenarios: List[Scenario] = []
         for run_idx in range(num_runs):
             for i, q in enumerate(queries):
@@ -415,14 +414,12 @@ class ABTest:
                     )
                 )
 
-        # Run sandbox for each agent
         sandbox_a = Sandbox(self.agent_a, pass_threshold=self.pass_threshold)
         sandbox_b = Sandbox(self.agent_b, pass_threshold=self.pass_threshold)
 
         report_a = sandbox_a.run(scenarios)
         report_b = sandbox_b.run(scenarios)
 
-        # Per-scenario mapping
         map_a = {r.scenario_name: r for r in report_a.results}
         map_b = {r.scenario_name: r for r in report_b.results}
 
@@ -451,7 +448,6 @@ class ABTest:
                 winner = "tie"
                 ties += 1
 
-            # Extract run index from name if present (Qx-runY)
             run_index = 1
             if "-run" in s.name:
                 try:
@@ -471,7 +467,6 @@ class ABTest:
                 )
             )
 
-        # Aggregate scores
         avg_overall_a = sum(overall_a) / len(overall_a) if overall_a else 0.0
         avg_overall_b = sum(overall_b) / len(overall_b) if overall_b else 0.0
 

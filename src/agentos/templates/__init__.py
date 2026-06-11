@@ -3,10 +3,8 @@
 Usage:
     from agentos.templates import list_templates, load_template
 
-    # See all available templates
     list_templates()
 
-    # Load and run a template
     agent = load_template("customer-support")
     agent.run("I need help with my order")
 """
@@ -51,7 +49,7 @@ TEMPLATES = {
 def list_templates():
     """Print all available agent templates."""
     print(f"\n{'=' * 60}")
-    print("📦 AgentOS Template Library")
+    print("AgentOS Template Library")
     print(f"{'=' * 60}")
     for tid, info in TEMPLATES.items():
         print(f"\n   [{tid}]")

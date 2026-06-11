@@ -189,7 +189,6 @@ class WorkflowRunner:
                 break
 
         if final_result is None and step.fallback_agent:
-            # Run fallback once
             fb_query = step.fallback_query or step.query
             fb_step = Step(
                 name=step.name,
@@ -209,7 +208,6 @@ class WorkflowRunner:
                 name=step.name, status="failed", error="All retries and fallback failed"
             )
 
-        # Update context and path
         if final_result.status in ("completed", "fallback"):
             ctx[step.name] = final_result.output
             last_output = final_result.output

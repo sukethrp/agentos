@@ -63,7 +63,6 @@ class PersonaStats:
 class SimulationReport:
     """Full report from a simulation run."""
 
-    # Global
     total_interactions: int = 0
     total_passed: int = 0
     total_failed: int = 0
@@ -76,13 +75,11 @@ class SimulationReport:
     duration_seconds: float = 0.0
     throughput_rps: float = 0.0
 
-    # Breakdowns
     per_persona: list[PersonaStats] = field(default_factory=list)
     weakest_personas: list[str] = field(default_factory=list)
     strongest_personas: list[str] = field(default_factory=list)
     failure_reasons: dict[str, int] = field(default_factory=dict)
 
-    # Chart data
     quality_over_time: list[dict] = field(default_factory=list)  # [{idx, overall}]
     latency_over_time: list[dict] = field(default_factory=list)  # [{idx, latency_ms}]
     persona_quality_chart: list[dict] = field(
@@ -95,7 +92,6 @@ class SimulationReport:
         default_factory=dict
     )  # {"1-2": n, "3-4": n, ...}
 
-    # Worst interactions (for debugging)
     worst_interactions: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -149,9 +145,9 @@ class SimulationReport:
             )
 
         if self.weakest_personas:
-            lines.append(f"\n  ⚠️  Weakest: {', '.join(self.weakest_personas)}")
+            lines.append(f"\n  Weakest: {', '.join(self.weakest_personas)}")
         if self.strongest_personas:
-            lines.append(f"  ✅ Strongest: {', '.join(self.strongest_personas)}")
+            lines.append(f"  Strongest: {', '.join(self.strongest_personas)}")
 
         if self.failure_reasons:
             lines.append("\n  Top Failure Reasons:")
@@ -181,7 +177,6 @@ def build_report(
     if not results:
         return rpt
 
-    # Global aggregates
     rpt.total_passed = sum(1 for r in results if r.passed)
     rpt.total_failed = sum(1 for r in results if not r.passed and not r.error)
     rpt.total_errors = sum(1 for r in results if r.error)
@@ -191,7 +186,6 @@ def build_report(
     rpt.total_cost = sum(r.cost_usd for r in results)
     rpt.total_tokens = sum(r.tokens_used for r in results)
 
-    # Per-persona
     by_persona: dict[str, list[InteractionResult]] = defaultdict(list)
     for r in results:
         by_persona[r.persona_name].append(r)
@@ -221,14 +215,12 @@ def build_report(
         ]
         rpt.weakest_personas = [p.name for p in persona_stats[-2:] if p.pass_rate < 80]
 
-    # Failure reasons
     reasons: Counter = Counter()
     for r in results:
         if r.failure_reason:
             reasons[r.failure_reason] += 1
     rpt.failure_reasons = dict(reasons.most_common(10))
 
-    # Chart data
     rpt.quality_over_time = [
         {"idx": r.interaction_id, "overall": r.overall} for r in results
     ]
@@ -245,7 +237,6 @@ def build_report(
         for p in persona_stats
     ]
 
-    # Difficulty vs quality scatter
     diff_map = persona_difficulty or {}
     rpt.difficulty_vs_quality = [
         {
@@ -256,7 +247,6 @@ def build_report(
         for r in results
     ]
 
-    # Score distribution buckets
     buckets = {"1-2": 0, "3-4": 0, "5-6": 0, "7-8": 0, "9-10": 0}
     for r in results:
         s = r.overall
@@ -272,7 +262,6 @@ def build_report(
             buckets["9-10"] += 1
     rpt.score_distribution = buckets
 
-    # Worst interactions
     sorted_results = sorted(results, key=lambda r: r.overall)
     rpt.worst_interactions = [r.to_dict() for r in sorted_results[:10]]
 

@@ -93,7 +93,7 @@ class MeshCostTracker:
     def print_summary(self) -> None:
         s = self.summary()
         print(f"\n{'=' * 60}")
-        print("🔗 Mesh Run Summary")
+        print("Mesh Run Summary")
         print(f"{'=' * 60}")
         print(f"   Delegations:  {s['total_delegations']}")
         print(f"   Total tokens: {s['total_tokens']:,}")

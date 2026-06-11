@@ -352,7 +352,6 @@ def call_mock(
         " ".join(m.get("content", "") or "" for m in messages)
     )
 
-    # Phase 1: if tools are available and no tool results yet, try a tool call
     if tools and not _has_tool_results(messages):
         tc = _pick_tool_call(last_user_msg, tools)
         if tc:
@@ -366,7 +365,6 @@ def call_mock(
             )
             return msg, event
 
-    # Phase 2: generate a text response
     content = _synthesize_response(messages)
     latency = (time.time() - start) * 1000
     completion_tokens = _estimate_tokens(content)
@@ -402,7 +400,6 @@ def call_mock_stream(
         " ".join(m.get("content", "") or "" for m in messages)
     )
 
-    # Phase 1: tool call (no streaming needed — tool calls arrive as one chunk)
     if tools and not _has_tool_results(messages):
         tc = _pick_tool_call(last_user_msg, tools)
         if tc:
@@ -418,7 +415,6 @@ def call_mock_stream(
             yield ("tool_calls", msg, event)
             return
 
-    # Phase 2: stream text token-by-token
     content = _synthesize_response(messages)
     words = content.split(" ")
     for i, word in enumerate(words):

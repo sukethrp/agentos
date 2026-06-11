@@ -23,7 +23,6 @@ Usage:
     tree.add_message("user", "I want high risk, high reward")
     tree.add_message("assistant", "Consider growth stocks and crypto...")
 
-    # Compare both paths
     comparison = tree.compare_branches("main", new_id)
 """
 
@@ -116,7 +115,6 @@ class ConversationTree:
         self._main_branch_id: str = main.branch_id
 
     # ------------------------------------------------------------------
-    # Properties
     # ------------------------------------------------------------------
 
     @property
@@ -132,7 +130,6 @@ class ConversationTree:
         return self._main_branch_id
 
     # ------------------------------------------------------------------
-    # Message management (acts on active branch)
     # ------------------------------------------------------------------
 
     def add_message(
@@ -169,7 +166,6 @@ class ConversationTree:
         return branch.get_messages_as_openai()
 
     # ------------------------------------------------------------------
-    # Branching
     # ------------------------------------------------------------------
 
     def branch(
@@ -228,7 +224,6 @@ class ConversationTree:
         return True
 
     # ------------------------------------------------------------------
-    # Listing & inspection
     # ------------------------------------------------------------------
 
     def list_branches(self) -> list[dict]:
@@ -247,7 +242,6 @@ class ConversationTree:
         return self.branches[branch_id]
 
     # ------------------------------------------------------------------
-    # Compare & merge
     # ------------------------------------------------------------------
 
     def compare_branches(self, branch_a_id: str, branch_b_id: str) -> dict:
@@ -266,7 +260,6 @@ class ConversationTree:
         if not b:
             raise KeyError(f"Branch '{branch_b_id}' not found")
 
-        # Find the longest common prefix
         shared_len = 0
         for i in range(min(len(a.messages), len(b.messages))):
             if (
@@ -317,10 +310,8 @@ class ConversationTree:
         a = self.branches[branch_a_id]
         b = self.branches[branch_b_id]
 
-        # Start the merged branch from the shared prefix
         shared_msgs = copy.deepcopy(a.messages[: comparison["shared_count"]])
 
-        # Build a summary message of both paths
         a_summary_parts = []
         for m in comparison["branch_a_unique"]:
             a_summary_parts.append(f"[{m['role']}]: {m['content'][:200]}")
@@ -367,7 +358,6 @@ class ConversationTree:
         return merged_branch.branch_id
 
     # ------------------------------------------------------------------
-    # Serialization
     # ------------------------------------------------------------------
 
     def to_dict(self) -> dict:

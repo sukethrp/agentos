@@ -62,7 +62,6 @@ class GovernanceEngine:
     ) -> GuardrailResult:
         """Check if a tool call is allowed by all governance rules."""
 
-        # Check kill switch first
         if self.killed:
             self.audit.log(
                 action=f"tool_call:{tool_name}",
@@ -72,11 +71,10 @@ class GovernanceEngine:
             )
             return GuardrailResult(
                 allowed=False,
-                message=f"🛑 AGENT KILLED: {self.kill_reason}",
+                message=f"AGENT KILLED: {self.kill_reason}",
                 rule="kill_switch",
             )
 
-        # Check permissions
         perm_ok, perm_msg = self.permissions.check_tool(tool_name)
         if not perm_ok:
             self.audit.log(
@@ -86,7 +84,7 @@ class GovernanceEngine:
                 governance_rule="permission",
             )
             return GuardrailResult(
-                allowed=False, message=f"🔒 {perm_msg}", rule="permission"
+                allowed=False, message=f"{perm_msg}", rule="permission"
             )
 
         if self._org_id and (self._org_token_cap > 0 or self._org_cost_cap > 0):
@@ -130,7 +128,7 @@ class GovernanceEngine:
                 )
             )
             return GuardrailResult(
-                allowed=False, message=f"💰 {budget_msg}", rule="budget"
+                allowed=False, message=f"{budget_msg}", rule="budget"
             )
 
         self.audit.log(
@@ -175,7 +173,7 @@ class GovernanceEngine:
             reason=reason,
             governance_rule="kill_switch",
         )
-        print(f"\n🛑 KILL SWITCH: Agent '{self.agent_name}' has been stopped.")
+        print(f"\nKILL SWITCH: Agent '{self.agent_name}' has been stopped.")
         print(f"   Reason: {reason}")
 
     def revive(self):
@@ -196,9 +194,9 @@ class GovernanceEngine:
 
     def print_status(self):
         s = self.get_status()
-        status = "🛑 KILLED" if s["killed"] else "✅ Active"
+        status = "KILLED" if s["killed"] else "Active"
         print(f"\n{'=' * 60}")
-        print(f"🛡️  Governance Status: {self.agent_name}")
+        print(f"Governance Status: {self.agent_name}")
         print(f"{'=' * 60}")
         print(f"   Status:          {status}")
         print(

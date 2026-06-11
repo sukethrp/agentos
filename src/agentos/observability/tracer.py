@@ -37,24 +37,20 @@ class TraceStep:
     step_type: StepType = StepType.LLM_CALL
     timestamp: float = 0.0
 
-    # What the LLM saw
     messages_snapshot: list[dict] = field(default_factory=list)
     system_prompt: str = ""
     available_tools: list[str] = field(default_factory=list)
 
-    # What it decided
     decision: str = ""  # "call tool X" | "final answer" | "error"
     tool_name: str = ""
     tool_arguments: dict = field(default_factory=dict)
     tool_result: str = ""
     response_text: str = ""
 
-    # Metrics
     tokens_used: int = 0
     cost_usd: float = 0.0
     latency_ms: float = 0.0
 
-    # Diagnostics hooks
     is_error: bool = False
     error_message: str = ""
     tool_not_found: bool = False
@@ -171,7 +167,7 @@ class Trace:
         for s in self.steps:
             lines.append(f"  {s.summary()}")
         lines.append("-" * 60)
-        status = "✅ Success" if self.success else f"❌ Failed: {self.error}"
+        status = "Success" if self.success else f"Failed: {self.error}"
         lines.append(f"  {status}")
         return "\n".join(lines)
 

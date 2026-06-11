@@ -33,7 +33,6 @@ class InteractionResult:
     cost_usd: float = 0.0
     error: str | None = None
 
-    # scores (1-10)
     relevance: float = 0.0
     helpfulness: float = 0.0
     tone: float = 0.0

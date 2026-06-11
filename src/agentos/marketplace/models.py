@@ -37,7 +37,7 @@ class MarketplaceAgent(BaseModel):
     author: str = "anonymous"
     version: str = "1.0.0"
     category: str = "general"
-    icon: str = "🤖"
+    icon: str = ""
     tags: list[str] = Field(default_factory=list)
     price: float = 0.0  # 0 = free
     downloads: int = 0

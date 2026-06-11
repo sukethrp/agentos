@@ -12,7 +12,6 @@ from agentos.core.types import AgentEvent
 
 
 # ---------------------------------------------------------------------------
-# Monitor seed data
 # ---------------------------------------------------------------------------
 
 _SAMPLE_AGENTS = [
@@ -107,7 +106,7 @@ _SAMPLE_MARKETPLACE_AGENTS = [
         "and technical issues.",
         "author": "AgentOS Team",
         "category": "support",
-        "icon": "🎧",
+        "icon": "",
         "tags": ["customer-support", "faq", "tickets", "production-ready"],
         "downloads": 1_842,
         "rating": 4.6,
@@ -130,7 +129,7 @@ _SAMPLE_MARKETPLACE_AGENTS = [
         "summarizes documents, and synthesizes findings into structured reports.",
         "author": "AgentOS Team",
         "category": "research",
-        "icon": "🔬",
+        "icon": "",
         "tags": ["research", "web-search", "summarization", "reports"],
         "downloads": 3_217,
         "rating": 4.8,
@@ -152,7 +151,7 @@ _SAMPLE_MARKETPLACE_AGENTS = [
         "security issues, style violations, and suggests improvements.",
         "author": "dev_tools_inc",
         "category": "developer-tools",
-        "icon": "🔍",
+        "icon": "",
         "tags": ["code-review", "security", "best-practices", "developer"],
         "downloads": 2_456,
         "rating": 4.3,
@@ -174,7 +173,7 @@ _SAMPLE_MARKETPLACE_AGENTS = [
         "and meeting summaries. Includes company research and CRM integration.",
         "author": "growth_team",
         "category": "sales",
-        "icon": "📧",
+        "icon": "",
         "tags": ["sales", "email", "outreach", "crm"],
         "downloads": 967,
         "rating": 4.1,
@@ -195,7 +194,7 @@ _SAMPLE_MARKETPLACE_AGENTS = [
         "statistical summaries, and answers natural-language data questions.",
         "author": "analytics_lab",
         "category": "data",
-        "icon": "📊",
+        "icon": "",
         "tags": ["data-analysis", "csv", "statistics", "insights"],
         "downloads": 1_523,
         "rating": 4.5,

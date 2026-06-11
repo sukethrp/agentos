@@ -68,7 +68,6 @@ def extract_text_from_pdf(file_path: str) -> str:
 
     data = path.read_bytes()
 
-    # Collect all stream…endstream blocks
     text_parts: list[str] = []
     stream_re = re.compile(rb"stream\r?\n(.*?)endstream", re.DOTALL)
 
@@ -83,7 +82,6 @@ def extract_text_from_pdf(file_path: str) -> str:
             decoded = raw
 
         if decoded:
-            # Extract text from content stream operators: Tj, TJ, '
             text = _extract_text_operators(decoded)
             if text.strip():
                 text_parts.append(text.strip())
@@ -133,9 +131,7 @@ def _unescape_pdf(s: str) -> str:
 def _extract_printable_text(data: bytes) -> str:
     """Last-resort fallback: grab long runs of printable ASCII from the PDF."""
     text = data.decode("latin-1", errors="replace")
-    # Filter to runs of >=20 printable characters
     runs = re.findall(r"[ -~]{20,}", text)
-    # Remove PDF-internal lines that look like operators
     filtered = [
         r
         for r in runs

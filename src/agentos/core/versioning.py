@@ -8,13 +8,11 @@ Usage:
     vc.save_version(agent, tag="v1.0", notes="Initial release")
     vc.save_version(agent_v2, tag="v1.1", notes="Improved prompt")
 
-    # Compare versions
     vc.compare("v1.0", "v1.1")
 
     # Rollback
     old_config = vc.get_version("v1.0")
 
-    # List all versions
     vc.list_versions()
 """
 
@@ -73,14 +71,14 @@ class AgentVersionControl:
         self.versions[tag] = version
         self.history.append(tag)
         self.current_tag = tag
-        print(f"💾 Saved version [{tag}]: {notes}")
+        print(f"Saved version [{tag}]: {notes}")
 
     def get_version(self, tag: str) -> AgentVersion | None:
         return self.versions.get(tag)
 
     def list_versions(self):
         print(f"\n{'=' * 60}")
-        print(f"📋 Version History: {self.agent_name}")
+        print(f"Version History: {self.agent_name}")
         print(f"{'=' * 60}")
         for tag in self.history:
             v = self.versions[tag]
@@ -101,11 +99,11 @@ class AgentVersionControl:
         a = self.versions.get(tag_a)
         b = self.versions.get(tag_b)
         if not a or not b:
-            print(f"❌ Version not found: {tag_a if not a else tag_b}")
+            print(f"Version not found: {tag_a if not a else tag_b}")
             return
 
         print(f"\n{'=' * 60}")
-        print(f"🔄 Comparing: [{tag_a}] vs [{tag_b}]")
+        print(f"Comparing: [{tag_a}] vs [{tag_b}]")
         print(f"{'=' * 60}")
 
         diffs = []
@@ -131,13 +129,13 @@ class AgentVersionControl:
             pr_a = a.test_results.get("pass_rate", 0)
             pr_b = b.test_results.get("pass_rate", 0)
             diff = pr_b - pr_a
-            icon = "📈" if diff > 0 else "📉" if diff < 0 else "➡️"
+            icon = "" if diff > 0 else "" if diff < 0 else ""
             diffs.append(f"   Pass rate:   {pr_a}% → {pr_b}% {icon} ({diff:+.1f}%)")
 
             qa = a.test_results.get("avg_quality", 0)
             qb = b.test_results.get("avg_quality", 0)
             qdiff = qb - qa
-            icon = "📈" if qdiff > 0 else "📉" if qdiff < 0 else "➡️"
+            icon = "" if qdiff > 0 else "" if qdiff < 0 else ""
             diffs.append(f"   Avg quality: {qa} → {qb} {icon} ({qdiff:+.1f})")
 
         if diffs:
@@ -152,7 +150,7 @@ class AgentVersionControl:
         """Get config from a previous version for rollback."""
         v = self.versions.get(tag)
         if not v:
-            print(f"❌ Version not found: {tag}")
+            print(f"Version not found: {tag}")
             return None
         self.current_tag = tag
         print(f"⏪ Rolled back to version [{tag}]")
@@ -176,7 +174,7 @@ class AgentVersionControl:
         a = self.versions.get(tag_a)
         b = self.versions.get(tag_b)
         if not a or not b:
-            print(f"❌ Version not found: {tag_a if not a else tag_b}")
+            print(f"Version not found: {tag_a if not a else tag_b}")
             return None
 
         queries = [q for q in test_queries if q.strip()]
@@ -202,7 +200,6 @@ class AgentVersionControl:
         ab = ABTest(agent_a, agent_b)
         report = ab.run_test(queries, num_runs=num_runs)
 
-        # Attach a brief summary of the A/B test to each version's test_results
         summary_a = {
             "opponent": tag_b,
             "role": "A",
@@ -227,7 +224,7 @@ class AgentVersionControl:
         b.test_results.setdefault("ab_tests", {})[tag_a] = summary_b
 
         print(
-            f"\n🧪 A/B test [{tag_a}] vs [{tag_b}] → winner: {report.winner} (conf {report.confidence * 100:.1f}%)"
+            f"\nA/B test [{tag_a}] vs [{tag_b}] → winner: {report.winner} (conf {report.confidence * 100:.1f}%)"
         )
 
         return report
