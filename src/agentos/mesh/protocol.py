@@ -11,6 +11,7 @@ All payloads are plain JSON dicts — no binary, no protobuf.
 
 from __future__ import annotations
 
+import threading
 import time
 import uuid
 from enum import Enum

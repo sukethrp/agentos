@@ -1,7 +1,5 @@
 from __future__ import annotations
-import os
 import tempfile
-import uuid as _uuid
 from pathlib import Path as _Path
 from fastapi import FastAPI
 from agentos.events import WebhookTrigger

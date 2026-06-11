@@ -14,10 +14,8 @@ router = APIRouter(tags=["multimodal"])
 ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 ALLOWED_DOC_EXTS = {".txt", ".md", ".markdown", ".pdf", ".csv", ".json", ".log", ".rst"}
 ALLOWED_EXTS = ALLOWED_IMAGE_EXTS | ALLOWED_DOC_EXTS
-class AnalyzeFileRequest(BaseModel):
-    file_path: str
-    question: str = ""
-    model: str = "gpt-4o"
+
+
 @router.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     """Upload an image or document for analysis."""

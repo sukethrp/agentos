@@ -4,12 +4,9 @@ import asyncio
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
-from agentos.rag.chunker import Chunk, DocumentChunker
+from agentos.rag.chunker import DocumentChunker
 from agentos.rag.pipeline import RAGPipeline, RetrievalResult
 from agentos.rag.retriever import HybridRetriever, _rrf_fuse
-from agentos.rag.types import SearchResult
 from agentos.rag.vector_store import VectorStore
 
 
