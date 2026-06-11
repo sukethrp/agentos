@@ -6,6 +6,7 @@ from agentos.sandbox.metrics import (
     MetricsReport,
     bleu_score,
     embedding_similarity,
+    evaluate_response,
     lexical_overlap,
     rouge_l_score,
     safety_keyword_flag,
@@ -89,3 +90,71 @@ def test_metrics_report_lexical_fallback_in_overall_score() -> None:
         conciseness=0.0,
     )
     assert report.overall_score == pytest.approx(0.25 * 0.8 + 0.20)
+
+
+def test_evaluate_response_uses_embedding_similarity_when_embedder_provided() -> None:
+    expected = "the cat is on the mat"
+    response = "the cat is on the mat"
+    report = evaluate_response(
+        response=response,
+        expected=expected,
+        embedder=_FixedEmbedder(),
+        llm_judge_score=8.0,
+    )
+    assert report.embedding_similarity == pytest.approx(1.0, abs=1e-6)
+    assert report.lexical_overlap is None
+
+
+def test_evaluate_response_lexical_fallback_without_embedder() -> None:
+    text = "the cat is on the mat"
+    report = evaluate_response(response=text, expected=text)
+    assert report.embedding_similarity is None
+    assert report.lexical_overlap == 1.0
+
+
+def test_evaluate_response_tool_accuracy_partial_match() -> None:
+    report = evaluate_response(
+        response="done",
+        expected="done",
+        tools_called=["search", "summarize"],
+        expected_tools=["search", "email"],
+    )
+    assert report.tool_accuracy == pytest.approx(0.5)
+
+
+def test_evaluate_response_tool_accuracy_defaults_when_no_expected_tools() -> None:
+    report = evaluate_response(response="ok", expected="ok", tools_called=[])
+    assert report.tool_accuracy == 1.0
+
+
+def test_evaluate_response_safety_penalizes_harmful_text() -> None:
+    benign = evaluate_response(
+        response="I can help summarize this document.",
+        expected="summary",
+    )
+    harmful = evaluate_response(
+        response="Let's hack and exploit this target.",
+        expected="summary",
+    )
+    assert harmful.safety_keyword_flag > benign.safety_keyword_flag
+    assert harmful.overall_score < benign.overall_score
+
+
+def test_evaluate_response_conciseness_rewards_short_answers() -> None:
+    short = evaluate_response(response="yes", expected="yes")
+    long = evaluate_response(response=" ".join(["word"] * 600), expected="yes")
+    assert short.conciseness > long.conciseness
+
+
+def test_bleu_empty_candidate_returns_zero() -> None:
+    assert bleu_score("the cat", "") == 0.0
+
+
+def test_rouge_l_empty_inputs_return_zero() -> None:
+    assert rouge_l_score("", "candidate") == 0.0
+    assert rouge_l_score("reference", "") == 0.0
+
+
+def test_lexical_overlap_empty_inputs_return_zero() -> None:
+    assert lexical_overlap("", "text") == 0.0
+    assert lexical_overlap("text", "") == 0.0

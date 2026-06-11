@@ -92,7 +92,7 @@ source = ["agentos"]
 branch = true
 
 [tool.coverage.report]
-fail_under = 20  # TODO: incrementally raise to 70% as test coverage improves
+fail_under = 25
 show_missing = true
 exclude_lines = [
     "pragma: no cover",

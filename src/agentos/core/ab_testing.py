@@ -213,8 +213,10 @@ def run_ab_test(
         mask_a[:n1] = True
         r1 = float(np.sum(ranks[mask_a]))
 
-        # U statistic for A.
+        # U statistic for A; SciPy reports min(U1, U2).
         u1 = n1 * n2 + n1 * (n1 + 1) / 2.0 - r1
+        u2 = n1 * n2 - u1
+        u_stat = min(u1, u2)
         mean_u = n1 * n2 / 2.0
         n = n1 + n2
 
@@ -234,19 +236,24 @@ def run_ab_test(
             i = j
 
         if n <= 1:
-            return float(u1), 1.0
+            return float(u_stat), 1.0
 
         var_u = (n1 * n2 / 12.0) * (n + 1 - tie_sum / (n * (n - 1)))
         if var_u <= 0:
-            return float(u1), 1.0
+            return float(u_stat), 1.0
 
-        # Continuity correction for normal approximation.
-        z = (u1 - mean_u) / math.sqrt(var_u)
-        # Two-sided p-value from |z|.
+        sd_u = math.sqrt(var_u)
+        z = (u_stat - mean_u) / sd_u
+        if z > 0:
+            z = (u_stat - 0.5 - mean_u) / sd_u
+        elif z < 0:
+            z = (u_stat + 0.5 - mean_u) / sd_u
+        else:
+            z = 0.0
         p = 2.0 * _norm_sf(abs(z))
         p = max(0.0, min(1.0, float(p)))
 
-        return float(u1), p
+        return float(u_stat), p
 
     try:
         from scipy.stats import mannwhitneyu
