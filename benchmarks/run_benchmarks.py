@@ -1,152 +1,209 @@
-"""Run reproducible AgentOS benchmark snapshots.
-
-This script uses MockProvider for deterministic local benchmark runs,
-computes sandbox metrics on 100 synthetic scenarios, and writes markdown
-results under benchmarks/results/.
-"""
+"""Run reproducible AgentOS benchmarks from version-controlled labeled data."""
 
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
-import random
-from statistics import mean
+from statistics import median
 
-from agentos.providers.mock import call_mock
+from scipy.stats import pearsonr, spearmanr
+
+from agentos.governance.audit import AuditLog
+from agentos.governance.budget import BudgetGuard
+from agentos.governance.guardrails import GovernanceEngine
+from agentos.governance.permissions import PermissionGuard
 from agentos.sandbox.metrics import evaluate_response
 
 
+DATA_DIR = Path("benchmarks/data")
+EVAL_DATASET = DATA_DIR / "evaluation_responses.json"
+DOCS_PATH = Path("docs/benchmarks.md")
 RESULTS_DIR = Path("benchmarks/results")
-MD_PATH = RESULTS_DIR / "benchmark_report.md"
 JSON_PATH = RESULTS_DIR / "benchmark_metrics.json"
 
-
-BENCHMARK_TABLES = """# AgentOS Benchmarks
-
-## Evaluation Metrics Accuracy
-
-We benchmarked our evaluation metrics against human ratings on 200
-hand-labeled agent responses across 4 categories.
-
-### Correlation with Human Judgment
-
-| Metric             | Spearman ρ | Pearson r | Notes                    |
-|--------------------|-----------|-----------|--------------------------|
-| LLM-as-judge       | 0.87      | 0.85      | GPT-4o-mini as judge     |
-| BLEU               | 0.42      | 0.39      | Weak alone, good combined|
-| ROUGE-L            | 0.51      | 0.48      | Better for longer answers |
-| Semantic Similarity| 0.79      | 0.76      | Best single non-LLM metric|
-| Combined (ours)    | 0.91      | 0.89      | Weighted ensemble        |
-
-**Key insight:** Our weighted ensemble of all metrics outperforms
-LLM-as-judge alone by 4.6% Spearman correlation, while also being
-60% cheaper (fewer LLM calls needed).
-
-## RAG Pipeline Performance
-
-Tested on a 500-document knowledge base (technical documentation):
-
-| Embedding Backend   | Recall@5 | Recall@10 | Latency (ms) | Cost/1K queries |
-|--------------------|----------|-----------|---------------|-----------------|
-| OpenAI ada-3-small | 0.89     | 0.94      | 120ms         | $0.02           |
-| all-MiniLM-L6-v2   | 0.85     | 0.91      | 15ms          | $0.00           |
-| TF-IDF + SVD       | 0.71     | 0.82      | 2ms           | $0.00           |
-
-**Key insight:** Local embeddings achieve 95% of OpenAI quality at
-zero cost and 8x lower latency. TF-IDF remains a competitive
-baseline for keyword-heavy queries.
-
-## Governance Overhead
-
-| Feature             | Added Latency | Memory Overhead |
-|--------------------|---------------|-----------------|
-| Budget guard        | <1ms          | ~100 bytes      |
-| Permission guard    | <1ms          | ~200 bytes      |
-| Audit trail logging | ~2ms          | ~1KB per entry  |
-| Full governance     | <5ms          | Negligible      |
-
-Governance adds less than 5ms overhead to any agent query.
-
-## Agent Response Quality (MockProvider Baseline)
-
-Tested across 100 scenarios in 5 categories:
-
-| Category         | Pass Rate | Avg Quality (0-10) | Avg Latency |
-|-----------------|-----------|---------------------|-------------|
-| Math/calculation | 95%       | 9.2                 | 340ms       |
-| Information      | 88%       | 8.5                 | 520ms       |
-| Safety/refusal   | 100%      | 9.8                 | 210ms       |
-| Multi-tool       | 82%       | 7.9                 | 890ms       |
-| Conversation     | 90%       | 8.7                 | 450ms       |
-"""
+GOVERNANCE_ITERATIONS = 10_000
 
 
-def _build_scenarios(total: int = 100) -> list[dict[str, str]]:
-    categories = ["math", "information", "safety", "multi-tool", "conversation"]
-    scenarios: list[dict[str, str]] = []
-    for i in range(total):
-        category = categories[i % len(categories)]
-        scenarios.append(
-            {
-                "id": f"s{i+1:03d}",
-                "category": category,
-                "user": f"Scenario {i+1}: help with {category}",
-                "expected": f"Provide a correct and safe {category} response.",
-            }
+def _load_examples() -> list[dict]:
+    payload = json.loads(EVAL_DATASET.read_text(encoding="utf-8"))
+    examples = payload["examples"]
+    if len(examples) != payload["size"]:
+        raise ValueError(
+            f"Dataset size mismatch: header says {payload['size']}, found {len(examples)}"
         )
-    return scenarios
+    return examples
 
 
-def run_mock_metrics(total: int = 100) -> dict[str, float]:
-    random.seed(42)
-    scenarios = _build_scenarios(total=total)
-    metric_scores = []
-    for s in scenarios:
-        msg, event = call_mock(
-            messages=[{"role": "user", "content": s["user"]}],
-            tools=[],
-            model="mock",
-            agent_name="benchmark",
-        )
-        response = msg.content or ""
-        # Deterministic proxy judge score for reproducible local runs.
-        judge = 7.5 if "general" in response.lower() else 8.0
-        report = evaluate_response(
-            response=response,
-            expected=s["expected"],
-            tools_called=[],
-            expected_tools=[],
-            llm_judge_score=judge,
-        )
-        metric_scores.append(
-            {
-                "bleu": report.bleu_score,
-                "rouge_l": report.rouge_l_score,
-                "semantic": report.semantic_similarity,
-                "toxicity": report.toxicity_score,
-                "overall": report.overall_score,
-                "latency_ms": event.latency_ms,
-            }
-        )
+def _percentile_ms(samples: list[float], pct: float) -> float:
+    ordered = sorted(samples)
+    index = int(round((pct / 100.0) * (len(ordered) - 1)))
+    return ordered[index] * 1000.0
 
+
+def _measure_latency(fn, iterations: int) -> dict[str, float]:
+    samples: list[float] = []
+    for _ in range(iterations):
+        start = time.perf_counter()
+        fn()
+        samples.append(time.perf_counter() - start)
     return {
-        "num_scenarios": float(total),
-        "avg_bleu": mean(m["bleu"] for m in metric_scores),
-        "avg_rouge_l": mean(m["rouge_l"] for m in metric_scores),
-        "avg_semantic_similarity": mean(m["semantic"] for m in metric_scores),
-        "avg_toxicity": mean(m["toxicity"] for m in metric_scores),
-        "avg_overall_metrics_score": mean(m["overall"] for m in metric_scores),
-        "avg_latency_ms": mean(m["latency_ms"] for m in metric_scores),
+        "median_ms": median(samples) * 1000.0,
+        "p95_ms": _percentile_ms(samples, 95),
+        "iterations": float(iterations),
     }
 
 
+def compute_metric_correlations(examples: list[dict]) -> dict:
+    human_labels: list[float] = []
+    bleu_scores: list[float] = []
+    rouge_scores: list[float] = []
+    semantic_scores: list[float] = []
+    overall_scores: list[float] = []
+
+    for example in examples:
+        report = evaluate_response(
+            response=example["response"],
+            expected=example["reference"],
+            llm_judge_score=0.0,
+        )
+        human_labels.append(float(example["human_label_0_to_10"]))
+        bleu_scores.append(report.bleu_score)
+        rouge_scores.append(report.rouge_l_score)
+        semantic_scores.append(report.semantic_similarity)
+        overall_scores.append(report.overall_score)
+
+    n = len(examples)
+    rows = {}
+    for name, values in (
+        ("bleu", bleu_scores),
+        ("rouge_l", rouge_scores),
+        ("semantic_similarity", semantic_scores),
+        ("overall_score", overall_scores),
+    ):
+        spearman = spearmanr(human_labels, values)
+        pearson = pearsonr(human_labels, values)
+        rows[name] = {
+            "spearman_rho": float(spearman.statistic),
+            "pearson_r": float(pearson.statistic),
+        }
+
+    return {"n": n, "metrics": rows}
+
+
+def measure_governance_overhead(iterations: int = GOVERNANCE_ITERATIONS) -> dict:
+    budget = BudgetGuard()
+    permissions = PermissionGuard(max_actions_per_run=iterations + 1)
+    audit = AuditLog("benchmark")
+    governance = GovernanceEngine(
+        agent_name="benchmark",
+        budget=BudgetGuard(),
+        permissions=PermissionGuard(max_actions_per_run=iterations + 1),
+    )
+
+    return {
+        "budget_guard": _measure_latency(lambda: budget.check_action(0.001), iterations),
+        "permission_guard": _measure_latency(
+            lambda: permissions.check_tool("calculator"), iterations
+        ),
+        "audit_trail_logging": _measure_latency(
+            lambda: audit.log(
+                action="tool_call:calculator",
+                allowed=True,
+                reason="benchmark",
+            ),
+            iterations,
+        ),
+        "full_governance": _measure_latency(
+            lambda: governance.check_tool_call("calculator", estimated_cost=0.001),
+            iterations,
+        ),
+    }
+
+
+def _fmt_corr(value: float) -> str:
+    return f"{value:.3f}"
+
+
+def _fmt_ms(value: float) -> str:
+    if value < 0.01:
+        return f"{value:.6f}"
+    return f"{value:.2f}"
+
+
+def build_reproduction_notice(n: int) -> str:
+    return (
+        f"All numbers in this file are generated by benchmarks/run_benchmarks.py "
+        f"over benchmarks/data/ (N={n}). Run `python benchmarks/run_benchmarks.py` "
+        f"to reproduce."
+    )
+
+
+def build_markdown(correlations: dict, governance: dict, n: int) -> str:
+    notice = build_reproduction_notice(n)
+    metric_rows = correlations["metrics"]
+    lines = [
+        notice,
+        "",
+        "# AgentOS Benchmarks",
+        "",
+        "## Evaluation Metrics Accuracy",
+        "",
+        f"Hand-labeled agent responses (N={n}) across math, information, safety, "
+        "multi-tool, and conversation categories.",
+        "",
+        "### Correlation with Human Judgment",
+        "",
+        "| Metric | Spearman rho | Pearson r |",
+        "|--------|-------------|-----------|",
+        f"| BLEU | {_fmt_corr(metric_rows['bleu']['spearman_rho'])} | "
+        f"{_fmt_corr(metric_rows['bleu']['pearson_r'])} |",
+        f"| ROUGE-L | {_fmt_corr(metric_rows['rouge_l']['spearman_rho'])} | "
+        f"{_fmt_corr(metric_rows['rouge_l']['pearson_r'])} |",
+        f"| Semantic Similarity | {_fmt_corr(metric_rows['semantic_similarity']['spearman_rho'])} | "
+        f"{_fmt_corr(metric_rows['semantic_similarity']['pearson_r'])} |",
+        f"| Combined (overall_score) | {_fmt_corr(metric_rows['overall_score']['spearman_rho'])} | "
+        f"{_fmt_corr(metric_rows['overall_score']['pearson_r'])} |",
+        "",
+        "## Governance Overhead",
+        "",
+        f"Measured with `time.perf_counter` over {int(governance['budget_guard']['iterations'])} "
+        "iterations per feature.",
+        "",
+        "| Feature | Median (ms) | P95 (ms) |",
+        "|---------|------------|----------|",
+        f"| Budget guard | {_fmt_ms(governance['budget_guard']['median_ms'])} | "
+        f"{_fmt_ms(governance['budget_guard']['p95_ms'])} |",
+        f"| Permission guard | {_fmt_ms(governance['permission_guard']['median_ms'])} | "
+        f"{_fmt_ms(governance['permission_guard']['p95_ms'])} |",
+        f"| Audit trail logging | {_fmt_ms(governance['audit_trail_logging']['median_ms'])} | "
+        f"{_fmt_ms(governance['audit_trail_logging']['p95_ms'])} |",
+        f"| Full governance | {_fmt_ms(governance['full_governance']['median_ms'])} | "
+        f"{_fmt_ms(governance['full_governance']['p95_ms'])} |",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def main() -> None:
+    examples = _load_examples()
+    n = len(examples)
+    correlations = compute_metric_correlations(examples)
+    governance = measure_governance_overhead()
+
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    computed = run_mock_metrics(total=100)
-    MD_PATH.write_text(BENCHMARK_TABLES, encoding="utf-8")
-    JSON_PATH.write_text(json.dumps(computed, indent=2), encoding="utf-8")
-    print(f"Wrote markdown benchmark report to {MD_PATH}")
-    print(f"Wrote computed metric summary to {JSON_PATH}")
+    payload = {
+        "dataset_n": n,
+        "correlations": correlations,
+        "governance_overhead": governance,
+    }
+    JSON_PATH.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    DOCS_PATH.write_text(build_markdown(correlations, governance, n), encoding="utf-8")
+
+    notice = build_reproduction_notice(n)
+    print(notice)
+    print(f"Wrote {DOCS_PATH}")
+    print(f"Wrote {JSON_PATH}")
 
 
 if __name__ == "__main__":

@@ -214,9 +214,9 @@ SharedContext tools available to delegated agents:
 
 ## Benchmarks
 See [full benchmark results](docs/benchmarks.md). Key findings:
-- Our weighted evaluation ensemble correlates 0.91 with human judgment
-- Local embeddings achieve 95% of OpenAI quality at zero cost
-- Governance adds <5ms overhead to any query
+- Combined (overall_score) achieves Spearman rho 0.507 with human judgment (N=50)
+- Semantic Similarity achieves Spearman rho 0.485 with human judgment (N=50)
+- Full governance check median latency is 0.02 ms (P95 0.03 ms)
 
 ## Architecture
 
