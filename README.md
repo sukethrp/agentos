@@ -36,6 +36,30 @@
 pip install agentos-platform
 ```
 
+### Installation
+
+The base install requires no API key. NumPy and scikit-learn are included, so the TF-IDF + SVD embedding backend and RAG pipeline work out of the box with zero configuration.
+
+For hosted models, set the provider API key:
+
+```bash
+export OPENAI_API_KEY=...      # for OpenAI models
+export ANTHROPIC_API_KEY=...   # for Anthropic models
+```
+
+The 10-line example below uses `gpt-4o-mini` and therefore needs `OPENAI_API_KEY`. Demo mode and TF-IDF embeddings run without any key.
+
+### Optional extras
+
+| Extra | Install | Adds |
+|-------|---------|------|
+| `dev` | `pip install 'agentos-platform[dev]'` | pytest, pytest-asyncio, pytest-cov, black, and ruff for development and testing |
+| `redis` | `pip install 'agentos-platform[redis]'` | Redis client for Redis-backed caching and storage |
+| `mcp` | `pip install 'agentos-platform[mcp]'` | MCP server (stdio/SSE) for Claude Desktop and Cursor |
+| `otel` | `pip install 'agentos-platform[otel]'` | OpenTelemetry API, SDK, and OTLP exporter for distributed tracing |
+| `rag` | `pip install 'agentos-platform[rag]'` | ChromaDB, Pinecone, pgvector, and psycopg vector-store backends for RAG |
+| `local` | `pip install 'agentos-platform[local]'` | Sentence-Transformers local embeddings (downloads PyTorch; large install) |
+
 10-line example:
 
 ```python
@@ -189,7 +213,9 @@ Tested in CI (`pytest`); see `tests/` for coverage.
 | Module | Description |
 |--------|-------------|
 | Observability | Tracing, alerting, and run replay |
-| Embeddings | TF-IDF, OpenAI, and local embedding backends |
+| Embeddings | TF-IDF (default, no API key), OpenAI (API key), local Sentence-Transformers (`[local]` extra) |
+
+TF-IDF is included in the base install and tested in CI. OpenAI embeddings are tested via mocks. Local backend tests skip in CI and run only when `[local]` is installed.
 
 **Shipped, limited automated test coverage**
 
