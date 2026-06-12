@@ -6,119 +6,146 @@
 <title>AgentOS — The Operating System for AI Agents</title>
 <meta name="description" content="Build, test, deploy, monitor, and govern AI agents. 15 modules. 10 lines of code. Open source.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#000;--card:#0a0a14;--border:#1a1a2e;--text:#e0e0e0;--muted:#888;
---accent:#00d4ff;--accent2:#6c5ce7;--green:#00ff88;--red:#ff4444;--yellow:#f0b429}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-background:var(--bg);color:var(--text);overflow-x:hidden}
+:root{
+  --bg:#F4F1EA;
+  --bg-2:#EAE6DC;
+  --surface:#FBFAF6;
+  --ink:#16140F;
+  --sub:#6B6557;
+  --line:#DCD7CA;
+  --accent:#E8654A;
+  --accent-press:#C9482E;
+  --accent-soft:#F6E2DB;
+  --chart-1:#FF6A47;
+  --chart-2:#E0A458;
+  --chart-3:#6FB7A6;
+  --chart-4:#7C9BD6;
+  --chart-5:#B98BD0;
+  --font-display:"Clash Display",sans-serif;
+  --font-body:Satoshi,sans-serif;
+  --font-mono:"JetBrains Mono",monospace;
+  --ease:cubic-bezier(0.22,1,0.36,1);
+  --ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+  --r-sm:10px;
+  --r:16px;
+  --r-lg:24px;
+  --fs-hero:clamp(3.5rem,10vw,11rem);
+  --fs-h1:clamp(2.5rem,6vw,5rem);
+  --fs-h2:clamp(2rem,4vw,3.25rem);
+}
+body{font-family:var(--font-body);
+background:var(--bg);color:var(--ink);overflow-x:hidden}
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
 
 /* ── Nav ── */
 nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;
 display:flex;justify-content:space-between;align-items:center;
-background:rgba(0,0,0,.7);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.04)}
+background:rgba(244,241,234,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 .logo{font-size:20px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px}
 .nav-links{display:flex;gap:28px;align-items:center}
-.nav-links a{color:var(--muted);font-size:14px;text-decoration:none;transition:color .2s}
-.nav-links a:hover{color:#fff}
-.nav-btn{padding:8px 20px;border-radius:6px;background:var(--accent);color:#000;font-weight:600;font-size:13px}
+.nav-links a{color:var(--sub);font-size:14px;text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:var(--ink)}
+.nav-btn{padding:8px 20px;border-radius:6px;background:var(--accent);color:var(--surface);font-weight:600;font-size:13px}
 .nav-btn:hover{text-decoration:none;opacity:.9}
 
 /* ── Hero ── */
 .hero{max-width:960px;margin:0 auto;padding:140px 40px 80px;text-align:center}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;
-background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.18);color:var(--accent);
+background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);
 font-size:13px;font-weight:500;margin-bottom:28px}
-h1{font-size:clamp(36px,6vw,64px);font-weight:800;line-height:1.08;margin-bottom:24px;
-background:linear-gradient(135deg,#fff 20%,var(--accent) 50%,var(--green) 90%);
+h1{font-family:var(--font-display);font-size:var(--fs-hero);font-weight:700;letter-spacing:-.04em;line-height:1.08;margin-bottom:24px;
+background:linear-gradient(135deg,var(--ink) 20%,var(--accent) 50%,var(--chart-3) 90%);
 -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.sub{font-size:clamp(16px,2.2vw,21px);color:var(--muted);line-height:1.6;max-width:640px;margin:0 auto 40px}
+.sub{font-size:clamp(16px,2.2vw,21px);color:var(--sub);line-height:1.6;max-width:640px;margin:0 auto 40px}
 .cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
 .btn{padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;
 border:none;cursor:pointer;transition:transform .15s,box-shadow .2s;display:inline-flex;align-items:center;gap:8px}
 .btn:hover{transform:translateY(-1px);text-decoration:none}
-.bp{background:linear-gradient(135deg,var(--accent),#0088ff);color:#000;box-shadow:0 4px 24px rgba(0,212,255,.25)}
-.bs{background:transparent;color:#fff;border:1px solid #333}
-.bs:hover{border-color:#555}
-.install{max-width:500px;margin:36px auto 0;background:#0d1117;border:1px solid var(--border);
+.bp{background:linear-gradient(135deg,var(--accent),var(--accent-press));color:var(--surface);box-shadow:0 4px 24px rgba(232,101,74,.25)}
+.bs{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.bs:hover{border-color:var(--sub)}
+.install{max-width:500px;margin:36px auto 0;background:var(--ink);border:1px solid var(--line);
 border-radius:10px;padding:14px 24px;display:flex;align-items:center;justify-content:center;gap:12px}
-.install code{color:var(--green);font-size:15px;font-family:'SF Mono','Fira Code',monospace}
-.install .copy{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px}
-.install .copy:hover{color:#fff}
+.install code{color:var(--chart-3);font-size:15px;font-family:var(--font-mono)}
+.install .copy{background:none;border:none;color:var(--sub);cursor:pointer;font-size:16px;padding:4px}
+.install .copy:hover{color:var(--ink)}
 
 /* ── Stats bar ── */
 .stats{display:flex;justify-content:center;gap:48px;padding:24px 40px;flex-wrap:wrap}
 .stat{text-align:center}
-.stat .num{font-size:32px;font-weight:800;color:#fff}
-.stat .lbl{font-size:13px;color:var(--muted);margin-top:4px}
+.stat .num{font-size:32px;font-weight:700;color:var(--ink)}
+.stat .lbl{font-size:13px;color:var(--sub);margin-top:4px}
 
 /* ── Sections ── */
 section{max-width:1140px;margin:0 auto;padding:80px 40px}
-h2{font-size:clamp(28px,4vw,40px);font-weight:700;color:#fff;margin-bottom:16px}
+h2{font-family:var(--font-display);font-size:var(--fs-h2);font-weight:600;letter-spacing:-.03em;color:var(--ink);margin-bottom:16px}
 h2.center{text-align:center}
-.section-sub{text-align:center;color:var(--muted);font-size:17px;max-width:600px;margin:0 auto 56px}
+.section-sub{text-align:center;color:var(--sub);font-size:17px;max-width:600px;margin:0 auto 56px}
 
 /* ── Feature grid ── */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:32px;
 transition:border-color .25s,transform .2s}
-.card:hover{border-color:rgba(0,212,255,.25);transform:translateY(-2px)}
+.card:hover{border-color:rgba(232,101,74,.25);transform:translateY(-2px)}
 .card .ic{font-size:36px;margin-bottom:16px}
-.card h3{font-size:18px;color:#fff;margin-bottom:8px;font-weight:600}
-.card p{color:var(--muted);font-size:14px;line-height:1.65}
+.card h3{font-size:18px;color:var(--ink);margin-bottom:8px;font-weight:600}
+.card p{color:var(--sub);font-size:14px;line-height:1.65}
 .card .tag{display:inline-block;margin-top:12px;padding:3px 10px;border-radius:4px;
 font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.tag-core{background:rgba(0,212,255,.1);color:var(--accent)}
-.tag-test{background:rgba(0,255,136,.1);color:var(--green)}
-.tag-prod{background:rgba(108,92,231,.1);color:var(--accent2)}
-.tag-eco{background:rgba(240,180,41,.1);color:var(--yellow)}
+.tag-core{background:var(--accent-soft);color:var(--accent)}
+.tag-test{background:rgba(111,183,166,.15);color:var(--chart-3)}
+.tag-prod{background:rgba(185,139,208,.15);color:var(--chart-5)}
+.tag-eco{background:rgba(224,164,88,.15);color:var(--chart-2)}
 
 /* ── Comparison table ── */
 .table-wrap{overflow-x:auto;margin:0 auto;max-width:960px}
 table{width:100%;border-collapse:collapse;margin-bottom:16px}
-th{text-align:left;padding:14px 16px;border-bottom:1px solid var(--border);color:var(--muted);
+th{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);color:var(--sub);
 font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
 td{padding:14px 16px;border-bottom:1px solid rgba(26,26,46,.5);font-size:14px}
 tr:hover td{background:rgba(255,255,255,.02)}
-.g{color:var(--green);font-weight:600}
-.r{color:#555}
-.y{color:#ffaa00;font-weight:600}
-.b{color:#00d4ff;font-weight:500}
-td:first-child{font-weight:500;color:#ccc}
+.g{color:var(--chart-3);font-weight:600}
+.r{color:var(--sub)}
+.y{color:var(--chart-2);font-weight:600}
+.b{color:var(--chart-4);font-weight:500}
+td:first-child{font-weight:500;color:var(--sub)}
 
 /* ── Code snippet ── */
 .code-section{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
-.code-block{background:#0d1117;border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.code-header{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;
-align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.code-block{background:var(--ink);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.code-header{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;
+align-items:center;gap:8px;font-size:13px;color:var(--sub)}
 .code-header .dot{width:10px;height:10px;border-radius:50%}
 .code-block pre{padding:20px;font-size:13px;line-height:1.7;overflow-x:auto;
-font-family:'SF Mono','Fira Code',monospace;color:#c9d1d9}
-.kw{color:#ff7b72} .fn{color:#d2a8ff} .st{color:#a5d6ff} .cm{color:#8b949e} .num{color:var(--green)}
+font-family:var(--font-mono);color:var(--surface)}
+.kw{color:var(--accent)} .fn{color:var(--chart-5)} .st{color:var(--chart-4)} .cm{color:var(--sub)} .num{color:var(--chart-3)}
 
 /* ── Embed preview ── */
-.embed-demo{background:var(--card);border:1px solid var(--border);border-radius:16px;
+.embed-demo{background:var(--surface);border:1px solid var(--line);border-radius:16px;
 padding:40px;text-align:center}
-.embed-demo h3{font-size:22px;margin-bottom:12px;color:#fff}
-.embed-demo p{color:var(--muted);margin-bottom:20px}
-.snippet-box{background:#0d1117;border:1px solid var(--border);border-radius:8px;
-padding:16px 20px;text-align:left;font-size:13px;font-family:'SF Mono','Fira Code',monospace;
-color:var(--green);overflow-x:auto;line-height:1.6}
+.embed-demo h3{font-size:22px;margin-bottom:12px;color:var(--ink)}
+.embed-demo p{color:var(--sub);margin-bottom:20px}
+.snippet-box{background:var(--ink);border:1px solid var(--line);border-radius:8px;
+padding:16px 20px;text-align:left;font-size:13px;font-family:var(--font-mono);
+color:var(--chart-3);overflow-x:auto;line-height:1.6}
 
 /* ── CTA final ── */
 .final-cta{text-align:center;padding:100px 40px;
-background:radial-gradient(ellipse at center,rgba(0,212,255,.06) 0%,transparent 70%)}
+background:radial-gradient(ellipse at center,var(--accent-soft) 0%,transparent 70%)}
 .final-cta h2{margin-bottom:16px}
-.final-cta p{color:var(--muted);font-size:18px;margin-bottom:40px}
+.final-cta p{color:var(--sub);font-size:18px;margin-bottom:40px}
 
 /* ── Footer ── */
-footer{text-align:center;padding:40px;border-top:1px solid var(--border)}
-footer p{color:#444;font-size:13px;line-height:2}
+footer{text-align:center;padding:40px;border-top:1px solid var(--line)}
+footer p{color:var(--sub);font-size:13px;line-height:2}
 footer .social{display:flex;justify-content:center;gap:24px;margin-bottom:12px}
-footer .social a{color:var(--muted);font-size:14px}
-footer .social a:hover{color:#fff}
+footer .social a{color:var(--sub);font-size:14px}
+footer .social a:hover{color:var(--ink)}
 
 /* ── Responsive ── */
 @media(max-width:768px){
@@ -297,7 +324,7 @@ footer .social a:hover{color:#fff}
       <tr><td>Community</td><td class="b">&#127793; Growing</td><td class="g">&#10003; Massive</td><td class="g">&#10003; Large</td><td class="g">&#10003; Large</td></tr>
     </table>
   </div>
-  <p style="color:#888;font-size:13px;max-width:640px;margin:18px auto 0;text-align:center;line-height:1.6">
+  <p style="color:var(--sub);font-size:13px;max-width:640px;margin:18px auto 0;text-align:center;line-height:1.6">
     <strong>Key:</strong> <span class="g">&#10003;</span> = Built-in/Yes &nbsp;|&nbsp;
     <span class="y">&#9889;</span> = Paid add-on &nbsp;|&nbsp;
     <span class="b">&#128279;</span> = Partial/separate tool &nbsp;|&nbsp;
@@ -305,7 +332,7 @@ footer .social a:hover{color:#fff}
     <span class="b">&#127793;</span> = Early stage &nbsp;|&nbsp;
     <span class="r">&#10007;</span> = Not available
   </p>
-  <p style="color:#777;font-size:13px;max-width:580px;margin:12px auto 0;text-align:center;line-height:1.6;font-style:italic">
+  <p style="color:var(--sub);font-size:13px;max-width:580px;margin:12px auto 0;text-align:center;line-height:1.6;font-style:italic">
     AgentOS focuses on what others don't: testing, governance, and monitoring built in from day one.
     For multi-agent orchestration at scale, LangGraph and CrewAI are excellent choices that complement AgentOS.
   </p>
