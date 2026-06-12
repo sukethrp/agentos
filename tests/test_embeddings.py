@@ -16,6 +16,7 @@ from agentos.rag.embeddings import (
 
 
 def test_get_embeddings_returns_tfidf_backend() -> None:
+    pytest.importorskip("sklearn")
     backend = get_embeddings("tfidf", n_components=64)
     assert isinstance(backend, TFIDFEmbeddings)
     assert backend.dimension() == 64
@@ -34,6 +35,7 @@ def test_get_embeddings_raises_on_unknown_backend() -> None:
 
 
 def test_tfidf_embeddings_unit_norm_and_dimension() -> None:
+    pytest.importorskip("sklearn")
     corpus = [
         "the cat sat on the mat",
         "dogs run in the park",
@@ -55,6 +57,7 @@ def test_tfidf_embeddings_unit_norm_and_dimension() -> None:
 
 
 def test_embedding_engine_cache_hit_and_disk_persistence(tmp_path) -> None:
+    pytest.importorskip("sklearn")
     cache_dir = tmp_path / "cache"
     engine = EmbeddingEngine(backend="tfidf", n_components=4, cache_dir=str(cache_dir))
 
@@ -109,6 +112,7 @@ def test_local_embeddings_dimension() -> None:
 
 
 def test_tfidf_empty_inputs() -> None:
+    pytest.importorskip("sklearn")
     embedder = TFIDFEmbeddings(n_components=4)
     assert embedder.embed([]) == []
     embedder.fit([])
@@ -116,11 +120,13 @@ def test_tfidf_empty_inputs() -> None:
 
 
 def test_embedding_engine_empty_batch() -> None:
+    pytest.importorskip("sklearn")
     engine = EmbeddingEngine(backend="tfidf", n_components=4)
     assert engine.embed_batch([]) == []
 
 
 def test_embedding_engine_recovers_from_corrupt_disk_cache(tmp_path) -> None:
+    pytest.importorskip("sklearn")
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir()
     (cache_dir / "embeddings_cache.json").write_text("{not-json")
@@ -133,5 +139,6 @@ def test_embedding_engine_recovers_from_corrupt_disk_cache(tmp_path) -> None:
 def test_get_embeddings_auto_falls_back_to_tfidf(
     _mock_local: MagicMock,
 ) -> None:
+    pytest.importorskip("sklearn")
     backend = get_embeddings("auto", n_components=4)
     assert isinstance(backend, TFIDFEmbeddings)

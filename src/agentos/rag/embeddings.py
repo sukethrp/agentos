@@ -152,10 +152,15 @@ def get_embeddings(backend: str = "auto", **kwargs: Any) -> BaseEmbeddings:
     try:
         return LocalEmbeddings(model=kwargs.get("model", DEFAULT_LOCAL_MODEL))
     except ImportError:
-        return TFIDFEmbeddings(
-            max_features=kwargs.get("max_features", 10000),
-            n_components=kwargs.get("n_components", 256),
-        )
+        try:
+            return TFIDFEmbeddings(
+                max_features=kwargs.get("max_features", 10000),
+                n_components=kwargs.get("n_components", 256),
+            )
+        except ImportError as exc:
+            raise ImportError(
+                "Install scikit-learn: pip install scikit-learn"
+            ) from exc
 
 
 class EmbeddingEngine:
