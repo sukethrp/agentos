@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import operator
+import re
 
 _BINARY_OPS: dict[type, operator] = {
     ast.Add: operator.add,
@@ -55,3 +56,52 @@ def _eval_node(node: ast.expr) -> float | int:
     raise ValueError(
         f"Unsupported expression node: {ast.dump(node)}"
     )
+
+
+_PERCENT_RE = re.compile(
+    r"(\d+(?:\.\d+)?)\s*%\s*(?:of\s+)?(\d+(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+_EXPR_RE = re.compile(r"([\d.]+(?:\s*[\+\-\*/]\s*[\d.]+)+)")
+
+
+def extract_calculator_expression(text: str) -> str:
+    """Pull a safe math expression from natural-language calculator queries."""
+    text = (text or "").strip()
+    if not text:
+        raise ValueError("empty message")
+
+    percent_match = _PERCENT_RE.search(text)
+    if percent_match:
+        pct = float(percent_match.group(1))
+        base = percent_match.group(2)
+        return f"{base} * {pct / 100}"
+
+    cleaned = re.sub(
+        r"^(?:what\s+is|what's|calculate|compute|solve|find|evaluate)\s+",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    ).strip().rstrip("?.")
+
+    for candidate in (cleaned, text):
+        candidate = candidate.strip()
+        if not candidate:
+            continue
+        for expr in (candidate, re.sub(r"\s+", "", candidate)):
+            try:
+                safe_eval_math(expr)
+                return expr
+            except ValueError:
+                continue
+
+    expr_match = _EXPR_RE.search(text)
+    if expr_match:
+        for expr in (expr_match.group(1), re.sub(r"\s+", "", expr_match.group(1))):
+            try:
+                safe_eval_math(expr)
+                return expr
+            except ValueError:
+                continue
+
+    raise ValueError(f"no calculable expression in: {text!r}")

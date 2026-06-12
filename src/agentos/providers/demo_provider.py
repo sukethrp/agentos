@@ -30,13 +30,19 @@ _TOOL_TRIGGERS: dict[str, list[str]] = {
 }
 
 _DEMO_TOOL_ARGS: dict[str, dict] = {
-    "calculator": {"expression": "85.50 * 0.15"},
-    "calc": {"expression": "85.50 * 0.15"},
     "get_weather": {"city": "San Francisco"},
     "weather": {"city": "San Francisco"},
     "web_search": {"query": "latest AI agent frameworks 2026"},
     "company_lookup": {"company_name": "Anthropic"},
 }
+
+
+def _demo_tool_args(tool_name: str, user_msg: str) -> dict:
+    if tool_name in ("calculator", "calc"):
+        from agentos.tools.safe_math import extract_calculator_expression
+
+        return {"expression": extract_calculator_expression(user_msg)}
+    return _DEMO_TOOL_ARGS.get(tool_name, {})
 
 _FALLBACK_RESPONSES = [
     "Based on my analysis, here's what I found:\n\n"
@@ -74,7 +80,7 @@ def _pick_tool_call(
     for tool in tools:
         triggers = _TOOL_TRIGGERS.get(tool.name, [])
         if any(t in msg_lower for t in triggers):
-            args = _DEMO_TOOL_ARGS.get(tool.name, {})
+            args = _demo_tool_args(tool.name, user_msg)
             return ToolCall(
                 id=f"call_{uuid.uuid4().hex[:8]}",
                 name=tool.name,

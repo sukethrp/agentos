@@ -44,6 +44,7 @@ injected so the UI behaves realistically.  Token counts are estimated at
 from __future__ import annotations
 
 import random
+import re
 import time
 import uuid
 from typing import AsyncGenerator, Generator
@@ -51,6 +52,7 @@ from typing import AsyncGenerator, Generator
 from agentos.core.tool import Tool
 from agentos.core.types import AgentEvent, Message, Role, ToolCall
 from agentos.providers.base import BaseProvider
+from agentos.tools.safe_math import safe_eval_math
 
 # ---------------------------------------------------------------------------
 # Response templates keyed by topic detected in the user message
@@ -108,10 +110,8 @@ _TOOL_TRIGGERS: dict[str, list[str]] = {
     "company_lookup": ["company", "about", "tell me about", "info on"],
 }
 
-# Default arguments for demo tool calls
+# Default arguments for demo tool calls (calculator uses live expression parsing)
 _DEMO_TOOL_ARGS: dict[str, dict] = {
-    "calculator": {"expression": "85.50 * 0.15"},
-    "calc": {"expression": "85.50 * 0.15"},
     "get_weather": {"city": "San Francisco"},
     "weather": {"city": "San Francisco"},
     "web_search": {"query": "latest AI agent frameworks 2026"},
@@ -129,6 +129,31 @@ MOCK_COST_PER_RESPONSE = 0.0001
 def _estimate_tokens(text: str) -> int:
     """Roughly 1 token per 4 characters, matching real tokeniser heuristics."""
     return max(1, len(text) // 4)
+
+
+_PERCENT_OF = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(?:%|percent)\s*of\s*(\d+(?:\.\d+)?)", re.IGNORECASE
+)
+
+
+def _extract_expression(user_msg: str) -> str | None:
+    """Pull a real arithmetic expression out of the user's message.
+
+    Handles "X% of Y" phrasing and any inline arithmetic; returns None when
+    nothing evaluable is found so the caller can fall back to a demo default.
+    """
+    pct = _PERCENT_OF.search(user_msg)
+    if pct:
+        return f"{pct.group(2)} * {pct.group(1)} / 100"
+    for candidate in sorted(re.findall(r"[-+*/().\d\s]+", user_msg), key=len, reverse=True):
+        candidate = candidate.strip()
+        if any(op in candidate for op in "+-*/") and any(c.isdigit() for c in candidate):
+            try:
+                safe_eval_math(candidate)
+                return candidate
+            except ValueError:
+                continue
+    return None
 
 
 def _pick_tool_call(user_msg: str, tools: list[Tool]) -> ToolCall | None:
@@ -150,7 +175,11 @@ def _pick_tool_call(user_msg: str, tools: list[Tool]) -> ToolCall | None:
     for tool in tools:
         triggers = _TOOL_TRIGGERS.get(tool.name, [])
         if any(t in msg_lower for t in triggers):
-            args = _DEMO_TOOL_ARGS.get(tool.name, {})
+            args = dict(_DEMO_TOOL_ARGS.get(tool.name, {}))
+            if tool.name in ("calculator", "calc"):
+                expr = _extract_expression(user_msg)
+                if expr:
+                    args["expression"] = expr
             return ToolCall(
                 id=f"call_{uuid.uuid4().hex[:8]}",
                 name=tool.name,
