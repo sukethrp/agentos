@@ -14,7 +14,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/mouse-follower@1/dist/mouse-follower.min.css">
   <style>
     :root{
   --bg:#F4F1EA;
@@ -39,12 +38,16 @@
   --r-sm:10px;
   --r:16px;
   --r-lg:24px;
-  --fs-hero:clamp(3.5rem,10vw,11rem);
+  --fs-hero:clamp(2.75rem,7.5vw,8rem);
   --fs-h1:clamp(2.5rem,6vw,5rem);
   --fs-h2:clamp(2rem,4vw,3.25rem);
+  --fs-h3:clamp(1.5rem,2.5vw,2.25rem);
+  --fs-body:1.05rem;
+  --shadow-surface:0 1px 3px rgba(0,0,0,.04),0 6px 24px rgba(0,0,0,.04);
+  --shadow-lift:0 4px 16px rgba(0,0,0,.06),0 20px 48px rgba(232,101,74,.08);
 }
     *{box-sizing:border-box}
-    html{scroll-behavior:smooth}
+    html{scroll-behavior:smooth;scroll-padding-top:80px}
     body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);line-height:1.7;letter-spacing:-.01em}
     a{color:inherit;text-decoration:none}
     .container{max-width:1100px;margin:0 auto;padding:0 28px}
@@ -52,26 +55,27 @@
     h1{font-size:var(--fs-hero);font-weight:700;letter-spacing:-.04em;line-height:.95;text-align:center}
     h2{font-size:var(--fs-h2);font-weight:600;letter-spacing:-.03em;line-height:1.1}
     h3{font-weight:600;letter-spacing:-.03em;line-height:1.1}
-    p{margin:0 0 14px;color:var(--sub);font-size:1.05rem}
+    p{margin:0 0 14px;color:var(--sub);font-size:var(--fs-body)}
     .label{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:600}
     .section-label{color:var(--accent);font-weight:600}
     section{padding:120px 0;position:relative}
     .alt{background:var(--bg-2)}
     .dark{background:var(--ink);color:var(--surface)}
-    .dark p{color:var(--sub)}
-    body.custom-cursor{cursor:none}
+    .dark p{color:rgba(251,250,246,.72)}
     .line-mask{display:block;overflow:hidden}
-    .nav{position:sticky;top:0;z-index:30;background:rgba(251,250,246,.88);backdrop-filter:blur(12px);transition:all .3s var(--ease)}
-    .nav.scrolled{border-bottom:1px solid var(--line)}
-    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:72px}
-    .brand{font-weight:600;letter-spacing:-.02em}
+    html.js .reveal-target{opacity:0;transform:translateY(18px)}
+    html:not(.js) .reveal-target{opacity:1;transform:none}
+    .nav{position:sticky;top:0;z-index:30;background:rgba(251,250,246,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid transparent;transition:border-color .3s var(--ease),box-shadow .3s var(--ease)}
+    .nav.scrolled{border-bottom-color:var(--line);box-shadow:0 1px 0 rgba(22,20,15,.04)}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:68px}
+    .brand{font-weight:600;letter-spacing:-.02em;font-size:1.05rem}
     .nav-links{display:flex;gap:24px;align-items:center}
     .nav-link{font-size:.95rem;color:var(--sub);position:relative;padding:4px 0}
     .nav-link::after{content:"";position:absolute;left:0;bottom:-2px;width:0;height:2px;background:var(--accent);transition:width .3s}
     .nav-link:hover::after,.nav-link.active::after{width:100%}
     .nav-link.active::before{content:"";position:absolute;left:-10px;top:50%;width:5px;height:5px;border-radius:50%;background:var(--accent);transform:translateY(-50%)}
     .upright{display:inline-flex;gap:5px;align-items:center}
-    .menu-btn{display:none;border:1px solid var(--line);background:transparent;border-radius:8px;padding:8px 10px}
+    .menu-btn{display:none;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);padding:8px 10px;color:var(--ink);cursor:pointer}
     .hero{text-align:center;padding-top:90px}
     .hero-tagline{position:relative;z-index:0;font-size:var(--fs-hero);font-weight:700;letter-spacing:-.04em;line-height:.95;min-height:1.1em}
     .hero-tagline::before{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:120%;height:140%;background:radial-gradient(circle,rgba(232,101,74,.10),transparent 70%);z-index:-1;pointer-events:none}
@@ -99,7 +103,7 @@
     .btn-invert{background:var(--bg-2);color:var(--ink)}
     .btn-outline-light{border-color:var(--bg-2);color:var(--bg-2)}
     .btn-outline-light:hover{background:var(--bg-2);color:var(--ink)}
-    .install{max-width:470px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:.9rem;box-shadow:0 1px 3px rgba(0,0,0,.04),0 6px 24px rgba(0,0,0,.04)}
+    .install{max-width:470px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:.9rem;box-shadow:var(--shadow-surface)}
     .copy-btn{border:0;background:transparent;cursor:pointer;color:var(--sub);display:inline-flex;align-items:center}
     .copy-btn:hover{color:var(--accent)}
     .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:40px auto 0;max-width:980px}
@@ -108,9 +112,9 @@
     .stat-label{font-size:.75rem;color:var(--sub);text-transform:uppercase;letter-spacing:.1em}
     .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
     .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:56px 48px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 6px 24px rgba(0,0,0,.04);transition:transform .5s var(--ease),border-color .5s var(--ease),box-shadow .5s var(--ease)}
-    .card:hover{transform:translateY(-8px) scale(1.015);border-color:var(--accent);box-shadow:0 4px 16px rgba(0,0,0,.06),0 24px 56px rgba(232,101,74,.10)}
-    .card h3{font-size:clamp(1.5rem,2.5vw,2.25rem);margin-top:20px;letter-spacing:-.03em}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:48px 40px;box-shadow:var(--shadow-surface);transition:transform .4s var(--ease),border-color .4s var(--ease),box-shadow .4s var(--ease)}
+    .card:hover{transform:translateY(-4px);border-color:rgba(232,101,74,.45);box-shadow:var(--shadow-lift)}
+    .card h3{font-size:var(--fs-h3);margin-top:20px;letter-spacing:-.03em}
     .editorial-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:48px}
     .mini-stat{font-family:var(--font-mono);font-size:.83rem;color:var(--accent);font-weight:600}
     .icon{width:22px;height:22px;color:var(--accent)}
@@ -125,9 +129,10 @@
     .pipe-box{background:var(--ink);border:1px solid #444;border-radius:10px;padding:14px;color:var(--surface);font-size:.84rem}
     .pipe-box b{display:block;color:var(--surface)}
     .pipe-result{margin:16px auto 0;max-width:300px;background:var(--ink);border:1px solid var(--accent);box-shadow:0 0 24px rgba(232,101,74,.2);border-radius:10px;padding:12px;text-align:center;font-weight:600;color:var(--surface)}
-    .code-block{position:relative;background:var(--ink);color:var(--surface);border-left:3px solid var(--accent);border-radius:10px;padding:18px 18px 18px 20px;font-family:var(--font-mono);font-size:.85rem;overflow:auto}
+    .code-block{position:relative;background:var(--ink);color:var(--surface);border:1px solid rgba(255,255,255,.08);border-left:3px solid var(--accent);border-radius:var(--r);padding:20px 20px 20px 22px;font-family:var(--font-mono);font-size:.85rem;line-height:1.65;overflow:auto;box-shadow:var(--shadow-surface)}
     .code-block pre{margin:0;white-space:pre}
-    .code-copy{position:absolute;right:10px;top:10px;border:1px solid #555;background:#3a3a3a;color:#ddd;border-radius:7px;padding:6px 8px;font-size:.72rem;cursor:pointer}
+    .code-copy{position:absolute;right:12px;top:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:rgba(251,250,246,.85);border-radius:var(--r-sm);padding:6px 10px;font-size:.72rem;cursor:pointer;transition:background .2s var(--ease),border-color .2s var(--ease)}
+    .code-copy:hover{background:rgba(232,101,74,.18);border-color:rgba(232,101,74,.45)}
     .tok-k{color:var(--accent)} .tok-s{color:var(--chart-3)} .tok-c{color:#6B6B6B} .tok-f{color:var(--chart-2)}
     .embed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
     .pill{display:inline-block;background:var(--bg-2);border-radius:999px;padding:6px 16px;color:var(--sub);font-size:.8rem;margin:5px 6px 0 0}
@@ -144,12 +149,11 @@
     .arch-row:not(:last-child)::after{content:"";position:absolute;left:50%;bottom:-16px;width:1px;height:14px;background:#5a5a5a}
     .arch-box{background:#2D2D2D;border:1px solid #444;border-radius:8px;padding:12px 18px;color:var(--surface);font-size:.85rem}
     .arch-ml{border-left:3px solid var(--accent)}
-    .feature-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:36px 32px;min-height:200px;transition:transform .5s var(--ease),border-color .5s var(--ease),box-shadow .5s var(--ease)}
-    .feature-card:hover{transform:translateY(-6px) scale(1.02);border-color:var(--accent);box-shadow:0 4px 16px rgba(0,0,0,.06),0 20px 48px rgba(232,101,74,.08)}
+    .feature-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:32px 28px;min-height:180px;box-shadow:var(--shadow-surface);transition:transform .4s var(--ease),border-color .4s var(--ease),box-shadow .4s var(--ease)}
+    .feature-card:hover{transform:translateY(-3px);border-color:rgba(232,101,74,.45);box-shadow:var(--shadow-lift)}
     .feature-card h4{margin:12px 0 10px;font-size:clamp(1.15rem,2vw,1.45rem);font-family:var(--font-display);font-weight:600;letter-spacing:-.02em}
     .feature-card p{font-size:.95rem;margin:0;line-height:1.6}
     .module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
-    .parallax-visual{will-change:transform}
     .comp td,.comp th{text-align:center}
     .yes{color:var(--chart-3);font-weight:500} .no{color:var(--sub)}
     .mellow{color:#8B8B8B}
@@ -166,8 +170,10 @@
     .footer a:hover{color:var(--surface)}
     @media (prefers-reduced-motion:reduce){
       html{scroll-behavior:auto}
+      html.js .reveal-target{opacity:1!important;transform:none!important}
       .marquee-wrap{animation:none!important;transform:none!important}
-      .card:hover,.feature-card:hover{transform:none}
+      .card:hover,.feature-card:hover,.btn:hover,.small-card:hover{transform:none}
+      .tagline-word,.line-mask>*{transform:none!important}
     }
     @media (max-width:1024px){
       .grid-3,.embed-grid,.editorial-grid,.module-grid{grid-template-columns:repeat(2,1fr)}
@@ -219,18 +225,18 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.8"/></svg>
           </a>
         </div>
-        <div class="install" data-cursor-text="Copy">
+        <div class="install reveal-target">
           <span>$ pip install agentos-platform</span>
           <button class="copy-btn" data-copy="pip install agentos-platform" aria-label="Copy install command">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="4" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/></svg>
           </button>
         </div>
         <div class="stats" id="heroStats">
-          <div class="stat"><div class="stat-num" data-target="0.562" data-decimals="3">0</div><div class="stat-label">Combined ρ, N=50</div></div>
-          <div class="stat"><div class="stat-num" data-target="3">0</div><div class="stat-label">Embedding Backends</div></div>
-          <div class="stat"><div class="stat-num" data-target="0.02" data-decimals="2" data-suffix="ms">0</div><div class="stat-label">Gov. Overhead (median)</div></div>
-          <div class="stat"><div class="stat-num" data-target="0.600" data-decimals="3">0</div><div class="stat-label">Embedding ρ, N=50</div></div>
-          <div class="stat"><div class="stat-num" data-target="100" data-suffix="+">0</div><div class="stat-label">Commits</div></div>
+          <div class="stat reveal-target"><div class="stat-num" data-target="0.562" data-decimals="3">0</div><div class="stat-label">Combined ρ, N=50</div></div>
+          <div class="stat reveal-target"><div class="stat-num" data-target="3">0</div><div class="stat-label">Embedding Backends</div></div>
+          <div class="stat reveal-target"><div class="stat-num" data-target="0.02" data-decimals="2" data-suffix="ms">0</div><div class="stat-label">Gov. Overhead (median)</div></div>
+          <div class="stat reveal-target"><div class="stat-num" data-target="0.600" data-decimals="3">0</div><div class="stat-label">Embedding ρ, N=50</div></div>
+          <div class="stat reveal-target"><div class="stat-num" data-target="100" data-suffix="+">0</div><div class="stat-label">Commits</div></div>
         </div>
         <p style="margin-top:14px;font-size:.85rem;color:var(--sub);text-align:center">Measured over a 50-example hand-labeled set. Reproduce with <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">benchmarks/run_benchmarks.py</code>.</p>
       </div>
@@ -248,21 +254,21 @@
         <div class="label section-label">Why AgentOS</div>
         <h2>Other frameworks help you build agents. We help you ship them.</h2>
         <div class="editorial-grid">
-          <article class="card" data-cursor-text="View">
+          <article class="card reveal-target">
             <div class="label">Testing</div>
             <svg class="icon" viewBox="0 0 24 24" fill="none" aria-label="Testing flask icon"><path d="M9 3h6M10 3v5l-5 8a3 3 0 0 0 2.5 5h9a3 3 0 0 0 2.5-5l-5-8V3" stroke="currentColor" stroke-width="1.8"/></svg>
             <h3>Test before you deploy</h3>
             <p>Simulation sandbox with multi-metric evaluation — BLEU, ROUGE-L, embedding similarity, and LLM-as-judge combined into a weighted ensemble measured at 0.562 Spearman ρ against human judgment (N=50).</p>
             <div class="mini-stat">0.562 Combined ρ, N=50</div>
           </article>
-          <article class="card" data-cursor-text="View">
+          <article class="card reveal-target">
             <div class="label">Governance</div>
             <svg class="icon" viewBox="0 0 24 24" fill="none" aria-label="Shield icon"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z" stroke="currentColor" stroke-width="1.8"/></svg>
             <h3>Govern what agents can do</h3>
             <p>Budget limits, permission controls, kill switch, and immutable audit trails. Enterprise-grade safety with 0.02 ms median overhead for the full governance stack.</p>
             <div class="mini-stat">0.02 ms median · 0.03 ms P95</div>
           </article>
-          <article class="card" data-cursor-text="View">
+          <article class="card reveal-target">
             <div class="label">Monitoring</div>
             <svg class="icon" viewBox="0 0 24 24" fill="none" aria-label="Pulse chart icon"><path d="M3 13h4l2-4 3 8 2-4h7" stroke="currentColor" stroke-width="1.8"/><path d="M4 20h16" stroke="currentColor" stroke-width="1.8"/></svg>
             <h3>See everything in real-time</h3>
@@ -279,28 +285,28 @@
         <h2>Measured, not claimed</h2>
         <p>Every capability is benchmarked with quantitative results.</p>
         <div class="grid-3">
-          <article class="card"><h3>Evaluation Accuracy</h3><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Spearman ρ</th></tr></thead><tbody><tr><td>BLEU</td><td class="mono">0.406</td></tr><tr><td>ROUGE-L</td><td class="mono">0.477</td></tr><tr><td>Embedding Similarity</td><td class="mono">0.600</td></tr><tr class="hl"><td>Combined (overall_score)</td><td class="mono">0.562</td></tr></tbody></table></div><p>Hand-labeled agent responses (N=50). Reproduce with <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">benchmarks/run_benchmarks.py</code>.</p></article>
-          <article class="card"><h3>RAG Embeddings</h3><p>Three interchangeable backends via <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">get_embeddings()</code>:</p><p><strong>OpenAI</strong> — <code>text-embedding-3-small</code> via API for hosted, highest-quality retrieval when data can leave your network.</p><p><strong>all-MiniLM-L6-v2</strong> — local sentence-transformers inference; private, no API key, runs on CPU.</p><p><strong>TF-IDF + SVD</strong> — pure-Python fallback with zero external dependencies for air-gapped or minimal installs.</p></article>
-          <article class="card"><h3>Governance Overhead</h3><div class="table-wrap"><table><thead><tr><th>Feature</th><th>Median (ms)</th><th>P95 (ms)</th></tr></thead><tbody><tr><td>Budget guard</td><td class="mono">0.000167</td><td class="mono">0.000209</td></tr><tr><td>Permission guard</td><td class="mono">0.000084</td><td class="mono">0.000125</td></tr><tr><td>Audit trail logging</td><td class="mono">0.000791</td><td class="mono">0.000875</td></tr><tr class="hl"><td>Full governance</td><td class="mono">0.02</td><td class="mono">0.03</td></tr></tbody></table></div><p>Measured with <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">time.perf_counter</code> over 10000 iterations per feature.</p></article>
+          <article class="card reveal-target"><h3>Evaluation Accuracy</h3><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Spearman ρ</th></tr></thead><tbody><tr><td>BLEU</td><td class="mono">0.406</td></tr><tr><td>ROUGE-L</td><td class="mono">0.477</td></tr><tr><td>Embedding Similarity</td><td class="mono">0.600</td></tr><tr class="hl"><td>Combined (overall_score)</td><td class="mono">0.562</td></tr></tbody></table></div><p>Hand-labeled agent responses (N=50). Reproduce with <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">benchmarks/run_benchmarks.py</code>.</p></article>
+          <article class="card reveal-target"><h3>RAG Embeddings</h3><p>Three interchangeable backends via <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">get_embeddings()</code>:</p><p><strong>OpenAI</strong> — <code>text-embedding-3-small</code> via API for hosted, highest-quality retrieval when data can leave your network.</p><p><strong>all-MiniLM-L6-v2</strong> — local sentence-transformers inference; private, no API key, runs on CPU.</p><p><strong>TF-IDF + SVD</strong> — pure-Python fallback with zero external dependencies for air-gapped or minimal installs.</p></article>
+          <article class="card reveal-target"><h3>Governance Overhead</h3><div class="table-wrap"><table><thead><tr><th>Feature</th><th>Median (ms)</th><th>P95 (ms)</th></tr></thead><tbody><tr><td>Budget guard</td><td class="mono">0.000167</td><td class="mono">0.000209</td></tr><tr><td>Permission guard</td><td class="mono">0.000084</td><td class="mono">0.000125</td></tr><tr><td>Audit trail logging</td><td class="mono">0.000791</td><td class="mono">0.000875</td></tr><tr class="hl"><td>Full governance</td><td class="mono">0.02</td><td class="mono">0.03</td></tr></tbody></table></div><p>Measured with <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">time.perf_counter</code> over 10000 iterations per feature.</p></article>
         </div>
       </div>
     </section>
 
-    <section class="dark" data-cursor="-inverse">
+    <section class="dark">
       <div class="container">
         <div class="label section-label">Evaluation</div>
         <h2>Not just LLM-as-judge</h2>
         <p>A multi-metric pipeline that actually correlates with human judgment.</p>
-        <div class="pipeline parallax-visual" data-parallax="50">
-          <div class="pipe-box"><b>BLEU Score</b>Weight: 10% · N-gram precision</div>
-          <div class="pipe-box"><b>ROUGE-L</b>Weight: 10% · Subsequence overlap</div>
-          <div class="pipe-box"><b>Semantic Similarity</b>Weight: 25% · Embedding cosine distance</div>
-          <div class="pipe-box"><b>Toxicity Check</b>Weight: 20% · Safety baseline</div>
-          <div class="pipe-box"><b>Tool Accuracy</b>Weight: 15% · Correct tool usage</div>
-          <div class="pipe-box"><b>LLM Judge</b>Weight: 15% · Qualitative assessment</div>
+        <div class="pipeline">
+          <div class="pipe-box reveal-target"><b>BLEU Score</b>Weight: 10% · N-gram precision</div>
+          <div class="pipe-box reveal-target"><b>ROUGE-L</b>Weight: 10% · Subsequence overlap</div>
+          <div class="pipe-box reveal-target"><b>Semantic Similarity</b>Weight: 25% · Embedding cosine distance</div>
+          <div class="pipe-box reveal-target"><b>Toxicity Check</b>Weight: 20% · Safety baseline</div>
+          <div class="pipe-box reveal-target"><b>Tool Accuracy</b>Weight: 15% · Correct tool usage</div>
+          <div class="pipe-box reveal-target"><b>LLM Judge</b>Weight: 15% · Qualitative assessment</div>
         </div>
-        <div class="pipe-result">Combined: 0.562 ρ (N=50)</div>
-        <div class="code-block" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.sandbox.metrics <span class="tok-k">import</span> <span class="tok-f">evaluate_response</span>
+        <div class="pipe-result reveal-target">Combined: 0.562 ρ (N=50)</div>
+        <div class="code-block reveal-target" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.sandbox.metrics <span class="tok-k">import</span> <span class="tok-f">evaluate_response</span>
 
 report = <span class="tok-f">evaluate_response</span>(
     response=<span class="tok-s">"The tip on $85 at 15% is $12.75"</span>,
@@ -318,11 +324,11 @@ report = <span class="tok-f">evaluate_response</span>(
         <h2>Three ways to embed</h2>
         <p>From zero-cost baseline to best-in-class API</p>
         <div class="embed-grid">
-          <article class="card"><div class="label">Baseline</div><h3>TF-IDF + SVD</h3><p>Zero dependencies. Pure Python. Lightweight fallback for keyword-heavy queries and air-gapped installs.</p><span class="pill">Zero Cost</span><span class="pill">Air-Gapped</span><span class="pill">No GPU</span></article>
-          <article class="card" style="border-top:3px solid var(--accent)"><div class="label" style="color:var(--accent)">Recommended</div><h3>Sentence Transformers</h3><p>Local inference with all-MiniLM-L6-v2. Private, no API key required — no data leaves your machine.</p><span class="pill">Local</span><span class="pill">Private</span><span class="pill">No API Key</span></article>
-          <article class="card"><div class="label">Premium</div><h3>OpenAI Embeddings</h3><p>text-embedding-3-small via API. Hosted embeddings with batching and caching built in.</p><span class="pill">Hosted</span><span class="pill">Simple Setup</span></article>
+          <article class="card reveal-target"><div class="label">Baseline</div><h3>TF-IDF + SVD</h3><p>Zero dependencies. Pure Python. Lightweight fallback for keyword-heavy queries and air-gapped installs.</p><span class="pill">Zero Cost</span><span class="pill">Air-Gapped</span><span class="pill">No GPU</span></article>
+          <article class="card reveal-target" style="border-top:3px solid var(--accent)"><div class="label" style="color:var(--accent)">Recommended</div><h3>Sentence Transformers</h3><p>Local inference with all-MiniLM-L6-v2. Private, no API key required — no data leaves your machine.</p><span class="pill">Local</span><span class="pill">Private</span><span class="pill">No API Key</span></article>
+          <article class="card reveal-target"><div class="label">Premium</div><h3>OpenAI Embeddings</h3><p>text-embedding-3-small via API. Hosted embeddings with batching and caching built in.</p><span class="pill">Hosted</span><span class="pill">Simple Setup</span></article>
         </div>
-        <div class="code-block" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.rag.embeddings <span class="tok-k">import</span> <span class="tok-f">get_embeddings</span>
+        <div class="code-block reveal-target" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.rag.embeddings <span class="tok-k">import</span> <span class="tok-f">get_embeddings</span>
 
 <span class="tok-c"># Recommended: local embeddings (no API key needed)</span>
 embedder = <span class="tok-f">get_embeddings</span>(<span class="tok-s">"local"</span>)
@@ -335,7 +341,7 @@ vectors = embedder.embed([<span class="tok-s">"Your document text here"</span>])
         <div class="label section-label">Experimentation</div>
         <h2>A/B testing with real statistics</h2>
         <p>Proper hypothesis testing, not just which-number-is-bigger</p>
-        <div class="terminal">┌─────────────────────────────────────────────────────┐
+        <div class="terminal reveal-target">┌─────────────────────────────────────────────────────┐
 │  A/B Test: GPT-4o-mini vs GPT-4o                    │
 │                                                      │
 │  Variant A (4o-mini)    7.2 ± 0.3  (95% CI)         │
@@ -359,10 +365,10 @@ vectors = embedder.embed([<span class="tok-s">"Your document text here"</span>])
         <h2>Know when your RAG degrades</h2>
         <p>MMD-based embedding drift detection catches quality drops before users do</p>
         <div class="state-grid">
-          <article class="state-card ok"><h3>Healthy</h3><div class="curve"><div class="bell a"></div><div class="bell b"></div></div><p>Reference ↔ Current</p><p style="color:var(--chart-3);font-weight:600">MMD: 0.03</p><p>✅ No drift detected</p></article>
-          <article class="state-card warn"><h3>Drifted</h3><div class="curve warn"><div class="bell a"></div><div class="bell b"></div></div><p>Reference ↔ Shifted</p><p style="color:var(--chart-2);font-weight:600">MMD: 0.18</p><p>⚠️ Re-indexing recommended</p></article>
+          <article class="state-card ok reveal-target"><h3>Healthy</h3><div class="curve"><div class="bell a"></div><div class="bell b"></div></div><p>Reference ↔ Current</p><p style="color:var(--chart-3);font-weight:600">MMD: 0.03</p><p>✅ No drift detected</p></article>
+          <article class="state-card warn reveal-target"><h3>Drifted</h3><div class="curve warn"><div class="bell a"></div><div class="bell b"></div></div><p>Reference ↔ Shifted</p><p style="color:var(--chart-2);font-weight:600">MMD: 0.18</p><p>⚠️ Re-indexing recommended</p></article>
         </div>
-        <div class="code-block" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.rag.drift <span class="tok-k">import</span> <span class="tok-f">EmbeddingDriftDetector</span>
+        <div class="code-block reveal-target" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.rag.drift <span class="tok-k">import</span> <span class="tok-f">EmbeddingDriftDetector</span>
 
 detector = <span class="tok-f">EmbeddingDriftDetector</span>(threshold=<span class="tok-s">0.1</span>)
 detector.set_reference(initial_embeddings)
@@ -373,21 +379,21 @@ report = detector.check(current_embeddings)
       </div>
     </section>
 
-    <section id="architecture" class="dark" data-cursor="-inverse">
+    <section id="architecture" class="dark">
       <div class="container">
         <div class="label section-label">Architecture</div>
         <h2>How it all fits together</h2>
-        <div class="arch parallax-visual" role="img" aria-label="AgentOS architecture layers diagram" data-cursor-text="View" data-parallax="40">
+        <div class="arch" role="img" aria-label="AgentOS architecture layers diagram">
           <div class="label">Interface</div>
-          <div class="arch-row"><div class="arch-box">CLI: serve · init · mcp</div><div class="arch-box">Web Platform: Builder · Chat · Dashboard</div></div>
+          <div class="arch-row reveal-target"><div class="arch-box">CLI: serve · init · mcp</div><div class="arch-box">Web Platform: Builder · Chat · Dashboard</div></div>
           <div class="label">Application</div>
-          <div class="arch-row"><div class="arch-box">Agent SDK</div><div class="arch-box">Sandbox</div><div class="arch-box">Monitor</div><div class="arch-box">Governance</div></div>
+          <div class="arch-row reveal-target"><div class="arch-box">Agent SDK</div><div class="arch-box">Sandbox</div><div class="arch-box">Monitor</div><div class="arch-box">Governance</div></div>
           <div class="label">ML Engine</div>
-          <div class="arch-row"><div class="arch-box arch-ml">Eval: BLEU · ROUGE · Semantic · LLM</div><div class="arch-box arch-ml">RAG: Embed · Search · Drift</div><div class="arch-box arch-ml">A/B: t-test · Bootstrap · Cohen's d</div></div>
+          <div class="arch-row reveal-target"><div class="arch-box arch-ml">Eval: BLEU · ROUGE · Semantic · LLM</div><div class="arch-box arch-ml">RAG: Embed · Search · Drift</div><div class="arch-box arch-ml">A/B: t-test · Bootstrap · Cohen's d</div></div>
           <div class="label">Providers</div>
-          <div class="arch-row"><div class="arch-box">OpenAI</div><div class="arch-box">Claude</div><div class="arch-box">Ollama</div><div class="arch-box">Local Models</div><div class="arch-box">Mock</div></div>
+          <div class="arch-row reveal-target"><div class="arch-box">OpenAI</div><div class="arch-box">Claude</div><div class="arch-box">Ollama</div><div class="arch-box">Local Models</div><div class="arch-box">Mock</div></div>
           <div class="label">Protocol</div>
-          <div class="arch-row"><div class="arch-box">MCP Server (JSON-RPC / stdio)</div></div>
+          <div class="arch-row reveal-target"><div class="arch-box">MCP Server (JSON-RPC / stdio)</div></div>
         </div>
       </div>
     </section>
@@ -397,21 +403,21 @@ report = detector.check(current_embeddings)
         <div class="label section-label">Platform</div>
         <h2>15 modules. One pip install.</h2>
         <div class="module-grid">
-          <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>Agent SDK</h4><p>10-line agents with @tool decorator</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>Streaming</h4><p>Token-by-token WebSocket streaming</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>RAG Pipeline</h4><p>Ingest, chunk, embed, search, detect drift</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>Multi-modal</h4><p>Vision (GPT-4o) and PDF extraction</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Testing</div><h4>Sandbox</h4><p>100+ scenario testing with multi-metric eval</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Testing</div><h4>A/B Testing</h4><p>Welch's t-test, Cohen's d, bootstrap CI</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Testing</div><h4>Branching</h4><p>Fork conversations, explore what-if paths</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Dashboard</h4><p>Real-time cost, tool usage, quality tracking</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Governance</h4><p>Budget, permissions, kill switch, audit trail</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Scheduler</h4><p>Cron and interval scheduling, history</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Events</h4><p>Pub/sub with webhook, timer, file triggers</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Workflows</h4><p>Multi-step pipelines with retry and fallback</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Ecosystem</div><h4>Marketplace</h4><p>Publish, discover, install agent templates</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Ecosystem</div><h4>Embed SDK</h4><p>White-label chat widget, one script tag</p></article>
-          <article class="feature-card" data-cursor-text="View"><div class="label">Ecosystem</div><h4>MCP Server</h4><p>Expose tools to Claude Desktop and Cursor</p></article>
+          <article class="feature-card reveal-target"><div class="label">Core</div><h4>Agent SDK</h4><p>10-line agents with @tool decorator</p></article>
+          <article class="feature-card reveal-target"><div class="label">Core</div><h4>Streaming</h4><p>Token-by-token WebSocket streaming</p></article>
+          <article class="feature-card reveal-target"><div class="label">Core</div><h4>RAG Pipeline</h4><p>Ingest, chunk, embed, search, detect drift</p></article>
+          <article class="feature-card reveal-target"><div class="label">Core</div><h4>Multi-modal</h4><p>Vision (GPT-4o) and PDF extraction</p></article>
+          <article class="feature-card reveal-target"><div class="label">Testing</div><h4>Sandbox</h4><p>100+ scenario testing with multi-metric eval</p></article>
+          <article class="feature-card reveal-target"><div class="label">Testing</div><h4>A/B Testing</h4><p>Welch's t-test, Cohen's d, bootstrap CI</p></article>
+          <article class="feature-card reveal-target"><div class="label">Testing</div><h4>Branching</h4><p>Fork conversations, explore what-if paths</p></article>
+          <article class="feature-card reveal-target"><div class="label">Production</div><h4>Dashboard</h4><p>Real-time cost, tool usage, quality tracking</p></article>
+          <article class="feature-card reveal-target"><div class="label">Production</div><h4>Governance</h4><p>Budget, permissions, kill switch, audit trail</p></article>
+          <article class="feature-card reveal-target"><div class="label">Production</div><h4>Scheduler</h4><p>Cron and interval scheduling, history</p></article>
+          <article class="feature-card reveal-target"><div class="label">Production</div><h4>Events</h4><p>Pub/sub with webhook, timer, file triggers</p></article>
+          <article class="feature-card reveal-target"><div class="label">Production</div><h4>Workflows</h4><p>Multi-step pipelines with retry and fallback</p></article>
+          <article class="feature-card reveal-target"><div class="label">Ecosystem</div><h4>Marketplace</h4><p>Publish, discover, install agent templates</p></article>
+          <article class="feature-card reveal-target"><div class="label">Ecosystem</div><h4>Embed SDK</h4><p>White-label chat widget, one script tag</p></article>
+          <article class="feature-card reveal-target"><div class="label">Ecosystem</div><h4>MCP Server</h4><p>Expose tools to Claude Desktop and Cursor</p></article>
         </div>
       </div>
     </section>
@@ -421,7 +427,7 @@ report = detector.check(current_embeddings)
         <div class="label section-label">Compare</div>
         <h2>Honest comparison</h2>
         <p>We don't claim to beat everyone at everything.</p>
-        <div class="table-wrap">
+        <div class="table-wrap reveal-target">
           <table class="comp">
             <thead><tr><th>Feature</th><th>AgentOS</th><th>LangChain</th><th>CrewAI</th><th>AutoGen</th></tr></thead>
             <tbody>
@@ -444,7 +450,7 @@ report = detector.check(current_embeddings)
       </div>
     </section>
 
-    <section class="dark" data-cursor="-inverse">
+    <section class="dark">
       <div class="container">
         <div class="label section-label">Code</div>
         <h2>10 lines. Production-ready.</h2>
@@ -453,7 +459,7 @@ report = detector.check(current_embeddings)
           <button class="tab" data-tab="test">test.py</button>
         </div>
         <div class="tab-panel active" id="panel-agent">
-          <div class="code-block"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.governed_agent <span class="tok-k">import</span> <span class="tok-f">GovernedAgent</span>
+          <div class="code-block reveal-target"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.governed_agent <span class="tok-k">import</span> <span class="tok-f">GovernedAgent</span>
 <span class="tok-k">from</span> agentos.core.tool <span class="tok-k">import</span> tool
 
 @tool(description=<span class="tok-s">"Calculate a math expression"</span>)
@@ -469,7 +475,7 @@ agent = <span class="tok-f">GovernedAgent</span>(
 result = agent.run(<span class="tok-s">"What's 15% tip on $85?"</span>)</pre></div>
         </div>
         <div class="tab-panel" id="panel-test">
-          <div class="code-block"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.sandbox.scenario <span class="tok-k">import</span> <span class="tok-f">Scenario</span>
+          <div class="code-block reveal-target"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.sandbox.scenario <span class="tok-k">import</span> <span class="tok-f">Scenario</span>
 
 report = agent.test([
     <span class="tok-f">Scenario</span>(
@@ -487,10 +493,10 @@ report = agent.test([
       <div class="container">
         <div class="label section-label">Embed</div>
         <h2>Add to any website in one script tag</h2>
-        <div class="code-block"><button class="code-copy">Copy</button><pre>&lt;script src=<span class="tok-s">"https://cdn.agentos.dev/embed.js"</span>
+        <div class="code-block reveal-target"><button class="code-copy">Copy</button><pre>&lt;script src=<span class="tok-s">"https://cdn.agentos.dev/embed.js"</span>
   data-agent=<span class="tok-s">"support-bot"</span>
   data-theme=<span class="tok-s">"light"</span>&gt;&lt;/script&gt;</pre></div>
-        <div class="code-block" style="margin-top:18px"><button class="code-copy">Copy</button><pre>$ pip install agentos-platform
+        <div class="code-block reveal-target" style="margin-top:18px"><button class="code-copy">Copy</button><pre>$ pip install agentos-platform
 $ agentos init my-agent
 ✅ Created agent project: my-agent/
 $ cd my-agent
@@ -506,14 +512,14 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
         <p>One command. 13 sections. Zero configuration.</p>
         <div class="install" style="margin:22px 0 24px">$ agentos serve</div>
         <div class="small-grid">
-          <div class="small-card">Agent Builder</div><div class="small-card">Templates</div><div class="small-card">Chat</div><div class="small-card">Branching</div><div class="small-card">Monitor</div>
-          <div class="small-card">Analytics</div><div class="small-card">Scheduler</div><div class="small-card">Events</div><div class="small-card">A/B Testing</div><div class="small-card">Multi-modal</div>
-          <div class="small-card">Marketplace</div><div class="small-card">Embed SDK</div><div class="small-card">Auth & Usage</div>
+          <div class="small-card reveal-target">Agent Builder</div><div class="small-card reveal-target">Templates</div><div class="small-card reveal-target">Chat</div><div class="small-card reveal-target">Branching</div><div class="small-card reveal-target">Monitor</div>
+          <div class="small-card reveal-target">Analytics</div><div class="small-card reveal-target">Scheduler</div><div class="small-card reveal-target">Events</div><div class="small-card reveal-target">A/B Testing</div><div class="small-card reveal-target">Multi-modal</div>
+          <div class="small-card reveal-target">Marketplace</div><div class="small-card reveal-target">Embed SDK</div><div class="small-card reveal-target">Auth & Usage</div>
         </div>
       </div>
     </section>
 
-    <section class="dark cta" data-cursor="-inverse">
+    <section class="dark cta">
       <div class="container">
         <h2>Build agents the right way.</h2>
         <p>Test before you deploy. Govern in production. Measure everything.</p>
@@ -531,15 +537,12 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
       <div><a href="https://github.com/sukethrp/agentos">GitHub</a> · <a href="https://pypi.org/project/agentos-platform/">PyPI</a> · <a href="https://www.linkedin.com/in/sukethprodutoor/">LinkedIn</a> · <a href="https://x.com/SProdutoor45130">X</a></div>
     </div>
   </footer>
+  <script>document.documentElement.classList.add("js")</script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-  <script src="https://unpkg.com/mouse-follower@1/dist/mouse-follower.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
   <script src="https://unpkg.com/split-type@0.3.4/umd/index.min.js"></script>
   <script>
     const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const canHover = matchMedia("(hover: hover)").matches;
-
     const nav = document.getElementById("nav");
     const links = [...document.querySelectorAll(".nav-link[href^='#']")];
     const menuBtn = document.getElementById("menuBtn");
@@ -557,6 +560,20 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
       }
     }), { rootMargin: "-40% 0px -50% 0px", threshold: 0.01 });
     sections.forEach(s => spy.observe(s));
+
+    window.addEventListener("scroll", () => nav.classList.toggle("scrolled", window.scrollY > 50), { passive: true });
+
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener("click", e => {
+        const id = a.getAttribute("href");
+        if (!id || id === "#") return;
+        const target = document.querySelector(id);
+        if (!target) return;
+        e.preventDefault();
+        target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+        navLinks.classList.remove("show");
+      });
+    });
 
     function setStatValues(animate) {
       [...stats.querySelectorAll(".stat-num")].forEach(el => {
@@ -606,7 +623,6 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
 
     const heroWords = ["Build", "Test", "Deploy", "Monitor", "Govern"];
     const heroEl = document.getElementById("heroTagline");
-    const easeHero = "power3.out";
 
     function renderHeroStatic() {
       heroEl.textContent = heroWords.join(", ");
@@ -620,7 +636,7 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
       const display = document.createElement("span");
       display.className = "tagline-display";
       heroEl.appendChild(display);
-      const tl = gsap.timeline({ delay: 0.4 });
+      const tl = gsap.timeline({ delay: 0.35 });
       heroWords.forEach((word, i) => {
         tl.call(() => {
           if (i > 0) {
@@ -636,59 +652,15 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
           span.textContent = (i === 0 ? "" : " ") + word;
           mask.appendChild(span);
           display.appendChild(mask);
-          gsap.fromTo(span, { yPercent: 110 }, { yPercent: 0, duration: 0.75, ease: easeHero });
-        }, null, i === 0 ? 0 : "+=0.55");
+          gsap.fromTo(span, { yPercent: 110 }, { yPercent: 0, duration: 0.65, ease: "power3.out" });
+        }, null, i === 0 ? 0 : "+=0.45");
       });
     }
 
     initHeroTagline();
 
-    if (reduceMotion || typeof gsap === "undefined") {
-      window.addEventListener("scroll", () => nav.classList.toggle("scrolled", window.scrollY > 50));
-    } else {
+    if (!reduceMotion && typeof gsap !== "undefined") {
       gsap.registerPlugin(ScrollTrigger);
-
-      if (canHover && typeof MouseFollower !== "undefined") {
-        document.body.classList.add("custom-cursor");
-        MouseFollower.registerGSAP(gsap);
-        new MouseFollower({ speed: 0.4, skewing: 1.5 });
-      }
-
-      const lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
-      lenis.on("scroll", e => {
-        ScrollTrigger.update();
-        nav.classList.toggle("scrolled", e.scroll > 50);
-      });
-      gsap.ticker.add(t => lenis.raf(t * 1000));
-      gsap.ticker.lagSmoothing(0);
-
-      document.querySelectorAll('a[href^="#"]').forEach(a => {
-        a.addEventListener("click", e => {
-          const id = a.getAttribute("href");
-          if (!id || id === "#") return;
-          const target = document.querySelector(id);
-          if (!target) return;
-          e.preventDefault();
-          lenis.scrollTo(target);
-          navLinks.classList.remove("show");
-        });
-      });
-
-      function magnetic(el, strength = 0.35) {
-        el.addEventListener("mousemove", e => {
-          const rect = el.getBoundingClientRect();
-          const x = e.clientX - rect.left - rect.width / 2;
-          const y = e.clientY - rect.top - rect.height / 2;
-          gsap.to(el, { x: x * strength, y: y * strength, duration: 0.4, ease: "power2.out", overwrite: true });
-        });
-        el.addEventListener("mouseleave", () => {
-          gsap.to(el, { x: 0, y: 0, duration: 0.7, ease: "elastic.out(1, 0.4)", overwrite: true });
-        });
-      }
-
-      if (canHover) {
-        document.querySelectorAll(".btn").forEach(el => magnetic(el));
-      }
 
       document.querySelectorAll("h2").forEach(heading => {
         if (typeof SplitType === "undefined") return;
@@ -703,36 +675,20 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
         gsap.set(split.lines, { yPercent: 110 });
         ScrollTrigger.create({
           trigger: heading,
-          start: "top 85%",
+          start: "top 88%",
           once: true,
           onEnter: () => {
-            gsap.to(split.lines, { yPercent: 0, duration: 0.9, ease: "power4.out", stagger: 0.1 });
+            gsap.to(split.lines, { yPercent: 0, duration: 0.75, ease: "power3.out", stagger: 0.08 });
           }
         });
       });
 
-      const revealSel = ".card, .feature-card, .stat, .install, .table-wrap, .pipe-box, .pipe-result, .terminal, .state-card, .code-block, .small-card, .arch-row";
-      gsap.set(revealSel, { opacity: 0, y: 40 });
-      ScrollTrigger.batch(revealSel, {
-        start: "top 88%",
+      ScrollTrigger.batch(".reveal-target", {
+        start: "top 90%",
         once: true,
         onEnter: batch => {
-          gsap.to(batch, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", stagger: 0.08 });
+          gsap.to(batch, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", stagger: 0.06 });
         }
-      });
-
-      document.querySelectorAll("[data-parallax]").forEach(el => {
-        const amount = parseFloat(el.dataset.parallax) || 40;
-        gsap.to(el, {
-          y: -amount,
-          ease: "none",
-          scrollTrigger: {
-            trigger: el.closest("section") || el,
-            start: "top bottom",
-            end: "bottom top",
-            scrub: true
-          }
-        });
       });
 
       const marqueeSection = document.getElementById("marquee");
@@ -740,7 +696,7 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
       if (marqueeSection && marqueeTrack) {
         const marqueeTween = gsap.to(marqueeTrack, {
           xPercent: -50,
-          duration: 28,
+          duration: 32,
           ease: "none",
           repeat: -1
         });
