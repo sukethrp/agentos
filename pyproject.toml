@@ -12,14 +12,30 @@ requires-python = ">=3.11"
 authors = [
     {name = "Suketh Reddy Produtoor", email = "produtoor.s@northeastern.edu"},
 ]
-keywords = ["ai", "agents", "llm", "openai", "anthropic", "governance", "monitoring"]
+keywords = [
+    "ai",
+    "agents",
+    "llm",
+    "openai",
+    "anthropic",
+    "governance",
+    "monitoring",
+    "rag",
+    "ab-testing",
+    "drift-detection",
+    "agent-framework",
+    "llmops",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Framework :: FastAPI",
 ]
 
 dependencies = [
@@ -73,8 +89,11 @@ local = ["sentence-transformers>=2.2.0"]
 
 [project.urls]
 Homepage = "https://github.com/sukethrp/agentos"
+Documentation = "https://github.com/sukethrp/agentos#readme"
 Repository = "https://github.com/sukethrp/agentos"
 Issues = "https://github.com/sukethrp/agentos/issues"
+Changelog = "https://github.com/sukethrp/agentos/releases"
+"Live Demo" = "https://agentos-mocha.vercel.app"
 
 [project.scripts]
 agentos = "agentos.cli:main"

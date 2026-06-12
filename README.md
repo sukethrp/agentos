@@ -19,7 +19,7 @@
 
 <!-- Architecture diagram -->
 <p align="center">
-  <img src="docs/assets/architecture.png" alt="AgentOS Architecture" width="700">
+  <img src="https://raw.githubusercontent.com/sukethrp/agentos/main/docs/assets/architecture.png" alt="AgentOS Architecture" width="700">
 </p>
 
 > **For teams who need to deploy AI agents with testing, governance, and monitoring built in — not bolted on.**
@@ -245,7 +245,7 @@ TF-IDF is included in the base install and tested in CI. OpenAI embeddings are t
 | Ecosystem maturity | 🌱 Growing | ✅ Very mature | ✅ Mature | ✅ Mature |
 
 ## Benchmarks
-See [full benchmark results](docs/benchmarks.md). Key findings:
+See [full benchmark results](https://github.com/sukethrp/agentos/blob/main/docs/benchmarks.md). Key findings:
 - Combined (overall_score) achieves Spearman rho 0.562 with human judgment (N=50)
 - Embedding Similarity achieves Spearman rho 0.600 with human judgment (N=50)
 - Full governance check median latency is 0.02 ms (P95 0.03 ms)
@@ -269,7 +269,7 @@ agentos/
 
 ## Contributing
 
-Contributions are welcome: [CONTRIBUTING.md](CONTRIBUTING.md)
+Contributions are welcome: [CONTRIBUTING.md](https://github.com/sukethrp/agentos/blob/main/CONTRIBUTING.md)
 
 ## Roadmap
 
