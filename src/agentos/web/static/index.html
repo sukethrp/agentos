@@ -31,21 +31,28 @@
   --r-sm:10px;
   --r:16px;
   --r-lg:24px;
+  --shadow:0 1px 2px rgba(0,0,0,0.22),0 8px 32px rgba(0,0,0,0.28);
+  --shadow-hover:0 4px 16px rgba(0,0,0,0.28),0 16px 48px rgba(255,106,71,0.08);
+  --fs-xs:11px;
+  --fs-sm:12px;
+  --fs-base:14px;
+  --fs-md:15px;
+  --fs-lg:17px;
+  --fs-xl:20px;
+  --fs-h2:18px;
+  --fs-stat:26px;
 }
-body{font-family:var(--font-body);background:var(--bg);color:var(--ink);min-height:100vh;overflow:hidden}
+body{font-family:var(--font-body);font-size:var(--fs-base);line-height:1.55;letter-spacing:-0.01em;background:var(--bg);color:var(--ink);min-height:100vh;overflow:hidden}
 
-/* ── Animated mesh gradient background ── */
-body::before{content:'';position:fixed;inset:0;z-index:0;
+/* ── Warm dark gradient + grain ── */
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:
-    radial-gradient(ellipse 80% 60% at 10% 20%,var(--accent-soft) 0%,transparent 60%),
-    radial-gradient(ellipse 60% 80% at 90% 80%,var(--accent-soft) 0%,transparent 60%),
-    radial-gradient(ellipse 50% 50% at 50% 50%,rgba(111,183,166,0.03) 0%,transparent 60%);
-  animation:bgShift 20s ease-in-out infinite alternate;pointer-events:none}
-@keyframes bgShift{
-  0%{filter:hue-rotate(0deg) brightness(1)}
-  50%{filter:hue-rotate(15deg) brightness(1.1)}
-  100%{filter:hue-rotate(-10deg) brightness(0.95)}
-}
+    radial-gradient(ellipse 72% 52% at 12% 8%,rgba(255,106,71,0.07) 0%,transparent 58%),
+    radial-gradient(ellipse 58% 48% at 88% 92%,rgba(255,106,71,0.05) 0%,transparent 52%),
+    linear-gradient(168deg,var(--bg) 0%,var(--bg-2) 55%,#13110D 100%)}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.04;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat:repeat;background-size:180px 180px}
 
 /* ── Scrollbars ── */
 ::-webkit-scrollbar{width:6px;height:6px}
@@ -54,122 +61,110 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
 ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}
 
 /* ── App layout ── */
-.app{display:grid;grid-template-columns:270px 1fr;grid-template-rows:60px 1fr;height:100vh;position:relative;z-index:1}
+.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;height:100vh;position:relative;z-index:1}
 
 /* ── Topbar ── */
-.topbar{grid-column:1/-1;background:rgba(16,20,15,0.85);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);border-bottom:1px solid var(--line);padding:0 28px;display:flex;align-items:center;justify-content:space-between;z-index:10}
-.topbar h1{font-family:var(--font-display);font-size:19px;font-weight:700;letter-spacing:-0.5px;
-  background:linear-gradient(135deg,var(--chart-1) 0%,var(--chart-4) 50%,var(--chart-3) 100%);
-  background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  animation:gradientText 6s ease infinite}
-@keyframes gradientText{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.topbar .status{color:var(--chart-3);font-size:13px;display:flex;align-items:center;gap:10px;font-weight:500}
-.topbar .status::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--chart-3);
-  box-shadow:0 0 8px var(--chart-3),0 0 16px rgba(111,183,166,0.3);animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.85)}}
-.topbar .status span.small{font-size:11px;color:var(--sub)}
+.topbar{grid-column:1/-1;background:rgba(16,15,12,0.88);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border-bottom:1px solid var(--line);padding:0 24px;display:flex;align-items:center;justify-content:space-between;z-index:10}
+.topbar h1{font-family:var(--font-display);font-size:var(--fs-lg);font-weight:600;letter-spacing:-0.03em;color:var(--ink)}
+.topbar .status{color:var(--sub);font-size:var(--fs-sm);display:flex;align-items:center;gap:8px;font-weight:500}
+.topbar .status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 8px var(--accent-soft);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.55;transform:scale(0.9)}}
+.topbar .status span.small{font-size:var(--fs-xs);color:var(--sub)}
 
 /* ── Sidebar ── */
-.sidebar{background:rgba(22,24,15,0.75);backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);border-right:1px solid var(--line);padding:18px 14px;overflow-y:auto;z-index:5}
-.sidebar h3{font-size:10px;text-transform:uppercase;letter-spacing:1.8px;color:var(--sub);margin:20px 0 8px 8px;font-weight:600}
-.sidebar h3:first-child{margin-top:4px}
-.nav-item{padding:10px 14px;border-radius:var(--r-sm);cursor:pointer;font-size:13.5px;font-weight:500;margin-bottom:3px;
-  transition:all 0.3s var(--ease);display:flex;align-items:center;gap:10px;position:relative;overflow:hidden;color:var(--sub)}
-.nav-item::before{content:'';position:absolute;inset:0;border-radius:inherit;opacity:0;transition:opacity 0.3s var(--ease);
-  background:linear-gradient(135deg,var(--accent-soft),var(--accent-soft))}
-.nav-item:hover{color:var(--ink);transform:translateX(3px)}
-.nav-item:hover::before{opacity:1}
-.nav-item.active{color:var(--accent);font-weight:600;
-  background:linear-gradient(135deg,var(--accent-soft),var(--accent-soft));
-  box-shadow:inset 0 0 0 1px var(--accent),0 0 30px var(--accent-soft)}
-.nav-item.active::after{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:0 4px 4px 0;
-  background:linear-gradient(180deg,var(--accent),var(--chart-4));box-shadow:0 0 12px var(--accent)}
+.sidebar{background:rgba(22,20,15,0.78);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);border-right:1px solid var(--line);padding:14px 12px;overflow-y:auto;z-index:5}
+.sidebar h3{font-family:var(--font-display);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:0.12em;color:var(--sub);margin:16px 0 6px 10px;font-weight:600}
+.sidebar h3:first-child{margin-top:2px}
+.nav-item{padding:9px 12px;border-radius:var(--r-sm);cursor:pointer;font-size:var(--fs-sm);font-weight:500;margin-bottom:2px;
+  transition:color 0.2s var(--ease),background 0.2s var(--ease),transform 0.2s var(--ease-spring);display:flex;align-items:center;gap:8px;position:relative;color:var(--sub)}
+.nav-item:hover{color:var(--ink);background:var(--accent-soft);transform:translateX(2px)}
+.nav-item.active{color:var(--accent);font-weight:600;background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1px rgba(255,106,71,0.35)}
+.nav-item.active::after{content:'';position:absolute;left:0;top:22%;bottom:22%;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
 
 /* ── Main area ── */
-.main{padding:28px;overflow-y:auto;position:relative}
-.panel{display:none;animation:fadeSlide 0.4s var(--ease) both}
-.panel.active{display:block}
-@keyframes fadeSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.main{padding:22px 24px;overflow-y:auto;position:relative}
+.panel{display:none;opacity:0}
+.panel.active{display:block;animation:fadeSlide 0.22s var(--ease) both}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.panel-fade{animation:panelCross 0.2s var(--ease) both}
+@keyframes panelCross{from{opacity:0.4}to{opacity:1}}
 
-/* ── Cards — glassmorphism ── */
-.card{background:var(--surface);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
-  border:1px solid var(--line);border-radius:var(--r);padding:26px;margin-bottom:18px;
-  transition:all 0.35s var(--ease);position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)}
-.card:hover{border-color:var(--line);box-shadow:0 8px 40px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.04)}
-.card h2{font-family:var(--font-display);font-size:20px;font-weight:600;margin-bottom:18px;color:var(--ink);letter-spacing:-0.3px}
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;margin-bottom:14px;
+  box-shadow:var(--shadow);transition:transform 0.2s var(--ease-spring),box-shadow 0.2s var(--ease),border-color 0.2s var(--ease);position:relative}
+.card:hover{transform:translateY(-2px) scale(1.005);border-color:rgba(255,106,71,0.2);box-shadow:var(--shadow-hover)}
+.card h2{font-family:var(--font-display);font-size:var(--fs-h2);font-weight:600;margin-bottom:14px;color:var(--ink);letter-spacing:-0.03em;line-height:1.2}
+.text-muted{color:var(--sub)}
+.text-dim{color:var(--sub);opacity:0.75}
+.stat-inline{font-family:var(--font-mono);font-size:var(--fs-xl);font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.stat-inline-label{font-size:var(--fs-xs);color:var(--sub);margin-top:2px}
+.metric-val,.response-box code{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 
 /* ── Form elements ── */
-label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px;margin-top:18px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
-input,textarea,select{width:100%;padding:11px 16px;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  color:var(--ink);font-size:14px;font-family:inherit;transition:all 0.3s var(--ease);font-weight:400}
-input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);
-  box-shadow:0 0 0 3px var(--accent-soft),0 0 20px var(--accent-soft)}
-input::placeholder,textarea::placeholder{color:var(--sub);font-weight:300}
-textarea{min-height:80px;resize:vertical}
+label{display:block;font-size:var(--fs-xs);color:var(--sub);margin-bottom:5px;margin-top:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em}
+input,textarea,select{width:100%;padding:10px 14px;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-sm);
+  color:var(--ink);font-size:var(--fs-base);font-family:inherit;transition:border-color 0.2s var(--ease),box-shadow 0.2s var(--ease);font-weight:400}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+input::placeholder,textarea::placeholder{color:var(--sub);opacity:0.7}
+textarea{min-height:72px;resize:vertical}
 select{cursor:pointer;appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239B9483' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 14px center}
-input[type="range"]{-webkit-appearance:none;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--chart-4));border:none;padding:0}
-input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--ink);cursor:pointer;
-  box-shadow:0 0 10px var(--accent),0 2px 6px rgba(0,0,0,0.3)}
+input[type="range"]{-webkit-appearance:none;height:5px;border-radius:3px;background:var(--line);border:none;padding:0}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;
+  box-shadow:0 0 0 2px var(--bg-2),0 2px 8px var(--accent-soft);transition:transform 0.15s var(--ease-spring)}
+input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.1)}
 
 /* ── Buttons ── */
-.btn{padding:12px 28px;border-radius:var(--r-sm);border:none;font-size:14px;font-weight:600;cursor:pointer;
-  transition:all 0.3s var(--ease);position:relative;overflow:hidden;font-family:inherit}
-.btn::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.3s;
-  background:radial-gradient(circle at var(--x,50%) var(--y,50%),rgba(255,255,255,0.15) 0%,transparent 60%)}
+.btn{padding:10px 22px;border-radius:var(--r-sm);border:none;font-size:var(--fs-sm);font-weight:600;cursor:pointer;
+  transition:transform 0.2s var(--ease-spring),box-shadow 0.2s var(--ease),background 0.2s var(--ease),border-color 0.2s var(--ease);
+  position:relative;overflow:hidden;font-family:inherit}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.2s;
+  background:radial-gradient(circle at var(--x,50%) var(--y,50%),rgba(255,255,255,0.12) 0%,transparent 60%)}
 .btn:hover::after{opacity:1}
-.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-press),var(--chart-4));background-size:200% 200%;color:var(--ink);
-  box-shadow:0 4px 20px var(--accent-soft);animation:btnGrad 4s ease infinite}
-@keyframes btnGrad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px var(--accent),0 0 60px rgba(124,92,252,0.1)}
-.btn-primary:active{transform:translateY(0);box-shadow:0 2px 10px var(--accent-soft)}
+.btn-primary{background:var(--accent);color:var(--bg);box-shadow:0 2px 12px var(--accent-soft)}
+.btn-primary:hover{transform:translateY(-2px) scale(1.02);background:var(--accent-press);box-shadow:0 6px 24px rgba(255,106,71,0.28)}
+.btn-primary:active{transform:translateY(0) scale(1);box-shadow:0 2px 8px var(--accent-soft)}
 .btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
-.btn-secondary{background:var(--accent-soft);border:1px solid var(--line);color:var(--ink);backdrop-filter:blur(8px)}
-.btn-secondary:hover{background:var(--accent-soft);border-color:var(--line);transform:translateY(-1px)}
+.btn-secondary{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn-secondary:hover{background:var(--accent-soft);border-color:rgba(255,106,71,0.35);color:var(--accent);transform:translateY(-1px) scale(1.01)}
 
 /* ── Tool tags ── */
 .tools-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.tool-tag{padding:7px 16px;border-radius:24px;font-size:13px;cursor:pointer;border:1px solid var(--line);background:var(--accent-soft);
-  transition:all 0.3s var(--ease);font-weight:500;color:var(--sub)}
-.tool-tag.selected{background:linear-gradient(135deg,var(--accent-soft),var(--accent-soft));border-color:var(--accent);color:var(--accent);
-  box-shadow:0 0 20px var(--accent-soft)}
-.tool-tag:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.tool-tag{padding:6px 14px;border-radius:999px;font-size:var(--fs-sm);cursor:pointer;border:1px solid var(--line);background:var(--bg-2);
+  transition:all 0.2s var(--ease-spring);font-weight:500;color:var(--sub)}
+.tool-tag.selected{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.tool-tag:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px) scale(1.02)}
 
 /* ── Response box ── */
 .response-box{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:18px;margin-top:16px;
   min-height:100px;white-space:pre-wrap;line-height:1.7;font-size:14px;position:relative}
 .stats-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
-.stat-chip{background:var(--accent-soft);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:12px;color:var(--sub);font-weight:500}
-.stat-chip span{color:var(--accent);font-weight:700}
+.stat-chip{background:var(--bg-2);border:1px solid var(--line);padding:5px 12px;border-radius:999px;font-size:var(--fs-xs);color:var(--sub);font-weight:500}
+.stat-chip span{font-family:var(--font-mono);color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
 
 /* ── Templates ── */
 .templates-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
-.template-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;cursor:pointer;
-  transition:all 0.4s var(--ease);position:relative;overflow:hidden}
-.template-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.4s;
-  background:linear-gradient(135deg,var(--accent-soft),var(--accent-soft))}
-.template-card:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.3),0 0 30px var(--accent-soft)}
-.template-card:hover::before{opacity:1}
-.template-card .icon{font-size:30px;margin-bottom:10px;filter:drop-shadow(0 0 8px rgba(0,212,255,0.3))}
+.template-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;cursor:pointer;
+  box-shadow:var(--shadow);transition:transform 0.2s var(--ease-spring),box-shadow 0.2s var(--ease),border-color 0.2s var(--ease);position:relative}
+.template-card:hover{border-color:rgba(255,106,71,0.35);transform:translateY(-3px) scale(1.01);box-shadow:var(--shadow-hover)}
+.template-card .icon{font-size:26px;margin-bottom:8px}
 .template-card h4{color:var(--ink);margin-bottom:4px;font-weight:600}
 .template-card p{color:var(--sub);font-size:13px;line-height:1.4}
 .template-card .cat{font-size:11px;color:var(--accent);margin-top:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
 
 /* ── Monitor ── */
 .monitor-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
-.monitor-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;
-  backdrop-filter:blur(12px);transition:all 0.3s var(--ease);position:relative;overflow:hidden}
-.monitor-card::after{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:0 var(--r) 0 40px;opacity:0.04;
-  background:linear-gradient(135deg,var(--accent),var(--chart-4))}
-.monitor-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.2)}
-.monitor-card .label{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:1px;font-weight:600}
-.monitor-card .value{font-size:30px;font-weight:800;margin-top:6px;letter-spacing:-1px}
-.monitor-card .value.blue{color:var(--accent);text-shadow:0 0 30px var(--accent-soft)}
-.monitor-card .value.green{color:var(--chart-3);text-shadow:0 0 30px rgba(111,183,166,0.2)}
-.monitor-card .value.yellow{color:var(--chart-2);text-shadow:0 0 30px rgba(224,164,88,0.2)}
+.monitor-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;
+  box-shadow:var(--shadow);transition:transform 0.2s var(--ease-spring),box-shadow 0.2s var(--ease);position:relative}
+.monitor-card:hover{transform:translateY(-2px) scale(1.01);box-shadow:var(--shadow-hover)}
+.monitor-card .label{font-size:var(--fs-xs);color:var(--sub);text-transform:uppercase;letter-spacing:0.08em;font-weight:600}
+.monitor-card .value{font-family:var(--font-mono);font-size:var(--fs-stat);font-weight:600;margin-top:4px;letter-spacing:-0.02em;
+  font-variant-numeric:tabular-nums;color:var(--accent)}
+.monitor-card .value.blue,.monitor-card .value.green,.monitor-card .value.yellow,.monitor-card .value.purple{color:var(--accent)}
 
 /* ── Event rows ── */
 .event-row{background:var(--accent-soft);border:1px solid var(--line);padding:11px 16px;margin-bottom:4px;border-radius:var(--r-sm);
@@ -204,10 +199,13 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 .an-bar .bar-label{font-size:10px;color:var(--sub);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px;text-align:center}
 .an-bar .bar-value{font-size:11px;color:var(--ink);font-weight:700;margin-bottom:4px}
 .an-table{width:100%;border-collapse:separate;border-spacing:0}
-.an-table th{text-align:left;font-size:10px;text-transform:uppercase;color:var(--sub);letter-spacing:0.8px;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600}
-.an-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--line)}
-.an-table tr{transition:background 0.2s}
-.an-table tr:hover td{background:var(--accent-soft)}
+.an-table thead th{text-align:left;font-size:var(--fs-xs);text-transform:uppercase;color:var(--sub);letter-spacing:0.06em;
+  padding:10px 12px;border-bottom:1px solid var(--line);font-weight:600;background:var(--bg-2);position:sticky;top:0;z-index:1}
+.an-table th.num,.an-table td.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:var(--fs-sm)}
+.an-table td{padding:10px 12px;font-size:var(--fs-sm);border-bottom:1px solid var(--line)}
+.an-table tbody tr:nth-child(even) td{background:rgba(240,236,227,0.02)}
+.an-table tr{transition:background 0.15s var(--ease)}
+.an-table tbody tr:hover td{background:var(--accent-soft)}
 .an-rank{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:12px;font-weight:800}
 .an-rank.gold{background:rgba(224,164,88,0.15);color:var(--chart-2);box-shadow:0 0 12px rgba(224,164,88,0.2)}
 .an-rank.silver{background:rgba(180,180,180,0.12);color:#bbb}
@@ -216,16 +214,17 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 .an-quality-bar{height:6px;border-radius:3px;background:rgba(255,255,255,0.05);overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-left:6px}
 .an-quality-bar .fill{height:100%;border-radius:3px}
 .an-tabs{display:flex;gap:4px;margin-bottom:16px}
-.an-tab{padding:7px 16px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--line);background:var(--accent-soft);color:var(--sub);
-  transition:all 0.3s var(--ease);font-weight:500}
-.an-tab.active{background:linear-gradient(135deg,var(--accent-soft),var(--accent-soft));border-color:var(--accent);color:var(--accent);
-  box-shadow:0 0 15px var(--accent-soft)}
+.an-tab{padding:6px 14px;border-radius:999px;font-size:var(--fs-xs);cursor:pointer;border:1px solid var(--line);background:var(--bg-2);color:var(--sub);
+  transition:all 0.2s var(--ease);font-weight:500}
+.an-tab.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.an-tab:hover:not(.active){border-color:rgba(255,106,71,0.3);color:var(--ink)}
+.an-chart-wrap.chart-fade{animation:panelCross 0.2s var(--ease) both}
 
 /* ── Multi-modal upload ── */
 .mm-upload-zone{border:2px dashed var(--line);border-radius:var(--r);padding:44px 20px;text-align:center;cursor:pointer;
   transition:all 0.4s var(--ease);background:var(--accent-soft);margin-bottom:16px;position:relative;overflow:hidden}
-.mm-upload-zone::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.4s;
-  background:linear-gradient(135deg,rgba(0,212,255,0.04),rgba(124,92,252,0.03))}
+.mm-upload-zone::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.2s var(--ease);
+  background:var(--accent-soft)}
 .mm-upload-zone:hover,.mm-upload-zone.dragover{border-color:var(--accent);box-shadow:0 0 40px var(--accent-soft)}
 .mm-upload-zone:hover::before,.mm-upload-zone.dragover::before{opacity:1}
 .mm-upload-zone .icon{font-size:42px;margin-bottom:10px;filter:drop-shadow(0 0 12px var(--accent-soft))}
@@ -260,23 +259,30 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 .br-compare-col h4{font-size:13px;margin-bottom:8px;color:var(--ink);font-weight:600}
 
 /* ── Particle canvas ── */
-#particles-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.6}
+#particles-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.25}
 
 /* ── Floating orbs (ambient decoration) ── */
-.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(80px);opacity:0.4;animation:orbFloat 25s ease-in-out infinite alternate}
-.orb-1{width:400px;height:400px;background:radial-gradient(circle,var(--accent-soft),transparent 70%);top:-100px;left:-100px;animation-duration:30s}
-.orb-2{width:350px;height:350px;background:radial-gradient(circle,var(--accent-soft),transparent 70%);bottom:-100px;right:-50px;animation-duration:25s;animation-delay:-10s}
-.orb-3{width:300px;height:300px;background:radial-gradient(circle,rgba(0,255,136,0.08),transparent 70%);top:40%;left:50%;animation-duration:35s;animation-delay:-18s}
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(90px);opacity:0.35;animation:orbFloat 28s ease-in-out infinite alternate}
+.orb-1{width:380px;height:380px;background:radial-gradient(circle,var(--accent-soft),transparent 70%);top:-120px;left:-80px;animation-duration:32s}
+.orb-2{width:320px;height:320px;background:radial-gradient(circle,rgba(255,106,71,0.06),transparent 70%);bottom:-80px;right:-40px;animation-duration:26s;animation-delay:-10s}
+.orb-3{width:260px;height:260px;background:radial-gradient(circle,rgba(255,106,71,0.05),transparent 70%);top:42%;left:48%;animation-duration:34s;animation-delay:-18s}
 @keyframes orbFloat{
   0%{transform:translate(0,0) scale(1)}
-  33%{transform:translate(30px,-40px) scale(1.1)}
-  66%{transform:translate(-20px,30px) scale(0.95)}
-  100%{transform:translate(15px,-15px) scale(1.05)}
+  50%{transform:translate(18px,-24px) scale(1.04)}
+  100%{transform:translate(-12px,16px) scale(0.98)}
 }
 
 /* ── Shimmer effect for empty states ── */
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 .shimmer{background:linear-gradient(90deg,transparent 25%,rgba(255,255,255,0.03) 50%,transparent 75%);background-size:200% 100%;animation:shimmer 2s infinite}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
+  .panel.active,.an-chart-wrap.chart-fade{animation:none}
+  #particles-canvas,.orb{display:none}
+  .topbar .status::before{animation:none}
+}
 </style>
 </head>
 <body>
@@ -339,7 +345,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 </div>
 <label>Temperature (creativity: 0=focused, 1=creative)</label>
 <input type="range" id="b-temp" min="0" max="1" step="0.1" value="0.7" oninput="document.getElementById('temp-val').textContent=this.value">
-<span id="temp-val" style="color:var(--accent);font-size:13px">0.7</span>
+<span id="temp-val" class="metric-val" style="color:var(--accent);font-size:var(--fs-sm)">0.7</span>
 <label>Budget Limit ($/day)</label>
 <input type="number" id="b-budget" value="5.00" step="0.5" min="0.5">
 <div style="margin-top:24px">
@@ -359,7 +365,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <div class="panel" id="panel-templates">
 <div class="card">
 <h2>Agent Templates</h2>
-<p style="color:#888;margin-bottom:16px">Pre-built agents ready to deploy. Click one to load it into the builder.</p>
+<p style="color:var(--sub);margin-bottom:16px">Pre-built agents ready to deploy. Click one to load it into the builder.</p>
 <div class="templates-grid" id="templates-list"></div>
 </div>
 </div>
@@ -383,9 +389,9 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <h2>Branching Chat</h2>
 <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="brNewTree()">+ New Conversation</button>
 </div>
-<p style="color:#888;font-size:13px;margin-bottom:8px">Explore "what if" scenarios by forking conversations. Click the fork icon on any message to create a branch.</p>
+<p style="color:var(--sub);font-size:13px;margin-bottom:8px">Explore "what if" scenarios by forking conversations. Click the fork icon on any message to create a branch.</p>
 <!-- Branch selector bar -->
-<div class="br-bar" id="br-bar"><span style="color:#555;font-size:12px">Start a conversation to see branches.</span></div>
+<div class="br-bar" id="br-bar"><span style="color:var(--sub);font-size:12px">Start a conversation to see branches.</span></div>
 <!-- Action buttons -->
 <div style="display:flex;gap:6px;margin-bottom:10px" id="br-actions" style="display:none">
 <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="brCompare()" id="br-compare-btn" title="Select two branches then compare">Compare</button>
@@ -396,8 +402,8 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <!-- Compare results area (hidden by default) -->
 <div id="br-compare-area" style="display:none;margin-bottom:8px">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-<span style="color:#888;font-size:12px;font-weight:600">Branch Comparison</span>
-<span style="font-size:11px;color:#555;cursor:pointer" onclick="document.getElementById('br-compare-area').style.display='none'">close</span>
+<span style="color:var(--sub);font-size:12px;font-weight:600">Branch Comparison</span>
+<span style="font-size:11px;color:var(--sub);cursor:pointer" onclick="document.getElementById('br-compare-area').style.display='none'">close</span>
 </div>
 <div style="display:flex;gap:8px" id="br-compare-cols"></div>
 </div>
@@ -462,7 +468,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <div class="card">
 <h2>Most Used Tools</h2>
 <div class="an-bar-wrap" id="an-tools-bars"></div>
-<p style="color:#555;font-size:12px;text-align:center;margin-top:8px" id="an-tools-empty">No tool usage recorded yet. Run an agent with tools enabled.</p>
+<p style="color:var(--sub);font-size:12px;text-align:center;margin-top:8px" id="an-tools-empty">No tool usage recorded yet. Run an agent with tools enabled.</p>
 </div>
 
 <!-- Model comparison table -->
@@ -470,8 +476,8 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <h2>Model Comparison</h2>
 <div style="overflow-x:auto">
 <table class="an-table" id="an-model-table">
-<thead><tr><th>Model</th><th>Calls</th><th>Total Cost</th><th>Avg Cost</th><th>Avg Latency</th><th>Avg Tokens</th><th>Total Tokens</th></tr></thead>
-<tbody id="an-model-tbody"><tr><td colspan="7" style="color:#555;text-align:center;padding:20px">No model data yet.</td></tr></tbody>
+<thead><tr><th>Model</th><th class="num">Calls</th><th class="num">Total Cost</th><th class="num">Avg Cost</th><th class="num">Avg Latency</th><th class="num">Avg Tokens</th><th class="num">Total Tokens</th></tr></thead>
+<tbody id="an-model-tbody"><tr><td colspan="7" class="text-muted" style="text-align:center;padding:20px">No model data yet.</td></tr></tbody>
 </table>
 </div>
 </div>
@@ -481,8 +487,8 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <h2>Agent Leaderboard</h2>
 <div style="overflow-x:auto">
 <table class="an-table" id="an-leader-table">
-<thead><tr><th>#</th><th>Agent</th><th>Quality</th><th>Queries</th><th>Tool Calls</th><th>Total Cost</th><th>Cost/Query</th><th>Events</th></tr></thead>
-<tbody id="an-leader-tbody"><tr><td colspan="8" style="color:#555;text-align:center;padding:20px">No agent data yet.</td></tr></tbody>
+<thead><tr><th>#</th><th>Agent</th><th>Quality</th><th class="num">Queries</th><th class="num">Tool Calls</th><th class="num">Total Cost</th><th class="num">Cost/Query</th><th class="num">Events</th></tr></thead>
+<tbody id="an-leader-tbody"><tr><td colspan="8" class="text-muted" style="text-align:center;padding:20px">No agent data yet.</td></tr></tbody>
 </table>
 </div>
 </div>
@@ -510,12 +516,12 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 </select>
 <button class="btn btn-primary" style="white-space:nowrap" onclick="mpSearch()">Search</button>
 </div>
-<div class="templates-grid" id="mp-grid"><p style="color:#555;padding:20px;text-align:center">Loading marketplace...</p></div>
+<div class="templates-grid" id="mp-grid"><p style="color:var(--sub);padding:20px;text-align:center">Loading marketplace...</p></div>
 </div>
 <!-- Publish form -->
 <div class="card">
 <h2>Publish Your Agent</h2>
-<p style="color:#888;margin-bottom:12px">Share your agent configuration with the community.</p>
+<p style="color:var(--sub);margin-bottom:12px">Share your agent configuration with the community.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
 <label>Agent Name</label>
@@ -563,13 +569,13 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <div class="tool-tag" data-tool="read_document" onclick="toggleTool(this)">Doc Reader</div>
 </div>
 <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="mpPublish()">Publish to Marketplace</button>
-<div id="mp-pub-status" style="margin-top:8px;font-size:13px;color:#888"></div>
+<div id="mp-pub-status" style="margin-top:8px;font-size:13px;color:var(--sub)"></div>
 </div>
 <!-- Detail / review overlay (hidden) -->
 <div class="card" id="mp-detail" style="display:none">
 <div style="display:flex;justify-content:space-between;align-items:center">
 <h2 id="mp-detail-title">Agent Details</h2>
-<span style="font-size:12px;color:#555;cursor:pointer" onclick="document.getElementById('mp-detail').style.display='none'">close</span>
+<span style="font-size:12px;color:var(--sub);cursor:pointer" onclick="document.getElementById('mp-detail').style.display='none'">close</span>
 </div>
 <div id="mp-detail-body"></div>
 <div style="margin-top:16px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px">
@@ -588,7 +594,7 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <div class="panel" id="panel-embed">
 <div class="card">
 <h2>Embeddable Chat Widget</h2>
-<p style="color:#888;margin-bottom:16px">Generate an embeddable widget so other companies can add AgentOS agents to their websites with a single script tag.</p>
+<p style="color:var(--sub);margin-bottom:16px">Generate an embeddable widget so other companies can add AgentOS agents to their websites with a single script tag.</p>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
@@ -600,8 +606,8 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 <select id="emb-pos"><option value="bottom-right">Bottom-right</option><option value="bottom-left">Bottom-left</option></select>
 <label>Accent Colour</label>
 <div style="display:flex;gap:8px;align-items:center">
-<input type="color" id="emb-color" value="#6c5ce7" style="width:44px;height:36px;padding:2px;border-radius:4px;border:1px solid rgba(255,255,255,0.06);background:rgba(6,6,14,0.6);cursor:pointer">
-<input type="text" id="emb-color-hex" value="#6c5ce7" style="flex:1" oninput="document.getElementById('emb-color').value=this.value">
+<input type="color" id="emb-color" value="#FF6A47" style="width:44px;height:36px;padding:2px;border-radius:4px;border:1px solid var(--line);background:var(--bg-2);cursor:pointer">
+<input type="text" id="emb-color-hex" value="#FF6A47" style="flex:1" oninput="document.getElementById('emb-color').value=this.value">
 </div>
 </div>
 <div>
@@ -627,15 +633,15 @@ input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;hei
 
 <div class="card" id="emb-output" style="display:none">
 <h2>Embed Code</h2>
-<p style="color:#888;margin-bottom:8px">Copy this snippet and paste it into any HTML page, just before <code>&lt;/body&gt;</code>:</p>
+<p style="color:var(--sub);margin-bottom:8px">Copy this snippet and paste it into any HTML page, just before <code>&lt;/body&gt;</code>:</p>
 <pre id="emb-snippet" style="background:rgba(6,6,14,0.6);padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;border:1px solid rgba(255,255,255,0.06);color:#10b981;max-height:260px;overflow-y:auto"></pre>
 <button class="btn btn-secondary" style="margin-top:8px" onclick="embCopy()">Copy to Clipboard</button>
-<span id="emb-copy-status" style="margin-left:8px;font-size:13px;color:#888"></span>
+<span id="emb-copy-status" style="margin-left:8px;font-size:13px;color:var(--sub)"></span>
 </div>
 
 <div class="card">
 <h2>Python SDK</h2>
-<p style="color:#888;margin-bottom:8px">Use the Python SDK to integrate AgentOS into any backend:</p>
+<p style="color:var(--sub);margin-bottom:8px">Use the Python SDK to integrate AgentOS into any backend:</p>
 <pre style="background:rgba(6,6,14,0.6);padding:16px;border-radius:8px;font-size:13px;overflow-x:auto;white-space:pre-wrap;border:1px solid rgba(255,255,255,0.06);color:#e0e0e0">from agentos.embed import AgentOSClient
 
 client = AgentOSClient(
@@ -662,24 +668,24 @@ for a in agents:
 <div class="panel" id="panel-mesh">
 <div class="card">
 <h2>Agent-to-Agent Mesh</h2>
-<p style="color:#888;margin-bottom:16px">Discover, authenticate, negotiate, and transact with agents across organisations using the mesh protocol.</p>
+<p style="color:var(--sub);margin-bottom:16px">Discover, authenticate, negotiate, and transact with agents across organisations using the mesh protocol.</p>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
-<div style="font-size:22px;font-weight:700;color:#6c5ce7" id="mesh-stat-agents">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Agents</div>
+<div style="font-size:22px;font-weight:700;color:var(--accent)" id="mesh-stat-agents">0</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Agents</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
-<div style="font-size:22px;font-weight:700;color:#00cec9" id="mesh-stat-orgs">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Organisations</div>
+<div style="font-size:22px;font-weight:700;color:var(--accent)" id="mesh-stat-orgs">0</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Organisations</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#fdcb6e" id="mesh-stat-tx">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Transactions</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Transactions</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#10b981" id="mesh-stat-completed">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Completed</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Completed</div>
 </div>
 </div>
 </div>
@@ -688,7 +694,7 @@ for a in agents:
 <!-- Registry -->
 <div class="card">
 <h2>Registry</h2>
-<p style="color:#888;margin-bottom:12px;font-size:13px">Agents registered in the mesh network.</p>
+<p style="color:var(--sub);margin-bottom:12px;font-size:13px">Agents registered in the mesh network.</p>
 <div style="display:flex;gap:8px;margin-bottom:12px">
 <input type="text" id="mesh-search" placeholder="Search agents…" style="flex:1" oninput="meshSearchRegistry()">
 <button class="btn btn-secondary" onclick="meshRefresh()">Refresh</button>
@@ -699,7 +705,7 @@ for a in agents:
 <!-- Register -->
 <div class="card">
 <h2>Register Agent</h2>
-<p style="color:#888;margin-bottom:12px;font-size:13px">Add a new agent to the mesh network.</p>
+<p style="color:var(--sub);margin-bottom:12px;font-size:13px">Add a new agent to the mesh network.</p>
 <label>Mesh ID</label>
 <input type="text" id="mesh-reg-id" placeholder="sales-bot@acme.com">
 <label>Display Name</label>
@@ -718,7 +724,7 @@ for a in agents:
 <!-- Ping / Negotiate -->
 <div class="card">
 <h2>Send Message</h2>
-<p style="color:#888;margin-bottom:12px;font-size:13px">Send a mesh protocol message to another agent.</p>
+<p style="color:var(--sub);margin-bottom:12px;font-size:13px">Send a mesh protocol message to another agent.</p>
 <label>Sender Mesh ID</label>
 <input type="text" id="mesh-msg-sender" placeholder="my-bot@myorg.com">
 <label>Recipient Mesh ID</label>
@@ -741,7 +747,7 @@ for a in agents:
 <!-- Transactions -->
 <div class="card">
 <h2>Transactions</h2>
-<p style="color:#888;margin-bottom:12px;font-size:13px">Ledger of all mesh transactions.</p>
+<p style="color:var(--sub);margin-bottom:12px;font-size:13px">Ledger of all mesh transactions.</p>
 <div id="mesh-tx-list" style="max-height:300px;overflow-y:auto"></div>
 </div>
 </div>
@@ -757,28 +763,28 @@ for a in agents:
 <div class="panel" id="panel-simulation">
 <div class="card">
 <h2>Agent Simulation World</h2>
-<p style="color:#888;margin-bottom:16px">Stress-test your agent with realistic simulated customers. Generate 50-100 concurrent interactions from different personas, then review quality scores and failure analysis.</p>
+<p style="color:var(--sub);margin-bottom:16px">Stress-test your agent with realistic simulated customers. Generate 50-100 concurrent interactions from different personas, then review quality scores and failure analysis.</p>
 
 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
-<div style="font-size:22px;font-weight:700;color:#6c5ce7" id="sim-stat-total">-</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Total</div>
+<div style="font-size:22px;font-weight:700;color:var(--accent)" id="sim-stat-total">-</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Total</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#10b981" id="sim-stat-passed">-</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Passed</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Passed</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#e74c3c" id="sim-stat-failed">-</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Failed</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Failed</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#fdcb6e" id="sim-stat-quality">-</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Avg Quality</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Avg Quality</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
-<div style="font-size:22px;font-weight:700;color:#00cec9" id="sim-stat-rate">-</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Pass Rate</div>
+<div style="font-size:22px;font-weight:700;color:var(--accent)" id="sim-stat-rate">-</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Pass Rate</div>
 </div>
 </div>
 </div>
@@ -808,9 +814,9 @@ for a in agents:
 </div>
 <div id="sim-progress-wrap" style="display:none;margin-top:12px">
 <div style="background:#1e1e3a;border-radius:6px;height:8px;overflow:hidden">
-<div id="sim-progress-bar" style="background:linear-gradient(90deg,#6c5ce7,#00cec9);height:100%;width:0%;transition:width 0.3s"></div>
+<div id="sim-progress-bar" style="background:linear-gradient(90deg,var(--accent),var(--accent-press));height:100%;width:0%;transition:width 0.3s"></div>
 </div>
-<div style="font-size:12px;color:#888;margin-top:4px" id="sim-progress-text">Starting…</div>
+<div style="font-size:12px;color:var(--sub);margin-top:4px" id="sim-progress-text">Starting…</div>
 </div>
 </div>
 
@@ -818,7 +824,7 @@ for a in agents:
 <div class="card">
 <h2>Persona Breakdown</h2>
 <div id="sim-persona-list" style="max-height:380px;overflow-y:auto">
-<div style="color:#888;font-size:13px">Run a simulation to see per-persona results.</div>
+<div style="color:var(--sub);font-size:13px">Run a simulation to see per-persona results.</div>
 </div>
 </div>
 </div>
@@ -827,20 +833,20 @@ for a in agents:
 <!-- Score Distribution -->
 <div class="card">
 <h2>Score Distribution</h2>
-<div id="sim-score-dist" style="min-height:120px"><div style="color:#888;font-size:13px">No data yet.</div></div>
+<div id="sim-score-dist" style="min-height:120px"><div style="color:var(--sub);font-size:13px">No data yet.</div></div>
 </div>
 
 <!-- Failure Analysis -->
 <div class="card">
 <h2>Failure Analysis</h2>
-<div id="sim-failures" style="max-height:200px;overflow-y:auto"><div style="color:#888;font-size:13px">No failures yet.</div></div>
+<div id="sim-failures" style="max-height:200px;overflow-y:auto"><div style="color:var(--sub);font-size:13px">No failures yet.</div></div>
 </div>
 </div>
 
 <!-- Worst interactions -->
 <div class="card" style="margin-top:16px">
 <h2>Worst Interactions</h2>
-<div id="sim-worst" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">Run a simulation to see results.</div></div>
+<div id="sim-worst" style="max-height:300px;overflow-y:auto"><div style="color:var(--sub);font-size:13px">Run a simulation to see results.</div></div>
 </div>
 </div>
 
@@ -848,28 +854,28 @@ for a in agents:
 <div class="panel" id="panel-learning">
 <div class="card">
 <h2>Agent Learning System</h2>
-<p style="color:#888;margin-bottom:16px">Collect user feedback, analyze failure patterns, auto-optimise prompts, and build few-shot examples — all without fine-tuning.</p>
+<p style="color:var(--sub);margin-bottom:16px">Collect user feedback, analyze failure patterns, auto-optimise prompts, and build few-shot examples — all without fine-tuning.</p>
 
 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
-<div style="font-size:22px;font-weight:700;color:#6c5ce7" id="lrn-stat-total">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Feedback</div>
+<div style="font-size:22px;font-weight:700;color:var(--accent)" id="lrn-stat-total">0</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Feedback</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#10b981" id="lrn-stat-pos">0%</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Positive</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Positive</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#fdcb6e" id="lrn-stat-quality">-</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Avg Quality</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Avg Quality</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
-<div style="font-size:22px;font-weight:700;color:#00cec9" id="lrn-stat-patches">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Patches</div>
+<div style="font-size:22px;font-weight:700;color:var(--accent)" id="lrn-stat-patches">0</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Patches</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#e17055" id="lrn-stat-examples">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Few-shots</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Few-shots</div>
 </div>
 </div>
 </div>
@@ -900,8 +906,8 @@ for a in agents:
 <!-- Topic Analysis -->
 <div class="card">
 <h2>Topic Analysis</h2>
-<p style="color:#888;font-size:13px;margin-bottom:8px">Which topics does the agent handle well (or poorly)?</p>
-<div id="lrn-topics" style="max-height:320px;overflow-y:auto"><div style="color:#888;font-size:13px">Submit feedback or click Analyze to see results.</div></div>
+<p style="color:var(--sub);font-size:13px;margin-bottom:8px">Which topics does the agent handle well (or poorly)?</p>
+<div id="lrn-topics" style="max-height:320px;overflow-y:auto"><div style="color:var(--sub);font-size:13px">Submit feedback or click Analyze to see results.</div></div>
 <button class="btn btn-secondary" style="margin-top:8px;width:100%" onclick="lrnAnalyze()">Analyze Patterns</button>
 </div>
 </div>
@@ -910,16 +916,16 @@ for a in agents:
 <!-- Prompt Patches -->
 <div class="card">
 <h2>Prompt Patches</h2>
-<p style="color:#888;font-size:13px;margin-bottom:8px">Auto-generated prompt improvements for weak areas.</p>
-<div id="lrn-patches" style="max-height:320px;overflow-y:auto"><div style="color:#888;font-size:13px">Run analysis to generate patches.</div></div>
+<p style="color:var(--sub);font-size:13px;margin-bottom:8px">Auto-generated prompt improvements for weak areas.</p>
+<div id="lrn-patches" style="max-height:320px;overflow-y:auto"><div style="color:var(--sub);font-size:13px">Run analysis to generate patches.</div></div>
 <button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="lrnOptimize()">Generate Patches</button>
 </div>
 
 <!-- Few-Shot Examples -->
 <div class="card">
 <h2>Few-Shot Examples</h2>
-<p style="color:#888;font-size:13px;margin-bottom:8px">Best interactions auto-selected as in-context examples.</p>
-<div id="lrn-fewshot" style="max-height:320px;overflow-y:auto"><div style="color:#888;font-size:13px">Build examples from positive feedback.</div></div>
+<p style="color:var(--sub);font-size:13px;margin-bottom:8px">Best interactions auto-selected as in-context examples.</p>
+<div id="lrn-fewshot" style="max-height:320px;overflow-y:auto"><div style="color:var(--sub);font-size:13px">Build examples from positive feedback.</div></div>
 <button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="lrnBuildFewShot()">Build Examples</button>
 </div>
 </div>
@@ -928,19 +934,19 @@ for a in agents:
 <div class="card" style="margin-top:16px">
 <h2>Learning Progress</h2>
 <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-<span id="lrn-direction" style="font-size:18px;font-weight:700;color:#888">-</span>
-<span id="lrn-change" style="font-size:14px;color:#888"></span>
+<span id="lrn-direction" style="font-size:18px;font-weight:700;color:var(--sub)">-</span>
+<span id="lrn-change" style="font-size:14px;color:var(--sub)"></span>
 <button class="btn btn-secondary" style="margin-left:auto" onclick="lrnProgress()">Refresh</button>
 </div>
 <div id="lrn-timeline" style="display:flex;gap:8px;align-items:flex-end;height:120px;padding:8px 0;border-bottom:1px solid #1e1e3a">
-<div style="color:#888;font-size:13px">Run analysis to see timeline.</div>
+<div style="color:var(--sub);font-size:13px">Run analysis to see timeline.</div>
 </div>
 </div>
 
 <!-- Recent Feedback -->
 <div class="card" style="margin-top:16px">
 <h2>Recent Feedback</h2>
-<div id="lrn-recent" style="max-height:250px;overflow-y:auto"><div style="color:#888;font-size:13px">No feedback yet.</div></div>
+<div id="lrn-recent" style="max-height:250px;overflow-y:auto"><div style="color:var(--sub);font-size:13px">No feedback yet.</div></div>
 </div>
 </div>
 
@@ -948,24 +954,24 @@ for a in agents:
 <div class="panel" id="panel-observability">
 <div class="card">
 <h2>Root Cause Analysis</h2>
-<p style="color:#888;margin-bottom:16px">Deep tracing, 5-point diagnostics, smart causal alerts, and step-by-step replay of agent interactions.</p>
+<p style="color:var(--sub);margin-bottom:16px">Deep tracing, 5-point diagnostics, smart causal alerts, and step-by-step replay of agent interactions.</p>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
-<div style="font-size:22px;font-weight:700;color:#6c5ce7" id="rca-stat-traces">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Traces</div>
+<div style="font-size:22px;font-weight:700;color:var(--accent)" id="rca-stat-traces">0</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Traces</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#10b981" id="rca-stat-success">0%</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Success Rate</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Success Rate</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#e74c3c" id="rca-stat-failed">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Failed</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Failed</div>
 </div>
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
 <div style="font-size:22px;font-weight:700;color:#fdcb6e" id="rca-stat-alerts">0</div>
-<div style="font-size:11px;color:#888;margin-top:2px">Alerts</div>
+<div style="font-size:11px;color:var(--sub);margin-top:2px">Alerts</div>
 </div>
 </div>
 <button class="btn btn-secondary" onclick="rcaRefresh()" style="margin-bottom:8px">Refresh</button>
@@ -975,28 +981,28 @@ for a in agents:
 <!-- Alerts -->
 <div class="card">
 <h2>Smart Alerts</h2>
-<p style="color:#888;font-size:13px;margin-bottom:8px">Causal alerts that explain WHY something is wrong.</p>
-<div id="rca-alerts" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">Click Refresh to check for alerts.</div></div>
+<p style="color:var(--sub);font-size:13px;margin-bottom:8px">Causal alerts that explain WHY something is wrong.</p>
+<div id="rca-alerts" style="max-height:300px;overflow-y:auto"><div style="color:var(--sub);font-size:13px">Click Refresh to check for alerts.</div></div>
 </div>
 
 <!-- Recent Traces -->
 <div class="card">
 <h2>Recent Traces</h2>
-<div id="rca-traces" style="max-height:300px;overflow-y:auto"><div style="color:#888;font-size:13px">No traces yet.</div></div>
+<div id="rca-traces" style="max-height:300px;overflow-y:auto"><div style="color:var(--sub);font-size:13px">No traces yet.</div></div>
 </div>
 </div>
 
 <!-- Replay Viewer -->
 <div class="card" style="margin-top:16px">
 <h2>Interaction Replay</h2>
-<p style="color:#888;font-size:13px;margin-bottom:8px">Click a failed trace above to replay it step-by-step.</p>
-<div id="rca-replay" style="min-height:80px"><div style="color:#888;font-size:13px">Select a trace to replay.</div></div>
+<p style="color:var(--sub);font-size:13px;margin-bottom:8px">Click a failed trace above to replay it step-by-step.</p>
+<div id="rca-replay" style="min-height:80px"><div style="color:var(--sub);font-size:13px">Select a trace to replay.</div></div>
 </div>
 
 <!-- Diagnosis Detail -->
 <div class="card" style="margin-top:16px">
 <h2>5-Point Diagnosis</h2>
-<div id="rca-diagnosis" style="min-height:60px"><div style="color:#888;font-size:13px">Select a trace to see its diagnosis.</div></div>
+<div id="rca-diagnosis" style="min-height:60px"><div style="color:var(--sub);font-size:13px">Select a trace to see its diagnosis.</div></div>
 </div>
 </div>
 
@@ -1004,7 +1010,7 @@ for a in agents:
 <div class="panel" id="panel-scheduler">
 <div class="card">
 <h2>Agent Scheduler</h2>
-<p style="color:#888;margin-bottom:16px">Schedule agents to run automatically at intervals or cron times.</p>
+<p style="color:var(--sub);margin-bottom:16px">Schedule agents to run automatically at intervals or cron times.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
 <label>Agent Name</label>
@@ -1037,7 +1043,7 @@ for a in agents:
 <div id="sc-cron" style="display:none">
 <label>Cron Expression</label>
 <input type="text" id="sc-cron-val" value="0 9 * * *" placeholder="min hour dom month dow">
-<span style="font-size:11px;color:#555">e.g. 0 9 * * * = 9am daily</span>
+<span style="font-size:11px;color:var(--sub)">e.g. 0 9 * * * = 9am daily</span>
 </div>
 <label>Tools</label>
 <div class="tools-grid">
@@ -1055,7 +1061,7 @@ for a in agents:
 </div>
 <div class="card">
 <h2>Active Jobs</h2>
-<div id="sc-jobs"><p style="color:#555">No scheduled jobs. Create one above.</p></div>
+<div id="sc-jobs"><p style="color:var(--sub)">No scheduled jobs. Create one above.</p></div>
 </div>
 </div>
 
@@ -1063,7 +1069,7 @@ for a in agents:
 <div class="panel" id="panel-events">
 <div class="card">
 <h2>Event Bus</h2>
-<p style="color:#888;margin-bottom:16px">Fire events and see which agents react. Supports webhooks, timers, agent-to-agent chains, and custom events.</p>
+<p style="color:var(--sub);margin-bottom:16px">Fire events and see which agents react. Supports webhooks, timers, agent-to-agent chains, and custom events.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
 <label>Event Name</label>
@@ -1081,7 +1087,7 @@ for a in agents:
 <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="document.getElementById('ev-name').value='custom.test'">custom.test</button>
 </div>
 <label>Webhook URL</label>
-<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:13px;color:#888;margin-top:4px;word-break:break-all">
+<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--sub);margin-top:4px;word-break:break-all">
 POST <span style="color:var(--accent)">/api/webhook/{event_name}</span>
 <br><span style="font-size:11px">Send JSON body to fire events from external services</span>
 </div>
@@ -1092,11 +1098,11 @@ POST <span style="color:var(--accent)">/api/webhook/{event_name}</span>
 </div>
 <div class="card">
 <h2>Registered Listeners</h2>
-<div id="ev-listeners"><p style="color:#555">No listeners registered. Use the Python API to register agents.</p></div>
+<div id="ev-listeners"><p style="color:var(--sub)">No listeners registered. Use the Python API to register agents.</p></div>
 </div>
 <div class="card">
 <h2>Event History</h2>
-<div id="ev-history"><p style="color:#555">No events emitted yet.</p></div>
+<div id="ev-history"><p style="color:var(--sub)">No events emitted yet.</p></div>
 </div>
 </div>
 
@@ -1104,7 +1110,7 @@ POST <span style="color:var(--accent)">/api/webhook/{event_name}</span>
 <div class="panel" id="panel-auth">
 <div class="card">
 <h2>Account</h2>
-<p style="color:#888;margin-bottom:12px">Register or log in to get an API key. This key is used to track your usage.</p>
+<p style="color:var(--sub);margin-bottom:12px">Register or log in to get an API key. This key is used to track your usage.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
 <label>Email</label>
@@ -1120,14 +1126,14 @@ POST <span style="color:var(--accent)">/api/webhook/{event_name}</span>
 <label>Your API Key</label>
 <input type="text" id="auth-apikey" readonly placeholder="Not logged in">
 <button class="btn btn-secondary" style="margin-top:8px;width:100%" onclick="copyApiKey()">Copy API Key</button>
-<p style="font-size:11px;color:#555;margin-top:8px">API key is stored locally in your browser (localStorage) and sent as <code>X-API-Key</code> for API calls.</p>
+<p style="font-size:11px;color:var(--sub);margin-top:8px">API key is stored locally in your browser (localStorage) and sent as <code>X-API-Key</code> for API calls.</p>
 </div>
 </div>
-<div id="auth-message" style="margin-top:12px;font-size:13px;color:#888"></div>
+<div id="auth-message" style="margin-top:12px;font-size:13px;color:var(--sub)"></div>
 </div>
 <div class="card">
 <h2>Your Usage</h2>
-<div id="auth-usage"><p style="color:#555">Log in to see your usage.</p></div>
+<div id="auth-usage"><p style="color:var(--sub)">Log in to see your usage.</p></div>
 </div>
 </div>
 
@@ -1135,7 +1141,7 @@ POST <span style="color:var(--accent)">/api/webhook/{event_name}</span>
 <div class="panel" id="panel-abtest">
 <div class="card">
 <h2>A/B Testing</h2>
-<p style="color:#888;margin-bottom:16px">Compare two agent configurations on the same set of queries using an LLM-as-judge.</p>
+<p style="color:var(--sub);margin-bottom:16px">Compare two agent configurations on the same set of queries using an LLM-as-judge.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div>
 <h3 style="font-size:14px;margin-bottom:8px;color:var(--ink)">Agent A</h3>
@@ -1183,11 +1189,11 @@ Write a short product description for an AI agent platform.</textarea>
 <label style="margin-top:16px">Number of runs (repeats full query set)</label>
 <input type="number" id="ab-runs" value="3" min="1" max="10">
 <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="runAbTest()">Run A/B Test</button>
-<div id="ab-status" style="margin-top:8px;font-size:13px;color:#888"></div>
+<div id="ab-status" style="margin-top:8px;font-size:13px;color:var(--sub)"></div>
 </div>
 <div class="card">
 <h2>Results</h2>
-<div id="ab-results"><p style="color:#555">No A/B test run yet.</p></div>
+<div id="ab-results"><p style="color:var(--sub)">No A/B test run yet.</p></div>
 </div>
 </div>
 
@@ -1195,7 +1201,7 @@ Write a short product description for an AI agent platform.</textarea>
 <div class="panel" id="panel-multimodal">
 <div class="card">
 <h2>Multi-modal Analysis</h2>
-<p style="color:#888;margin-bottom:16px">Upload an image or document and ask questions about it. Supports images (PNG, JPG, GIF, WebP) and documents (TXT, MD, PDF, CSV, JSON).</p>
+<p style="color:var(--sub);margin-bottom:16px">Upload an image or document and ask questions about it. Supports images (PNG, JPG, GIF, WebP) and documents (TXT, MD, PDF, CSV, JSON).</p>
 <div class="mm-upload-zone" id="mm-dropzone" onclick="document.getElementById('mm-file-input').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleDrop(event)">
 <div class="icon"></div>
 <p>Click to upload or drag &amp; drop</p>
@@ -1221,18 +1227,18 @@ Write a short product description for an AI agent platform.</textarea>
 </div>
 </div>
 <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="analyzeFile()" id="mm-analyze-btn">Analyze</button>
-<div id="mm-status" style="margin-top:8px;font-size:13px;color:#888"></div>
+<div id="mm-status" style="margin-top:8px;font-size:13px;color:var(--sub)"></div>
 <div class="mm-result" id="mm-result"></div>
 </div>
 <div class="card">
 <h2>Or Analyze by URL</h2>
-<p style="color:#888;margin-bottom:12px">Paste a public image URL to analyze without uploading.</p>
+<p style="color:var(--sub);margin-bottom:12px">Paste a public image URL to analyze without uploading.</p>
 <label>Image URL</label>
 <input type="text" id="mm-url" placeholder="https://example.com/photo.jpg">
 <label>Question</label>
 <input type="text" id="mm-url-question" placeholder="What is in this image?" onkeydown="if(event.key==='Enter')analyzeUrl()">
 <button class="btn btn-primary" style="margin-top:12px;width:100%" onclick="analyzeUrl()">Analyze URL</button>
-<div id="mm-url-status" style="margin-top:8px;font-size:13px;color:#888"></div>
+<div id="mm-url-status" style="margin-top:8px;font-size:13px;color:var(--sub)"></div>
 <div class="mm-result" id="mm-url-result"></div>
 </div>
 </div>
@@ -1305,7 +1311,7 @@ const q=input.value.trim();if(!q)return;
 input.value='';
 const msgs=document.getElementById('chat-messages');
 msgs.innerHTML+=`<div style="text-align:right;margin:8px 0"><span style="background:var(--accent)22;color:var(--accent);padding:8px 14px;border-radius:12px;display:inline-block">${q}</span></div>`;
-msgs.innerHTML+=`<div style="margin:8px 0" id="chat-response"><span style="background:rgba(255,255,255,0.04);padding:8px 14px;border-radius:12px;display:inline-block;max-width:80%;white-space:pre-wrap;line-height:1.5"><span id="chat-streaming"><span class="loading"></span> Thinking...</span><span id="chat-content"></span><span style="font-size:11px;color:#555;display:none" id="chat-stats"></span></span></div>`;
+msgs.innerHTML+=`<div style="margin:8px 0" id="chat-response"><span style="background:rgba(255,255,255,0.04);padding:8px 14px;border-radius:12px;display:inline-block;max-width:80%;white-space:pre-wrap;line-height:1.5"><span id="chat-streaming"><span class="loading"></span> Thinking...</span><span id="chat-content"></span><span style="font-size:11px;color:var(--sub);display:none" id="chat-stats"></span></span></div>`;
 msgs.scrollTop=msgs.scrollHeight;
 const wsProto=location.protocol==='https:'?'wss:':'ws:';
 const wsUrl=`${wsProto}//${location.host}/ws/chat`;
@@ -1416,7 +1422,7 @@ const info=e.event_type==='tool_call'?`${e.data.tool||''}(${JSON.stringify(e.dat
 `model:${e.data.model||''} tokens:${(e.data.prompt_tokens||0)+(e.data.completion_tokens||0)}`;
 h+=`<div class="event-row"><span style="color:var(--chart-5)">${e.agent_name}</span><span class="event-type ${cls}">${e.event_type}</span><span>${info}</span><span style="color:var(--chart-3);text-align:right">$${(e.cost_usd||0).toFixed(4)}</span><span style="color:#666;text-align:right">${(e.latency_ms||0).toFixed(0)}ms</span></div>`;
 });
-document.getElementById('mon-events').innerHTML=h||'<p style="color:#555;padding:16px">No events yet. Run an agent to see events here.</p>';
+document.getElementById('mon-events').innerHTML=h||'<p style="color:var(--sub);padding:16px">No events yet. Run an agent to see events here.</p>';
 }catch(e){console.log(e)}
 }
 
@@ -1449,7 +1455,7 @@ const r=await fetch('/api/scheduler/jobs');
 const d=await r.json();
 let h='';
 if(!d.jobs||d.jobs.length===0){
-h='<p style="color:#555">No scheduled jobs. Create one above.</p>';
+h='<p style="color:var(--sub)">No scheduled jobs. Create one above.</p>';
 }else{
 h+=`<div style="margin-bottom:12px;display:flex;gap:12px">
 <div class="stat-chip">Active: <span>${d.overview.active_jobs}</span></div>
@@ -1463,13 +1469,13 @@ const last=j.last_run?new Date(j.last_run*1000).toLocaleTimeString():'never';
 const sched=j.interval_seconds>0?(j.interval_seconds<60?j.interval_seconds+'s':j.interval_seconds<3600?Math.round(j.interval_seconds/60)+'m':Math.round(j.interval_seconds/3600)+'h'):j.cron_expression;
 h+=`<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:14px;margin-bottom:8px">
 <div style="display:flex;justify-content:space-between;align-items:center">
-<div><strong style="color:var(--ink)">${j.agent_name}</strong> <span style="color:#555;font-size:12px">· ${j.job_id}</span></div>
+<div><strong style="color:var(--ink)">${j.agent_name}</strong> <span style="color:var(--sub);font-size:12px">· ${j.job_id}</span></div>
 <div style="display:flex;gap:6px">
 <button onclick="fetch('/api/scheduler/${j.status==='paused'?'resume':'pause'}/${j.job_id}',{method:'POST'}).then(()=>refreshScheduler())" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--ink);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">${j.status==='paused'?'Resume':'Pause'}</button>
 <button onclick="if(confirm('Delete this job?'))fetch('/api/scheduler/delete/${j.job_id}',{method:'DELETE'}).then(()=>refreshScheduler())" style="background:#2a1a1a;border:1px solid #4a2a2a;color:var(--chart-1);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">Delete</button>
 </div>
 </div>
-<div style="color:#888;font-size:13px;margin-top:6px">${j.query}</div>
+<div style="color:var(--sub);font-size:13px;margin-top:6px">${j.query}</div>
 <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:#666">
 <span>${status}</span>
 <span>${sched}</span>
@@ -1478,7 +1484,7 @@ h+=`<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.
 <span>Last: ${last}</span>
 </div>`;
 if(j.history&&j.history.length>0){
-h+=`<div style="margin-top:8px;font-size:11px;color:#555">`;
+h+=`<div style="margin-top:8px;font-size:11px;color:var(--sub)">`;
 j.history.slice(-3).reverse().forEach(e=>{
 const t=new Date(e.started_at*1000).toLocaleTimeString();
 const st=e.status==='completed'?'':'';
@@ -1515,7 +1521,7 @@ const lr=await fetch('/api/events/listeners');
 const ld=await lr.json();
 let lh='';
 if(!ld.listeners||ld.listeners.length===0){
-lh='<p style="color:#555">No listeners registered. Use the Python API to register agents.</p>';
+lh='<p style="color:var(--sub)">No listeners registered. Use the Python API to register agents.</p>';
 }else{
 lh+=`<div style="margin-bottom:12px;display:flex;gap:12px">
 <div class="stat-chip">Listeners: <span>${ld.overview.total_listeners}</span></div>
@@ -1526,7 +1532,7 @@ ld.listeners.forEach(l=>{
 const last=l.last_triggered?new Date(l.last_triggered*1000).toLocaleTimeString():'never';
 lh+=`<div style="background:rgba(6,6,14,0.5);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;margin-bottom:6px;display:grid;grid-template-columns:1fr 1fr 80px 80px;gap:10px;font-size:13px;align-items:center">
 <div><span style="color:var(--accent);font-weight:600">${l.event_pattern}</span></div>
-<div><strong style="color:var(--ink)">${l.agent_name}</strong> <span style="color:#555;font-size:11px">· ${l.listener_id}</span></div>
+<div><strong style="color:var(--ink)">${l.agent_name}</strong> <span style="color:var(--sub);font-size:11px">· ${l.listener_id}</span></div>
 <div style="text-align:right;color:var(--chart-3)">${l.execution_count} runs</div>
 <div style="text-align:right;color:#666">${last}</div>
 </div>`;
@@ -1538,7 +1544,7 @@ const hr=await fetch('/api/events/history?limit=15');
 const hd=await hr.json();
 let hh='';
 if(!hd.history||hd.history.length===0){
-hh='<p style="color:#555">No events emitted yet.</p>';
+hh='<p style="color:var(--sub)">No events emitted yet.</p>';
 }else{
 hd.history.reverse().forEach(h=>{
 const t=new Date(h.event.timestamp*1000).toLocaleTimeString();
@@ -1548,7 +1554,7 @@ hh+=`<div style="background:rgba(6,6,14,0.5);border:1px solid rgba(255,255,255,0
 <span style="color:var(--accent);font-weight:600">${h.event.name}</span>
 <span style="color:#666;font-size:11px">${t}</span>
 </div>
-<div style="color:#888;font-size:12px;margin-top:4px">${h.listeners_triggered} listener(s) · source: ${h.event.source||'—'}</div>
+<div style="color:var(--sub);font-size:12px;margin-top:4px">${h.listeners_triggered} listener(s) · source: ${h.event.source||'—'}</div>
 ${results?'<div style="margin-top:6px;font-size:11px;border-top:1px solid rgba(255,255,255,0.06);padding-top:6px">'+results+'</div>':''}
 </div>`;
 });
@@ -1567,7 +1573,43 @@ function switchCostGranularity(g,el){
 _anGranularity=g;
 document.querySelectorAll('#panel-analytics .an-tab').forEach(t=>t.classList.remove('active'));
 el.classList.add('active');
+const chart=document.getElementById('an-cost-chart');
+if(chart&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+chart.classList.remove('chart-fade');chart.offsetHeight;chart.classList.add('chart-fade');
+}
 refreshAnalytics();
+}
+
+function _prefersReducedMotion(){return window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
+
+function countUpMetric(el,target,opts){
+if(!el)return;
+const prefix=opts.prefix||'',suffix=opts.suffix||'',decimals=opts.decimals!=null?opts.decimals:0;
+const duration=opts.duration||550;
+const end=typeof target==='number'?target:parseFloat(target)||0;
+if(_prefersReducedMotion()){el.textContent=prefix+(decimals?end.toFixed(decimals):end.toLocaleString())+suffix;return;}
+const startVal=parseFloat(el.dataset.countVal);
+const from=isNaN(startVal)?0:startVal;
+el.dataset.countVal=String(end);
+if(from===end){el.textContent=prefix+(decimals?end.toFixed(decimals):end.toLocaleString())+suffix;return;}
+const t0=performance.now();
+function frame(now){
+const p=Math.min(1,(now-t0)/duration);
+const eased=1-Math.pow(1-p,3);
+const v=from+(end-from)*eased;
+el.textContent=prefix+(decimals?v.toFixed(decimals):Math.round(v).toLocaleString())+suffix;
+if(p<1)requestAnimationFrame(frame);
+else el.textContent=prefix+(decimals?end.toFixed(decimals):end.toLocaleString())+suffix;
+}
+requestAnimationFrame(frame);
+}
+
+function animateAnalyticsSummary(s){
+countUpMetric(document.getElementById('an-total-spend'),s.total_spend||0,{prefix:'$',decimals:4});
+countUpMetric(document.getElementById('an-total-queries'),s.total_queries||0,{decimals:0});
+countUpMetric(document.getElementById('an-avg-cost'),s.avg_cost_per_query||0,{prefix:'$',decimals:4});
+countUpMetric(document.getElementById('an-total-events'),s.total_events||0,{decimals:0});
+countUpMetric(document.getElementById('an-total-agents'),s.total_agents||0,{decimals:0});
 }
 
 async function refreshAnalytics(){
@@ -1586,11 +1628,7 @@ const leaderD=await leaderR.json();
 
 // ── Summary cards ──
 const s=leaderD.summary||{};
-document.getElementById('an-total-spend').textContent='$'+(s.total_spend||0).toFixed(4);
-document.getElementById('an-total-queries').textContent=(s.total_queries||0).toLocaleString();
-document.getElementById('an-avg-cost').textContent='$'+(s.avg_cost_per_query||0).toFixed(4);
-document.getElementById('an-total-events').textContent=(s.total_events||0).toLocaleString();
-document.getElementById('an-total-agents').textContent=s.total_agents||0;
+animateAnalyticsSummary(s);
 
 // ── Cost line chart ──
 renderCostChart(costD.series||[]);
@@ -1673,19 +1711,19 @@ wrap.innerHTML=h;
 function renderModelTable(models){
 const tbody=document.getElementById('an-model-tbody');
 if(!models.length){
-tbody.innerHTML='<tr><td colspan="7" style="color:#555;text-align:center;padding:20px">No model data yet. Run an agent to see comparisons.</td></tr>';
+tbody.innerHTML='<tr><td colspan="7" class="text-muted" style="text-align:center;padding:20px">No model data yet. Run an agent to see comparisons.</td></tr>';
 return;
 }
 let h='';
 models.forEach(m=>{
 h+=`<tr>
 <td style="color:var(--accent);font-weight:600">${m.model}</td>
-<td>${m.calls}</td>
-<td style="color:var(--chart-2)">$${m.total_cost.toFixed(4)}</td>
-<td>$${m.avg_cost.toFixed(6)}</td>
-<td>${m.avg_latency_ms.toFixed(0)}ms</td>
-<td>${m.avg_tokens.toLocaleString()}</td>
-<td>${m.total_tokens.toLocaleString()}</td>
+<td class="num">${m.calls}</td>
+<td class="num">$${m.total_cost.toFixed(4)}</td>
+<td class="num">$${m.avg_cost.toFixed(6)}</td>
+<td class="num">${m.avg_latency_ms.toFixed(0)}ms</td>
+<td class="num">${m.avg_tokens.toLocaleString()}</td>
+<td class="num">${m.total_tokens.toLocaleString()}</td>
 </tr>`;
 });
 tbody.innerHTML=h;
@@ -1694,24 +1732,24 @@ tbody.innerHTML=h;
 function renderLeaderboard(agents){
 const tbody=document.getElementById('an-leader-tbody');
 if(!agents.length){
-tbody.innerHTML='<tr><td colspan="8" style="color:#555;text-align:center;padding:20px">No agent data yet.</td></tr>';
+tbody.innerHTML='<tr><td colspan="8" class="text-muted" style="text-align:center;padding:20px">No agent data yet.</td></tr>';
 return;
 }
 let h='';
 agents.forEach((a,i)=>{
 const rankCls=i===0?'gold':i===1?'silver':i===2?'bronze':'normal';
 const qStr=a.avg_quality!==null?a.avg_quality.toFixed(1):'—';
-const qColor=a.avg_quality===null?'#555':a.avg_quality>=8?'var(--chart-3)':a.avg_quality>=6?'var(--chart-2)':'var(--chart-1)';
+const qColor=a.avg_quality===null?'var(--sub)':a.avg_quality>=8?'var(--chart-3)':a.avg_quality>=6?'var(--chart-2)':'var(--chart-1)';
 const qPct=a.avg_quality!==null?Math.min(100,a.avg_quality*10):0;
 h+=`<tr>
 <td><span class="an-rank ${rankCls}">${i+1}</span></td>
 <td style="color:var(--ink);font-weight:600">${a.agent}</td>
 <td><span style="color:${qColor}">${qStr}</span><span class="an-quality-bar"><span class="fill" style="width:${qPct}%;background:${qColor}"></span></span></td>
-<td>${a.total_queries}</td>
-<td>${a.total_tool_calls}</td>
-<td style="color:var(--chart-2)">$${a.total_cost.toFixed(4)}</td>
-<td>$${a.cost_per_query.toFixed(6)}</td>
-<td>${a.total_events}</td>
+<td class="num">${a.total_queries}</td>
+<td class="num">${a.total_tool_calls}</td>
+<td class="num">$${a.total_cost.toFixed(4)}</td>
+<td class="num">$${a.cost_per_query.toFixed(6)}</td>
+<td class="num">${a.total_events}</td>
 </tr>`;
 });
 tbody.innerHTML=h;
@@ -1771,16 +1809,16 @@ async function rcaLoadTraces(){
     const r=await fetch('/api/observability/traces?limit=20');
     const traces=await r.json();
     const el=document.getElementById('rca-traces');
-    if(!traces.length){el.innerHTML='<div style="color:#888;font-size:13px">No traces.</div>';return;}
+    if(!traces.length){el.innerHTML='<div style="color:var(--sub);font-size:13px">No traces.</div>';return;}
     el.innerHTML=traces.map(t=>{
       const color=t.success?'#10b981':'#e74c3c';
       const icon=t.success?'':'';
       return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;cursor:pointer" onclick="rcaReplay(&quot;'+t.trace_id+'&quot;)">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<span>'+icon+' <strong style="color:#6c5ce7">'+t.agent_name+'</strong></span>'+
+        '<span>'+icon+' <strong style="color:var(--accent)">'+t.agent_name+'</strong></span>'+
         '<span style="color:'+color+';font-size:12px">'+(t.success?'OK':'FAIL')+'</span></div>'+
-        '<div style="font-size:11px;color:#888;margin-top:2px">'+t.user_query.slice(0,60)+'</div>'+
-        '<div style="font-size:10px;color:#555;margin-top:1px">'+t.step_count+' steps | '+t.total_tokens+' tokens | $'+t.total_cost.toFixed(4)+'</div></div>';
+        '<div style="font-size:11px;color:var(--sub);margin-top:2px">'+t.user_query.slice(0,60)+'</div>'+
+        '<div style="font-size:10px;color:var(--sub);margin-top:1px">'+t.step_count+' steps | '+t.total_tokens+' tokens | $'+t.total_cost.toFixed(4)+'</div></div>';
     }).join('');
   }catch(e){console.error(e)}
 }
@@ -1793,14 +1831,14 @@ async function rcaLoadAlerts(){
     const el=document.getElementById('rca-alerts');
     if(!alerts.length){el.innerHTML='<div style="color:#10b981;font-size:13px">No alerts — all clear!</div>';return;}
     el.innerHTML=alerts.map(a=>{
-      const colors={critical:'#e74c3c',warning:'#fdcb6e',info:'#6c5ce7'};
+      const colors={critical:'#e74c3c',warning:'#fdcb6e',info:'var(--accent)'};
       const icons={critical:'',warning:'',info:''};
       return '<div style="background:rgba(6,6,14,0.6);padding:10px;border-radius:6px;border:1px solid '+(colors[a.level]||'#1e1e3a')+';margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between">'+
         '<strong style="color:'+(colors[a.level]||'#ccc')+'">'+icons[a.level]+' '+a.title+'</strong>'+
-        '<span style="font-size:10px;color:#888">'+a.level.toUpperCase()+'</span></div>'+
+        '<span style="font-size:10px;color:var(--sub)">'+a.level.toUpperCase()+'</span></div>'+
         '<div style="font-size:12px;color:#ccc;margin-top:4px">'+a.cause+'</div>'+
-        '<div style="font-size:11px;color:#888;margin-top:2px">Impact: '+a.impact+'</div>'+
+        '<div style="font-size:11px;color:var(--sub);margin-top:2px">Impact: '+a.impact+'</div>'+
         '<div style="font-size:11px;color:#10b981;margin-top:2px">Fix: '+a.recommendation+'</div></div>';
     }).join('');
   }catch(e){console.error(e)}
@@ -1819,7 +1857,7 @@ async function rcaReplay(traceId){
       const border=f.is_failure_point?'2px solid #e74c3c':'1px solid #1e1e3a';
       return '<div style="background:rgba(6,6,14,0.6);padding:10px;border-radius:6px;border:'+border+';margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<strong style="color:#6c5ce7">'+(icons[f.severity]||'')+' '+f.label+'</strong>'+
+        '<strong style="color:var(--accent)">'+(icons[f.severity]||'')+' '+f.label+'</strong>'+
         (f.is_failure_point?'<span style="color:#e74c3c;font-size:11px;font-weight:700">← FAILURE POINT</span>':'')+
         '</div>'+
         '<pre style="font-size:11px;color:#aaa;margin:6px 0 0;white-space:pre-wrap;max-height:100px;overflow-y:auto">'+
@@ -1835,7 +1873,7 @@ async function rcaReplay(traceId){
         (diag.checks||[]).map(c=>
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
           '<span>'+sevIcons[c.severity]+'</span>'+
-          '<span style="color:#6c5ce7;font-size:13px;width:140px">'+c.check+'</span>'+
+          '<span style="color:var(--accent);font-size:13px;width:140px">'+c.check+'</span>'+
           '<span style="font-size:12px;color:#ccc">'+c.title+'</span></div>'
         ).join('');
     }
@@ -1879,16 +1917,16 @@ async function lrnAnalyze(){
     const d=await r.json();
     const el=document.getElementById('lrn-topics');
     const topics=d.topics||[];
-    if(!topics.length){el.innerHTML='<div style="color:#888">No data.</div>';return;}
+    if(!topics.length){el.innerHTML='<div style="color:var(--sub)">No data.</div>';return;}
     el.innerHTML=topics.map(t=>{
       const color=t.failure_rate>40?'#e74c3c':t.failure_rate>20?'#fdcb6e':'#10b981';
       return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between">'+
-        '<strong style="color:#6c5ce7">'+t.topic+'</strong>'+
+        '<strong style="color:var(--accent)">'+t.topic+'</strong>'+
         '<span style="color:'+color+';font-size:13px">'+t.failure_rate.toFixed(0)+'% fail</span></div>'+
         '<div style="background:#1e1e3a;border-radius:4px;height:6px;margin:6px 0;overflow:hidden">'+
         '<div style="background:'+color+';height:100%;width:'+Math.max(100-t.failure_rate,5)+'%"></div></div>'+
-        '<div style="font-size:11px;color:#888">quality='+t.avg_quality.toFixed(1)+' | n='+t.total+'</div></div>';
+        '<div style="font-size:11px;color:var(--sub)">quality='+t.avg_quality.toFixed(1)+' | n='+t.total+'</div></div>';
     }).join('');
   }catch(e){alert('Error: '+e.message)}
 }
@@ -1904,8 +1942,8 @@ async function lrnOptimize(){
     el.innerHTML=patches.map(p=>
       '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
       '<div style="display:flex;justify-content:space-between">'+
-      '<strong style="color:#6c5ce7">'+p.topic+'</strong>'+
-      '<span style="font-size:11px;color:#888">confidence='+Math.round(p.confidence*100)+'%</span></div>'+
+      '<strong style="color:var(--accent)">'+p.topic+'</strong>'+
+      '<span style="font-size:11px;color:var(--sub)">confidence='+Math.round(p.confidence*100)+'%</span></div>'+
       '<pre style="font-size:11px;color:#ccc;margin:6px 0 0;white-space:pre-wrap;max-height:100px;overflow-y:auto">'+
       p.instruction.replace(/</g,'&lt;')+'</pre></div>'
     ).join('');
@@ -1919,11 +1957,11 @@ async function lrnBuildFewShot(){
     const examples=d.examples||[];
     document.getElementById('lrn-stat-examples').textContent=examples.length;
     const el=document.getElementById('lrn-fewshot');
-    if(!examples.length){el.innerHTML='<div style="color:#888">Need more positive feedback.</div>';return;}
+    if(!examples.length){el.innerHTML='<div style="color:var(--sub)">Need more positive feedback.</div>';return;}
     el.innerHTML=examples.map(e=>
       '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
-      '<div style="font-size:11px;color:#888;margin-bottom:4px">['+e.topic+'] source='+e.source+' quality='+e.quality_score.toFixed(1)+'</div>'+
-      '<div style="font-size:12px;color:#6c5ce7">User: '+e.query+'</div>'+
+      '<div style="font-size:11px;color:var(--sub);margin-bottom:4px">['+e.topic+'] source='+e.source+' quality='+e.quality_score.toFixed(1)+'</div>'+
+      '<div style="font-size:12px;color:var(--accent)">User: '+e.query+'</div>'+
       '<div style="font-size:12px;color:#10b981;margin-top:2px">Asst: '+e.response+'</div></div>'
     ).join('');
   }catch(e){alert('Error: '+e.message)}
@@ -1943,13 +1981,13 @@ async function lrnProgress(){
     // Timeline bars
     const tl=d.timeline||[];
     const el=document.getElementById('lrn-timeline');
-    if(!tl.length){el.innerHTML='<div style="color:#888">No data yet.</div>';return;}
+    if(!tl.length){el.innerHTML='<div style="color:var(--sub)">No data yet.</div>';return;}
     const maxQ=Math.max(...tl.map(t=>t.avg_quality),1);
     el.innerHTML=tl.map(t=>{
       const h=Math.max(Math.round(t.avg_quality/maxQ*100),5);
       const color=t.avg_quality>=7?'#10b981':t.avg_quality>=5?'#fdcb6e':'#e74c3c';
       return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end">'+
-        '<div style="font-size:10px;color:#888;margin-bottom:2px">'+t.avg_quality.toFixed(1)+'</div>'+
+        '<div style="font-size:10px;color:var(--sub);margin-bottom:2px">'+t.avg_quality.toFixed(1)+'</div>'+
         '<div style="width:80%;background:'+color+';border-radius:4px 4px 0 0;height:'+h+'px"></div>'+
         '<div style="font-size:10px;color:#666;margin-top:4px">'+t.label+'</div></div>';
     }).join('');
@@ -1961,12 +1999,12 @@ async function lrnLoadRecent(){
     const r=await fetch('/api/learning/recent');
     const entries=await r.json();
     const el=document.getElementById('lrn-recent');
-    if(!entries.length){el.innerHTML='<div style="color:#888">No feedback yet.</div>';return;}
+    if(!entries.length){el.innerHTML='<div style="color:var(--sub)">No feedback yet.</div>';return;}
     el.innerHTML=entries.map(e=>{
       const icon={thumbs_up:'',thumbs_down:'',rating:'',correction:'',comment:''}[e.feedback_type]||'';
       return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;font-size:12px">'+
-        '<span>'+icon+'</span> <strong style="color:#6c5ce7">'+e.query.slice(0,60)+'</strong>'+
-        (e.topic?' <span style="color:#888;font-size:10px">['+e.topic+']</span>':'')+
+        '<span>'+icon+'</span> <strong style="color:var(--accent)">'+e.query.slice(0,60)+'</strong>'+
+        (e.topic?' <span style="color:var(--sub);font-size:10px">['+e.topic+']</span>':'')+
         '</div>';
     }).join('');
   }catch(e){console.error(e)}
@@ -2040,11 +2078,11 @@ async function simLoadReport(){
       const color=p.pass_rate>=80?'#10b981':p.pass_rate>=50?'#fdcb6e':'#e74c3c';
       return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<strong style="color:#6c5ce7">'+p.name+'</strong>'+
+        '<strong style="color:var(--accent)">'+p.name+'</strong>'+
         '<span style="color:'+color+';font-size:13px">'+p.pass_rate.toFixed(0)+'% pass</span></div>'+
         '<div style="background:#1e1e3a;border-radius:4px;height:6px;margin:6px 0;overflow:hidden">'+
         '<div style="background:'+color+';height:100%;width:'+barW+'%"></div></div>'+
-        '<div style="font-size:11px;color:#888">quality='+p.avg_quality.toFixed(1)+
+        '<div style="font-size:11px;color:var(--sub)">quality='+p.avg_quality.toFixed(1)+
         ' | relevance='+p.avg_relevance.toFixed(1)+' | tone='+p.avg_tone.toFixed(1)+
         ' | n='+p.total+'</div></div>';
     }).join('');
@@ -2056,9 +2094,9 @@ async function simLoadReport(){
     sdEl.innerHTML=Object.entries(sd).map(([k,v])=>{
       const pct=Math.round(v/maxBucket*100);
       return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
-        '<span style="width:40px;font-size:12px;color:#888;text-align:right">'+k+'</span>'+
+        '<span style="width:40px;font-size:12px;color:var(--sub);text-align:right">'+k+'</span>'+
         '<div style="flex:1;background:#1e1e3a;border-radius:4px;height:16px;overflow:hidden">'+
-        '<div style="background:linear-gradient(90deg,#6c5ce7,#00cec9);height:100%;width:'+pct+'%"></div></div>'+
+        '<div style="background:linear-gradient(90deg,var(--accent),var(--accent-press));height:100%;width:'+pct+'%"></div></div>'+
         '<span style="width:30px;font-size:12px;color:#aaa">'+v+'</span></div>';
     }).join('');
 
@@ -2080,9 +2118,9 @@ async function simLoadReport(){
       const color=w.overall<4?'#e74c3c':w.overall<6?'#fdcb6e':'#888';
       return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between">'+
-        '<strong style="color:#6c5ce7">#'+w.id+' — '+w.persona+'</strong>'+
+        '<strong style="color:var(--accent)">#'+w.id+' — '+w.persona+'</strong>'+
         '<span style="color:'+color+';font-size:13px">quality='+w.overall.toFixed(1)+'</span></div>'+
-        '<div style="font-size:12px;color:#888;margin-top:4px">Query: '+w.query+'</div>'+
+        '<div style="font-size:12px;color:var(--sub);margin-top:4px">Query: '+w.query+'</div>'+
         (w.failure_reason?'<div style="font-size:11px;color:#e74c3c;margin-top:2px">'+w.failure_reason+'</div>':'')+
         '</div>';
     }).join('');}
@@ -2126,13 +2164,13 @@ async function meshRefreshRegistry(){
     const r=await fetch('/api/mesh/registry');
     const agents=await r.json();
     const el=document.getElementById('mesh-registry-list');
-    if(!agents.length){el.innerHTML='<div style="color:#888;font-size:13px">No agents registered.</div>';return;}
+    if(!agents.length){el.innerHTML='<div style="color:var(--sub);font-size:13px">No agents registered.</div>';return;}
     el.innerHTML=agents.map(a=>{
-      const online=a.online?'<span style="color:#10b981"> online</span>':'<span style="color:#888"> offline</span>';
+      const online=a.online?'<span style="color:#10b981"> online</span>':'<span style="color:var(--sub)"> offline</span>';
       return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
-        '<strong style="color:#6c5ce7">'+a.mesh_id+'</strong>'+online+'</div>'+
-        '<div style="font-size:12px;color:#888;margin-top:4px">'+a.display_name+' — '+a.organisation+'</div>'+
+        '<strong style="color:var(--accent)">'+a.mesh_id+'</strong>'+online+'</div>'+
+        '<div style="font-size:12px;color:var(--sub);margin-top:4px">'+a.display_name+' — '+a.organisation+'</div>'+
         '<div style="font-size:11px;color:#666;margin-top:2px">Capabilities: '+(a.capabilities||[]).join(', ')+'</div>'+
         '</div>';
     }).join('');
@@ -2194,13 +2232,13 @@ async function meshRefreshTx(){
     const r=await fetch('/api/mesh/transactions');
     const txs=await r.json();
     const el=document.getElementById('mesh-tx-list');
-    if(!txs.length){el.innerHTML='<div style="color:#888;font-size:13px">No transactions yet.</div>';return;}
+    if(!txs.length){el.innerHTML='<div style="color:var(--sub);font-size:13px">No transactions yet.</div>';return;}
     el.innerHTML=txs.map(t=>{
       const color=t.status==='completed'?'#10b981':t.status==='failed'?'#e74c3c':'#fdcb6e';
       return '<div style="background:rgba(6,6,14,0.5);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px">'+
-        '<div style="display:flex;justify-content:space-between"><strong style="color:#6c5ce7">'+t.transaction_id+'</strong>'+
+        '<div style="display:flex;justify-content:space-between"><strong style="color:var(--accent)">'+t.transaction_id+'</strong>'+
         '<span style="color:'+color+';font-size:12px">'+t.status.toUpperCase()+'</span></div>'+
-        '<div style="font-size:12px;color:#888;margin-top:4px">'+t.description+'</div>'+
+        '<div style="font-size:12px;color:var(--sub);margin-top:4px">'+t.description+'</div>'+
         '<div style="font-size:11px;color:#666;margin-top:2px">'+t.initiator+' → '+t.counterparty+'</div>'+
         '</div>';
     }).join('');
@@ -2244,7 +2282,7 @@ async function mpRefresh(){
 
 function mpRenderGrid(agents){
   const g=document.getElementById('mp-grid');
-  if(!agents.length){g.innerHTML='<p style="color:#555;padding:20px;text-align:center">No agents found. Be the first to publish!</p>';return;}
+  if(!agents.length){g.innerHTML='<p style="color:var(--sub);padding:20px;text-align:center">No agents found. Be the first to publish!</p>';return;}
   g.innerHTML=agents.map(a=>{
     const stars=''.repeat(Math.round(a.rating))+''.repeat(5-Math.round(a.rating));
     const priceLabel=a.price===0?'Free':'$'+a.price;
@@ -2291,12 +2329,12 @@ async function mpShowDetail(id){
     const det=document.getElementById('mp-detail');
     document.getElementById('mp-detail-title').textContent=d.icon+' '+d.name+' v'+d.version;
     let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
-    html+='<div><span style="color:#888">Author:</span> '+d.author+'</div>';
-    html+='<div><span style="color:#888">Category:</span> '+d.category+'</div>';
-    html+='<div><span style="color:#888">Price:</span> '+(d.price===0?'Free':'$'+d.price)+'</div>';
-    html+='<div><span style="color:#888">Downloads:</span> '+d.downloads+'</div>';
-    html+='<div><span style="color:#888">Rating:</span> '+d.rating+' ('+d.review_count+' reviews)</div>';
-    html+='<div><span style="color:#888">Tags:</span> '+(d.tags||[]).join(', ')+'</div>';
+    html+='<div><span style="color:var(--sub)">Author:</span> '+d.author+'</div>';
+    html+='<div><span style="color:var(--sub)">Category:</span> '+d.category+'</div>';
+    html+='<div><span style="color:var(--sub)">Price:</span> '+(d.price===0?'Free':'$'+d.price)+'</div>';
+    html+='<div><span style="color:var(--sub)">Downloads:</span> '+d.downloads+'</div>';
+    html+='<div><span style="color:var(--sub)">Rating:</span> '+d.rating+' ('+d.review_count+' reviews)</div>';
+    html+='<div><span style="color:var(--sub)">Tags:</span> '+(d.tags||[]).join(', ')+'</div>';
     html+='</div>';
     html+='<p>'+d.description+'</p>';
     html+='<div style="margin-top:12px"><strong>Config:</strong><pre style="background:rgba(6,6,14,0.6);padding:8px;border-radius:4px;font-size:12px;max-height:200px;overflow:auto">'+JSON.stringify(d.config||{},null,2)+'</pre></div>';
@@ -2381,7 +2419,7 @@ brRenderMessages([]);
 
 function brRenderBar(){
 const bar=document.getElementById('br-bar');
-if(!_brBranches.length){bar.innerHTML='<span style="color:#555;font-size:12px">Start a conversation.</span>';return;}
+if(!_brBranches.length){bar.innerHTML='<span style="color:var(--sub);font-size:12px">Start a conversation.</span>';return;}
 const colors=['var(--accent)','var(--chart-3)','var(--chart-2)','var(--chart-5)','var(--chart-1)','var(--chart-3)'];
 let h='';
 _brBranches.forEach((b,i)=>{
@@ -2438,7 +2476,7 @@ brRenderMessages(d.messages);
 function brRenderMessages(msgs){
 const el=document.getElementById('br-messages');
 if(!msgs||msgs.length===0){
-el.innerHTML='<div style="color:#555;text-align:center;padding:40px">No messages yet. Type below to start the conversation.</div>';
+el.innerHTML='<div style="color:var(--sub);text-align:center;padding:40px">No messages yet. Type below to start the conversation.</div>';
 return;
 }
 let h='';
@@ -2523,14 +2561,14 @@ let h=`<div class="br-compare-col"><h4>${c.branch_a.label} (${c.branch_a.total_m
 c.branch_a_unique.forEach(m=>{
 h+=`<div style="margin:4px 0;font-size:12px"><span style="color:${m.role==='user'?'var(--accent)':'#888'}">${m.role}:</span> ${escHtml((m.content||'').slice(0,200))}</div>`;
 });
-if(!c.branch_a_unique.length)h+='<div style="color:#555;font-size:12px">No unique messages.</div>';
+if(!c.branch_a_unique.length)h+='<div style="color:var(--sub);font-size:12px">No unique messages.</div>';
 h+=`</div>`;
-h+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 4px"><div style="font-size:11px;color:#555">${c.shared_count} shared</div><div style="font-size:16px;color:#555">⇔</div></div>`;
+h+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 4px"><div style="font-size:11px;color:var(--sub)">${c.shared_count} shared</div><div style="font-size:16px;color:var(--sub)">⇔</div></div>`;
 h+=`<div class="br-compare-col"><h4>${c.branch_b.label} (${c.branch_b.total_messages} msgs)</h4>`;
 c.branch_b_unique.forEach(m=>{
 h+=`<div style="margin:4px 0;font-size:12px"><span style="color:${m.role==='user'?'var(--accent)':'#888'}">${m.role}:</span> ${escHtml((m.content||'').slice(0,200))}</div>`;
 });
-if(!c.branch_b_unique.length)h+='<div style="color:#555;font-size:12px">No unique messages.</div>';
+if(!c.branch_b_unique.length)h+='<div style="color:var(--sub);font-size:12px">No unique messages.</div>';
 h+=`</div>`;
 document.getElementById('br-compare-cols').innerHTML=h;
 }
@@ -2777,7 +2815,7 @@ const apiKey=localStorage.getItem('agentos_api_key');
 const usageEl=document.getElementById('auth-usage');
 if(!apiKey){
 setUserStatus(null);
-usageEl.innerHTML='<p style="color:#555">Log in to see your usage.</p>';
+usageEl.innerHTML='<p style="color:var(--sub)">Log in to see your usage.</p>';
 return;
 }
 document.getElementById('auth-apikey').value=apiKey;
@@ -2812,7 +2850,7 @@ const statusEl=document.getElementById('ab-status');
 const resultsEl=document.getElementById('ab-results');
 statusEl.style.color='#888';
 statusEl.textContent='Running A/B test... this may take a while.';
-resultsEl.innerHTML='<p style="color:#888">Running A/B test...</p>';
+resultsEl.innerHTML='<p style="color:var(--sub)">Running A/B test...</p>';
 const tools=[...document.querySelectorAll('#ab-tools .tool-tag.selected')].map(t=>t.dataset.tool);
 const queriesRaw=document.getElementById('ab-queries').value.split('\\n').map(q=>q.trim()).filter(q=>q);
 const runs=parseInt(document.getElementById('ab-runs').value)||3;
@@ -2880,7 +2918,7 @@ h+=`<div style="background:rgba(6,6,14,0.6);border:1px solid rgba(255,255,255,0.
 <span><strong>Q${i+1}</strong> ${r.query}</span>
 <span style="color:var(--accent)">Winner: ${icon}</span>
 </div>
-<div style="font-size:12px;color:#888;margin-top:4px">
+<div style="font-size:12px;color:var(--sub);margin-top:4px">
 A: ${r.score_a.toFixed(1)} · B: ${r.score_b.toFixed(1)}
 </div>
 </div>`;
@@ -2908,15 +2946,15 @@ refreshAuthUsage();
 // ── Particle background ──
 (function initParticles(){
 const canvas=document.getElementById('particles-canvas');
-if(!canvas)return;
+if(!canvas||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
 const ctx=canvas.getContext('2d');
 let w,h,particles=[];
 function resize(){w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight}
 window.addEventListener('resize',resize);resize();
-const COLORS=['rgba(0,212,255,','rgba(124,92,252,','rgba(0,255,136,'];
-for(let i=0;i<60;i++){
-particles.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,
-  r:Math.random()*2+0.5,color:COLORS[Math.floor(Math.random()*3)],alpha:Math.random()*0.5+0.1});
+const COLOR='rgba(255,106,71,';
+for(let i=0;i<36;i++){
+particles.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.2,vy:(Math.random()-0.5)*0.2,
+  r:Math.random()*1.5+0.4,alpha:Math.random()*0.25+0.05});
 }
 function draw(){
 ctx.clearRect(0,0,w,h);
@@ -2924,16 +2962,15 @@ particles.forEach(p=>{
   p.x+=p.vx;p.y+=p.vy;
   if(p.x<0)p.x=w;if(p.x>w)p.x=0;if(p.y<0)p.y=h;if(p.y>h)p.y=0;
   ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-  ctx.fillStyle=p.color+p.alpha+')';ctx.fill();
+  ctx.fillStyle=COLOR+p.alpha+')';ctx.fill();
 });
-// Draw connections
 for(let i=0;i<particles.length;i++){
   for(let j=i+1;j<particles.length;j++){
     const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y;
     const dist=Math.sqrt(dx*dx+dy*dy);
-    if(dist<120){
+    if(dist<100){
       ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);
-      ctx.strokeStyle='rgba(0,212,255,'+(0.06*(1-dist/120))+')';ctx.lineWidth=0.5;ctx.stroke();
+      ctx.strokeStyle='rgba(255,106,71,'+(0.04*(1-dist/100))+')';ctx.lineWidth=0.5;ctx.stroke();
     }
   }
 }
@@ -2956,7 +2993,9 @@ const _origShowPanel=showPanel;
 showPanel=function(name,el){
 _origShowPanel(name,el);
 const panel=document.getElementById('panel-'+name);
-if(panel){panel.style.animation='none';panel.offsetHeight;panel.style.animation='fadeSlide 0.4s cubic-bezier(0.4,0,0.2,1) both';}
+if(panel&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+panel.style.animation='none';panel.offsetHeight;panel.style.animation='fadeSlide 0.22s cubic-bezier(0.22,1,0.36,1) both';
+}
 };
 
 </script>
