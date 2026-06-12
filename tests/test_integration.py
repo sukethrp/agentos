@@ -37,6 +37,11 @@ def _greeter(name: str) -> str:
     return f"Hello, {name}!"
 
 
+class _StubEmbedder:
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [[1.0, 0.0] for _ in texts]
+
+
 @pytest.fixture(autouse=True)
 def _enable_demo_mode():
     """Enable demo mode for every test so the MockProvider is used."""
@@ -147,7 +152,7 @@ class TestFullPipeline:
         with patch("agentos.sandbox.runner.judge_response", side_effect=mock_judge):
             from agentos.sandbox.runner import Sandbox
 
-            sandbox = Sandbox(agent, pass_threshold=6.0)
+            sandbox = Sandbox(agent, pass_threshold=6.0, embedder=_StubEmbedder())
             report = sandbox.run(scenarios)
 
         assert isinstance(report, SandboxReport)

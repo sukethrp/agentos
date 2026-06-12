@@ -103,6 +103,7 @@ def test_openai_embeddings_batching(mock_openai_cls: MagicMock) -> None:
 
 
 def test_local_embeddings_dimension() -> None:
+    pytest.importorskip("sentence_transformers")
     embedder = LocalEmbeddings()
     vectors = embedder.embed(["hello world", "goodbye world"])
     assert len(vectors) == 2
