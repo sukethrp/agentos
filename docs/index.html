@@ -1,16 +1,22 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>AgentOS — The Operating System for AI Agents</title>
-<meta name="description" content="Build, test, deploy, monitor, and govern AI agents. 15 modules. 10 lines of code. Open source.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
-<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentOS — The Operating System for AI Agents</title>
+  <meta name="description" content="Build, test, deploy, monitor, and govern AI agents. Open source. 15 modules. 10 lines to start." />
+  <meta property="og:title" content="AgentOS — The Operating System for AI Agents" />
+  <meta property="og:description" content="Build, test, deploy, monitor, and govern AI agents with built-in testing, governance, and monitoring." />
+  <meta property="og:url" content="https://agentos-mocha.vercel.app" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/mouse-follower@1/dist/mouse-follower.min.css">
+  <style>
+    :root{
   --bg:#F4F1EA;
   --bg-2:#EAE6DC;
   --surface:#FBFAF6;
@@ -37,461 +43,711 @@
   --fs-h1:clamp(2.5rem,6vw,5rem);
   --fs-h2:clamp(2rem,4vw,3.25rem);
 }
-body{font-family:var(--font-body);
-background:var(--bg);color:var(--ink);overflow-x:hidden}
-a{color:var(--accent);text-decoration:none}
-a:hover{text-decoration:underline}
-
-/* ── Nav ── */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;
-display:flex;justify-content:space-between;align-items:center;
-background:rgba(244,241,234,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
-.logo{font-size:20px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px}
-.nav-links{display:flex;gap:28px;align-items:center}
-.nav-links a{color:var(--sub);font-size:14px;text-decoration:none;transition:color .2s}
-.nav-links a:hover{color:var(--ink)}
-.nav-btn{padding:8px 20px;border-radius:6px;background:var(--accent);color:var(--surface);font-weight:600;font-size:13px}
-.nav-btn:hover{text-decoration:none;opacity:.9}
-
-/* ── Hero ── */
-.hero{max-width:960px;margin:0 auto;padding:140px 40px 80px;text-align:center}
-.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;
-background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);
-font-size:13px;font-weight:500;margin-bottom:28px}
-h1{font-family:var(--font-display);font-size:var(--fs-hero);font-weight:700;letter-spacing:-.04em;line-height:1.08;margin-bottom:24px;
-background:linear-gradient(135deg,var(--ink) 20%,var(--accent) 50%,var(--chart-3) 90%);
--webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.sub{font-size:clamp(16px,2.2vw,21px);color:var(--sub);line-height:1.6;max-width:640px;margin:0 auto 40px}
-.cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
-.btn{padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;
-border:none;cursor:pointer;transition:transform .15s,box-shadow .2s;display:inline-flex;align-items:center;gap:8px}
-.btn:hover{transform:translateY(-1px);text-decoration:none}
-.bp{background:linear-gradient(135deg,var(--accent),var(--accent-press));color:var(--surface);box-shadow:0 4px 24px rgba(232,101,74,.25)}
-.bs{background:transparent;color:var(--ink);border:1px solid var(--line)}
-.bs:hover{border-color:var(--sub)}
-.install{max-width:500px;margin:36px auto 0;background:var(--ink);border:1px solid var(--line);
-border-radius:10px;padding:14px 24px;display:flex;align-items:center;justify-content:center;gap:12px}
-.install code{color:var(--chart-3);font-size:15px;font-family:var(--font-mono)}
-.install .copy{background:none;border:none;color:var(--sub);cursor:pointer;font-size:16px;padding:4px}
-.install .copy:hover{color:var(--ink)}
-
-/* ── Stats bar ── */
-.stats{display:flex;justify-content:center;gap:48px;padding:24px 40px;flex-wrap:wrap}
-.stat{text-align:center}
-.stat .num{font-size:32px;font-weight:700;color:var(--ink)}
-.stat .lbl{font-size:13px;color:var(--sub);margin-top:4px}
-
-/* ── Sections ── */
-section{max-width:1140px;margin:0 auto;padding:80px 40px}
-h2{font-family:var(--font-display);font-size:var(--fs-h2);font-weight:600;letter-spacing:-.03em;color:var(--ink);margin-bottom:16px}
-h2.center{text-align:center}
-.section-sub{text-align:center;color:var(--sub);font-size:17px;max-width:600px;margin:0 auto 56px}
-
-/* ── Feature grid ── */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:32px;
-transition:border-color .25s,transform .2s}
-.card:hover{border-color:rgba(232,101,74,.25);transform:translateY(-2px)}
-.card .ic{font-size:36px;margin-bottom:16px}
-.card h3{font-size:18px;color:var(--ink);margin-bottom:8px;font-weight:600}
-.card p{color:var(--sub);font-size:14px;line-height:1.65}
-.card .tag{display:inline-block;margin-top:12px;padding:3px 10px;border-radius:4px;
-font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.tag-core{background:var(--accent-soft);color:var(--accent)}
-.tag-test{background:rgba(111,183,166,.15);color:var(--chart-3)}
-.tag-prod{background:rgba(185,139,208,.15);color:var(--chart-5)}
-.tag-eco{background:rgba(224,164,88,.15);color:var(--chart-2)}
-
-/* ── Comparison table ── */
-.table-wrap{overflow-x:auto;margin:0 auto;max-width:960px}
-table{width:100%;border-collapse:collapse;margin-bottom:16px}
-th{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);color:var(--sub);
-font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-td{padding:14px 16px;border-bottom:1px solid rgba(26,26,46,.5);font-size:14px}
-tr:hover td{background:rgba(255,255,255,.02)}
-.g{color:var(--chart-3);font-weight:600}
-.r{color:var(--sub)}
-.y{color:var(--chart-2);font-weight:600}
-.b{color:var(--chart-4);font-weight:500}
-td:first-child{font-weight:500;color:var(--sub)}
-
-/* ── Code snippet ── */
-.code-section{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
-.code-block{background:var(--ink);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.code-header{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;
-align-items:center;gap:8px;font-size:13px;color:var(--sub)}
-.code-header .dot{width:10px;height:10px;border-radius:50%}
-.code-block pre{padding:20px;font-size:13px;line-height:1.7;overflow-x:auto;
-font-family:var(--font-mono);color:var(--surface)}
-.kw{color:var(--accent)} .fn{color:var(--chart-5)} .st{color:var(--chart-4)} .cm{color:var(--sub)} .num{color:var(--chart-3)}
-
-/* ── Embed preview ── */
-.embed-demo{background:var(--surface);border:1px solid var(--line);border-radius:16px;
-padding:40px;text-align:center}
-.embed-demo h3{font-size:22px;margin-bottom:12px;color:var(--ink)}
-.embed-demo p{color:var(--sub);margin-bottom:20px}
-.snippet-box{background:var(--ink);border:1px solid var(--line);border-radius:8px;
-padding:16px 20px;text-align:left;font-size:13px;font-family:var(--font-mono);
-color:var(--chart-3);overflow-x:auto;line-height:1.6}
-
-/* ── CTA final ── */
-.final-cta{text-align:center;padding:100px 40px;
-background:radial-gradient(ellipse at center,var(--accent-soft) 0%,transparent 70%)}
-.final-cta h2{margin-bottom:16px}
-.final-cta p{color:var(--sub);font-size:18px;margin-bottom:40px}
-
-/* ── Footer ── */
-footer{text-align:center;padding:40px;border-top:1px solid var(--line)}
-footer p{color:var(--sub);font-size:13px;line-height:2}
-footer .social{display:flex;justify-content:center;gap:24px;margin-bottom:12px}
-footer .social a{color:var(--sub);font-size:14px}
-footer .social a:hover{color:var(--ink)}
-
-/* ── Responsive ── */
-@media(max-width:768px){
-  nav{padding:14px 20px}
-  .nav-links{gap:16px}
-  .hero{padding:120px 20px 60px}
-  section{padding:60px 20px}
-  .grid{grid-template-columns:1fr}
-  .stats{gap:24px}
-  .code-section{grid-template-columns:1fr}
-  .stat .num{font-size:24px}
-}
-</style>
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);line-height:1.7;letter-spacing:-.01em}
+    a{color:inherit;text-decoration:none}
+    .container{max-width:1100px;margin:0 auto;padding:0 28px}
+    h1,h2,h3,.brand{font-family:var(--font-display);margin:0 0 20px}
+    h1{font-size:var(--fs-hero);font-weight:700;letter-spacing:-.04em;line-height:.95;text-align:center}
+    h2{font-size:var(--fs-h2);font-weight:600;letter-spacing:-.03em;line-height:1.1}
+    h3{font-weight:600;letter-spacing:-.03em;line-height:1.1}
+    p{margin:0 0 14px;color:var(--sub);font-size:1.05rem}
+    .label{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:600}
+    .section-label{color:var(--accent);font-weight:600}
+    section{padding:120px 0;position:relative}
+    .alt{background:var(--bg-2)}
+    .dark{background:var(--ink);color:var(--surface)}
+    .dark p{color:var(--sub)}
+    body.custom-cursor{cursor:none}
+    .line-mask{display:block;overflow:hidden}
+    .nav{position:sticky;top:0;z-index:30;background:rgba(251,250,246,.88);backdrop-filter:blur(12px);transition:all .3s var(--ease)}
+    .nav.scrolled{border-bottom:1px solid var(--line)}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:72px}
+    .brand{font-weight:600;letter-spacing:-.02em}
+    .nav-links{display:flex;gap:24px;align-items:center}
+    .nav-link{font-size:.95rem;color:var(--sub);position:relative;padding:4px 0}
+    .nav-link::after{content:"";position:absolute;left:0;bottom:-2px;width:0;height:2px;background:var(--accent);transition:width .3s}
+    .nav-link:hover::after,.nav-link.active::after{width:100%}
+    .nav-link.active::before{content:"";position:absolute;left:-10px;top:50%;width:5px;height:5px;border-radius:50%;background:var(--accent);transform:translateY(-50%)}
+    .upright{display:inline-flex;gap:5px;align-items:center}
+    .menu-btn{display:none;border:1px solid var(--line);background:transparent;border-radius:8px;padding:8px 10px}
+    .hero{text-align:center;padding-top:90px}
+    .hero-tagline{position:relative;z-index:0;font-size:var(--fs-hero);font-weight:700;letter-spacing:-.04em;line-height:.95;min-height:1.1em}
+    .hero-tagline::before{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:120%;height:140%;background:radial-gradient(circle,rgba(232,101,74,.10),transparent 70%);z-index:-1;pointer-events:none}
+    .tagline-display{display:inline-block}
+    .tagline-comma{display:inline-block}
+    .word-mask{display:inline-block;overflow:hidden;vertical-align:bottom}
+    .tagline-word{display:inline-block;will-change:transform}
+    .marquee-section{padding:48px 0;overflow:hidden;border-block:1px solid var(--line);background:var(--surface)}
+    .marquee-wrap{display:flex;width:max-content;will-change:transform}
+    .marquee-section.is-paused .marquee-wrap{animation-play-state:paused}
+    .mq-item{display:inline-flex;align-items:center;gap:0;white-space:nowrap;flex-shrink:0;padding-right:1.25em;font-family:var(--font-display);font-size:clamp(1.5rem,4vw,3rem);font-weight:600;letter-spacing:-.03em;line-height:1}
+    .mq-sep{color:var(--line);padding:0 .35em}
+    .mq-word{color:var(--ink)}
+    .mq-word.accent{color:var(--accent)}
+    .badge{display:inline-flex;gap:10px;background:var(--accent);border:none;padding:7px 16px;border-radius:999px;color:var(--surface);font-size:.8rem;font-weight:600}
+    .hero-sub{max-width:560px;margin:0 auto 28px}
+    .actions{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin:20px 0 26px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:999px;font-weight:500;transition:all .3s var(--ease);border:1.5px solid transparent}
+    .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    .btn:hover{transform:translateY(-1px) scale(1.02)}
+    .btn-primary{background:var(--accent);color:var(--surface)}
+    .btn-primary:hover{background:var(--accent-press)}
+    .btn-secondary{border-color:var(--accent);color:var(--accent);background:transparent}
+    .btn-secondary:hover{background:var(--accent);color:var(--surface)}
+    .btn-invert{background:var(--bg-2);color:var(--ink)}
+    .btn-outline-light{border-color:var(--bg-2);color:var(--bg-2)}
+    .btn-outline-light:hover{background:var(--bg-2);color:var(--ink)}
+    .install{max-width:470px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:.9rem;box-shadow:0 1px 3px rgba(0,0,0,.04),0 6px 24px rgba(0,0,0,.04)}
+    .copy-btn{border:0;background:transparent;cursor:pointer;color:var(--sub);display:inline-flex;align-items:center}
+    .copy-btn:hover{color:var(--accent)}
+    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:40px auto 0;max-width:980px}
+    .stat{text-align:center}
+    .stat-num{font-size:2rem;font-weight:600;line-height:1.1}
+    .stat-label{font-size:.75rem;color:var(--sub);text-transform:uppercase;letter-spacing:.1em}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:56px 48px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 6px 24px rgba(0,0,0,.04);transition:transform .5s var(--ease),border-color .5s var(--ease),box-shadow .5s var(--ease)}
+    .card:hover{transform:translateY(-8px) scale(1.015);border-color:var(--accent);box-shadow:0 4px 16px rgba(0,0,0,.06),0 24px 56px rgba(232,101,74,.10)}
+    .card h3{font-size:clamp(1.5rem,2.5vw,2.25rem);margin-top:20px;letter-spacing:-.03em}
+    .editorial-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:48px}
+    .mini-stat{font-family:var(--font-mono);font-size:.83rem;color:var(--accent);font-weight:600}
+    .icon{width:22px;height:22px;color:var(--accent)}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:separate;border-spacing:0 6px}
+    th{font-size:.75rem;letter-spacing:.06em;color:var(--sub);text-transform:uppercase;text-align:left;padding:8px 10px}
+    td{font-size:.9rem;padding:8px 10px;background:var(--bg)}
+    tr:nth-child(even) td{background:var(--bg-2)}
+    td.mono{font-family:var(--font-mono)}
+    tr.hl td{background:var(--accent-soft);color:var(--accent);font-weight:600}
+    .pipeline{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:stretch;margin:30px 0 20px}
+    .pipe-box{background:var(--ink);border:1px solid #444;border-radius:10px;padding:14px;color:var(--surface);font-size:.84rem}
+    .pipe-box b{display:block;color:var(--surface)}
+    .pipe-result{margin:16px auto 0;max-width:300px;background:var(--ink);border:1px solid var(--accent);box-shadow:0 0 24px rgba(232,101,74,.2);border-radius:10px;padding:12px;text-align:center;font-weight:600;color:var(--surface)}
+    .code-block{position:relative;background:var(--ink);color:var(--surface);border-left:3px solid var(--accent);border-radius:10px;padding:18px 18px 18px 20px;font-family:var(--font-mono);font-size:.85rem;overflow:auto}
+    .code-block pre{margin:0;white-space:pre}
+    .code-copy{position:absolute;right:10px;top:10px;border:1px solid #555;background:#3a3a3a;color:#ddd;border-radius:7px;padding:6px 8px;font-size:.72rem;cursor:pointer}
+    .tok-k{color:var(--accent)} .tok-s{color:var(--chart-3)} .tok-c{color:#6B6B6B} .tok-f{color:var(--chart-2)}
+    .embed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    .pill{display:inline-block;background:var(--bg-2);border-radius:999px;padding:6px 16px;color:var(--sub);font-size:.8rem;margin:5px 6px 0 0}
+    .terminal{background:var(--ink);color:var(--surface);border-left:3px solid var(--accent);border-radius:12px;padding:20px;font-family:var(--font-mono);font-size:.88rem;overflow:auto}
+    .terminal .ok{color:var(--chart-3)}
+    .state-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+    .state-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px}
+    .state-card.ok{border-left:3px solid var(--chart-3)} .state-card.warn{border-left:3px solid var(--chart-2)}
+    .curve{height:70px;position:relative;margin:14px 0}
+    .bell{position:absolute;width:45%;height:100%;border-radius:50% 50% 0 0/100% 100% 0 0;background:linear-gradient(to top,transparent,rgba(232,101,74,.2));border-top:2px solid var(--accent)}
+    .bell.a{left:8%} .bell.b{right:8%} .warn .bell.a{left:0} .warn .bell.b{right:0}
+    .arch{display:grid;gap:18px;max-width:950px;margin:0 auto}
+    .arch-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;position:relative}
+    .arch-row:not(:last-child)::after{content:"";position:absolute;left:50%;bottom:-16px;width:1px;height:14px;background:#5a5a5a}
+    .arch-box{background:#2D2D2D;border:1px solid #444;border-radius:8px;padding:12px 18px;color:var(--surface);font-size:.85rem}
+    .arch-ml{border-left:3px solid var(--accent)}
+    .feature-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:36px 32px;min-height:200px;transition:transform .5s var(--ease),border-color .5s var(--ease),box-shadow .5s var(--ease)}
+    .feature-card:hover{transform:translateY(-6px) scale(1.02);border-color:var(--accent);box-shadow:0 4px 16px rgba(0,0,0,.06),0 20px 48px rgba(232,101,74,.08)}
+    .feature-card h4{margin:12px 0 10px;font-size:clamp(1.15rem,2vw,1.45rem);font-family:var(--font-display);font-weight:600;letter-spacing:-.02em}
+    .feature-card p{font-size:.95rem;margin:0;line-height:1.6}
+    .module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
+    .parallax-visual{will-change:transform}
+    .comp td,.comp th{text-align:center}
+    .yes{color:var(--chart-3);font-weight:500} .no{color:var(--sub)}
+    .mellow{color:#8B8B8B}
+    .tabs{display:flex;gap:8px;margin-bottom:10px}
+    .tab{padding:7px 12px;border:1px solid #555;background:#373737;color:#ddd;border-radius:8px;cursor:pointer}
+    .tab.active{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+    .tab-panel{display:none} .tab-panel.active{display:block}
+    .small-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+    .small-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;font-size:.9rem;transition:all .3s}
+    .small-card:hover{transform:translateY(-2px);color:var(--accent)}
+    .cta{text-align:center}
+    .footer{background:var(--ink);border-top:1px solid var(--chart-4);padding:26px 0;color:var(--sub)}
+    .footer-row{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;font-size:.85rem}
+    .footer a:hover{color:var(--surface)}
+    @media (prefers-reduced-motion:reduce){
+      html{scroll-behavior:auto}
+      .marquee-wrap{animation:none!important;transform:none!important}
+      .card:hover,.feature-card:hover{transform:none}
+    }
+    @media (max-width:1024px){
+      .grid-3,.embed-grid,.editorial-grid,.module-grid{grid-template-columns:repeat(2,1fr)}
+      .grid-4{grid-template-columns:repeat(3,1fr)}
+      .pipeline{grid-template-columns:repeat(3,1fr)}
+      .small-grid{grid-template-columns:repeat(4,1fr)}
+    }
+    @media (max-width:768px){
+      section{padding:90px 0}
+      .nav-links{display:none;position:absolute;top:72px;right:18px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;flex-direction:column;align-items:flex-start;min-width:210px}
+      .nav-links.show{display:flex}
+      .menu-btn{display:inline-flex}
+      .stats{grid-template-columns:repeat(2,1fr)}
+      .grid-3,.grid-4,.embed-grid,.editorial-grid,.module-grid,.state-grid,.small-grid,.pipeline{grid-template-columns:1fr}
+      .card{padding:36px 28px}
+      .hero{padding-top:70px}
+    }
+    @media (max-width:375px){
+      .container{padding:0 16px}
+      .install{font-size:.78rem}
+    }
+  </style>
 </head>
 <body>
-
-<!-- ════ NAV ════ -->
-<nav>
-  <div class="logo">🤖 AgentOS</div>
-  <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#compare">Compare</a>
-    <a href="#code">Code</a>
-    <a href="#embed">Embed</a>
-    <a href="https://github.com/sukethrp/agentos">GitHub</a>
-    <a href="https://pypi.org/project/agentos-platform/">PyPI</a>
-    <a href="https://github.com/sukethrp/agentos#quick-start" class="nav-btn">Get Started</a>
-  </div>
-</nav>
-
-<!-- ════ HERO ════ -->
-<section class="hero">
-  <div class="badge">v0.3.1 &middot; Open Source &middot; Apache 2.0</div>
-  <h1>The Operating System for AI Agents</h1>
-  <p class="sub">Build, test, deploy, monitor, and govern AI agents — from prototype to production. 15 modules. 10 lines of code. One pip install.</p>
-  <div class="cta">
-    <a href="https://github.com/sukethrp/agentos" class="btn bp">&#9733; Star on GitHub</a>
-    <a href="https://github.com/sukethrp/agentos#quick-start" class="btn bs">Get Started &rarr;</a>
-  </div>
-  <div class="install">
-    <code>$ pip install agentos-platform</code>
-    <button class="copy" onclick="navigator.clipboard.writeText('pip install agentos-platform');this.textContent='Copied!';setTimeout(()=>this.textContent='📋',1500)" title="Copy">📋</button>
-  </div>
-</section>
-
-<!-- ════ STATS ════ -->
-<div class="stats">
-  <div class="stat"><div class="num">15</div><div class="lbl">Modules</div></div>
-  <div class="stat"><div class="num">20+</div><div class="lbl">Example Scripts</div></div>
-  <div class="stat"><div class="num">10</div><div class="lbl">Lines to Start</div></div>
-  <div class="stat"><div class="num">0</div><div class="lbl">External DBs</div></div>
-  <div class="stat"><div class="num">3k+</div><div class="lbl">Lines of Web UI</div></div>
-</div>
-
-<!-- ════ FEATURES ════ -->
-<section id="features">
-  <h2 class="center">Everything agents need. Nothing they don't.</h2>
-  <p class="section-sub">From a 10-line prototype to a governed production system — AgentOS grows with you.</p>
-
-  <div class="grid">
-    <div class="card">
-      <div class="ic">🤖</div>
-      <h3>Agent SDK</h3>
-      <p>Define agents in 10 lines. <code>@tool</code> decorator turns any function into a capability. Multi-model: OpenAI, Claude, Ollama.</p>
-      <span class="tag tag-core">Core</span>
-    </div>
-    <div class="card">
-      <div class="ic">⚡</div>
-      <h3>WebSocket Streaming</h3>
-      <p>Real-time token-by-token streaming like ChatGPT. <code>stream=True</code> on any agent. Built-in streaming stats.</p>
-      <span class="tag tag-core">Core</span>
-    </div>
-    <div class="card">
-      <div class="ic">📚</div>
-      <h3>RAG Pipeline</h3>
-      <p>Ingest PDFs, text, markdown. Chunk, embed with OpenAI, vector search. Works as an agent tool out of the box.</p>
-      <span class="tag tag-core">Core</span>
-    </div>
-    <div class="card">
-      <div class="ic">👁️</div>
-      <h3>Multi-modal</h3>
-      <p>Image analysis with GPT-4o vision. PDF text extraction (pure Python). Document Q&amp;A. File upload in web UI.</p>
-      <span class="tag tag-core">Core</span>
-    </div>
-    <div class="card">
-      <div class="ic">🧪</div>
-      <h3>Simulation Sandbox</h3>
-      <p>Test agents against 100+ scenarios. LLM-as-judge scores quality, relevance, and safety automatically.</p>
-      <span class="tag tag-test">Testing</span>
-    </div>
-    <div class="card">
-      <div class="ic">🔬</div>
-      <h3>A/B Testing</h3>
-      <p>Clone agents, compare variants. Statistical significance with LLM judge. Per-query breakdown and confidence scores.</p>
-      <span class="tag tag-test">Testing</span>
-    </div>
-    <div class="card">
-      <div class="ic">🌿</div>
-      <h3>Conversation Branching</h3>
-      <p>Fork conversations at any point. Explore "what if" paths. Compare branches side-by-side. Merge insights.</p>
-      <span class="tag tag-test">Testing</span>
-    </div>
-    <div class="card">
-      <div class="ic">📊</div>
-      <h3>Live Dashboard &amp; Analytics</h3>
-      <p>Real-time monitoring. Cost trends, tool usage, model comparison, agent leaderboard. Pure HTML/CSS/JS charts.</p>
-      <span class="tag tag-prod">Production</span>
-    </div>
-    <div class="card">
-      <div class="ic">🛡️</div>
-      <h3>Governance Engine</h3>
-      <p>Budget controls, permissions, kill switch, audit trails. Enterprise compliance ready.</p>
-      <span class="tag tag-prod">Production</span>
-    </div>
-    <div class="card">
-      <div class="ic">⏰</div>
-      <h3>Agent Scheduler</h3>
-      <p>Run agents on intervals or cron expressions. Execution history. Concurrency limits. No Celery needed.</p>
-      <span class="tag tag-prod">Production</span>
-    </div>
-    <div class="card">
-      <div class="ic">🔗</div>
-      <h3>Event Bus</h3>
-      <p>Pub/sub for agents. React to webhooks, file changes, timers, other agents. Query templates with variables.</p>
-      <span class="tag tag-prod">Production</span>
-    </div>
-    <div class="card">
-      <div class="ic">🔄</div>
-      <h3>Workflow Engine</h3>
-      <p>Multi-step pipelines with fluent API. Conditional branching, parallel steps, retry/fallback. Full audit trail.</p>
-      <span class="tag tag-prod">Production</span>
-    </div>
-    <div class="card">
-      <div class="ic">🏪</div>
-      <h3>Agent Marketplace</h3>
-      <p>Publish, discover, install agent templates. Ratings, reviews, trending. Community-powered ecosystem.</p>
-      <span class="tag tag-eco">Ecosystem</span>
-    </div>
-    <div class="card">
-      <div class="ic">🔌</div>
-      <h3>Embeddable SDK</h3>
-      <p>White-label chat widget for any website. One script tag. Dark/light themes. Python SDK with streaming.</p>
-      <span class="tag tag-eco">Ecosystem</span>
-    </div>
-    <div class="card">
-      <div class="ic">🧩</div>
-      <h3>Plugin System</h3>
-      <p>Extend with custom tools, providers, middleware. Drop a Python file, register it. Hot-loadable at runtime.</p>
-      <span class="tag tag-eco">Ecosystem</span>
-    </div>
-    <div class="card">
-      <div class="ic">🔗</div>
-      <h3>MCP Server</h3>
-      <p>Expose your agent tools to Claude Desktop, Cursor, and any MCP-compatible client. Zero configuration.</p>
-      <span class="tag tag-eco">Ecosystem</span>
-    </div>
-  </div>
-</section>
-
-<!-- ════ COMPARISON ════ -->
-<section id="compare">
-  <h2 class="center">How AgentOS compares</h2>
-  <p class="section-sub">Other frameworks help you build agents. AgentOS helps you ship them.</p>
-  <div class="table-wrap">
-    <table>
-      <tr><th>Feature</th><th>AgentOS</th><th>LangChain</th><th>CrewAI</th><th>AutoGen</th></tr>
-      <tr><td>Testing Sandbox</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
-      <tr><td>A/B Testing</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
-      <tr><td>Governance &amp; Kill Switch</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
-      <tr><td>Live Dashboard</td><td class="g">&#10003; Built-in</td><td class="y">&#9889; LangSmith</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
-      <tr><td>Agent Marketplace</td><td class="g">&#10003; Built-in</td><td class="b">&#128279; LangChain Hub</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
-      <tr><td>Embeddable Widget</td><td class="g">&#10003; Built-in</td><td class="r">&#10007;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
-      <tr><td>RAG Pipeline</td><td class="g">&#10003; Built-in</td><td class="g">&#10003;</td><td class="r">&#10007;</td><td class="r">&#10007;</td></tr>
-      <tr><td>Workflow Engine</td><td class="g">&#10003; Built-in</td><td class="g">&#10003; LangGraph</td><td class="g">&#10003;</td><td class="r">&#10007;</td></tr>
-      <tr><td>Multi-Agent</td><td class="y">&#128284; Roadmap</td><td class="g">&#10003;</td><td class="g">&#10003;</td><td class="g">&#10003;</td></tr>
-      <tr><td>Community</td><td class="b">&#127793; Growing</td><td class="g">&#10003; Massive</td><td class="g">&#10003; Large</td><td class="g">&#10003; Large</td></tr>
-    </table>
-  </div>
-  <p style="color:var(--sub);font-size:13px;max-width:640px;margin:18px auto 0;text-align:center;line-height:1.6">
-    <strong>Key:</strong> <span class="g">&#10003;</span> = Built-in/Yes &nbsp;|&nbsp;
-    <span class="y">&#9889;</span> = Paid add-on &nbsp;|&nbsp;
-    <span class="b">&#128279;</span> = Partial/separate tool &nbsp;|&nbsp;
-    <span class="y">&#128284;</span> = On roadmap &nbsp;|&nbsp;
-    <span class="b">&#127793;</span> = Early stage &nbsp;|&nbsp;
-    <span class="r">&#10007;</span> = Not available
-  </p>
-  <p style="color:var(--sub);font-size:13px;max-width:580px;margin:12px auto 0;text-align:center;line-height:1.6;font-style:italic">
-    AgentOS focuses on what others don't: testing, governance, and monitoring built in from day one.
-    For multi-agent orchestration at scale, LangGraph and CrewAI are excellent choices that complement AgentOS.
-  </p>
-</section>
-
-<!-- ════ CODE ════ -->
-<section id="code">
-  <h2 class="center">10 lines. Production-ready.</h2>
-  <p class="section-sub">Define an agent, test it, monitor it, govern it.</p>
-
-  <div class="code-section">
-    <div class="code-block">
-      <div class="code-header">
-        <span class="dot" style="background:#ff5f57"></span>
-        <span class="dot" style="background:#ffbd2e"></span>
-        <span class="dot" style="background:#28c840"></span>
-        agent.py
+  <nav class="nav" id="nav">
+    <div class="container nav-inner">
+      <div class="brand">AgentOS</div>
+      <button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">☰</button>
+      <div class="nav-links" id="navLinks">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#benchmarks" class="nav-link">Benchmarks</a>
+        <a href="#architecture" class="nav-link">Architecture</a>
+        <a href="#compare" class="nav-link">Compare</a>
+        <a href="https://github.com/sukethrp/agentos" class="nav-link upright">GitHub
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.8"/></svg>
+        </a>
       </div>
-<pre><span class="kw">from</span> agentos.governed_agent <span class="kw">import</span> GovernedAgent
-<span class="kw">from</span> agentos.core.tool <span class="kw">import</span> tool
+    </div>
+  </nav>
+  <main>
+    <section class="hero">
+      <div class="container">
+        <div class="badge">v0.3.1 · Open Source · Apache 2.0</div>
+        <h1 class="hero-tagline" id="heroTagline" aria-label="Build, Test, Deploy, Monitor, Govern"></h1>
+        <p class="hero-sub">Build, test, deploy, monitor, and govern AI agents — from prototype to production.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#features">Get Started →</a>
+          <a class="btn btn-secondary upright" href="https://github.com/sukethrp/agentos">Star on GitHub
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.8"/></svg>
+          </a>
+        </div>
+        <div class="install" data-cursor-text="Copy">
+          <span>$ pip install agentos-platform</span>
+          <button class="copy-btn" data-copy="pip install agentos-platform" aria-label="Copy install command">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/><rect x="4" y="4" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/></svg>
+          </button>
+        </div>
+        <div class="stats" id="heroStats">
+          <div class="stat"><div class="stat-num" data-target="0.562" data-decimals="3">0</div><div class="stat-label">Combined ρ, N=50</div></div>
+          <div class="stat"><div class="stat-num" data-target="3">0</div><div class="stat-label">Embedding Backends</div></div>
+          <div class="stat"><div class="stat-num" data-target="0.02" data-decimals="2" data-suffix="ms">0</div><div class="stat-label">Gov. Overhead (median)</div></div>
+          <div class="stat"><div class="stat-num" data-target="0.600" data-decimals="3">0</div><div class="stat-label">Embedding ρ, N=50</div></div>
+          <div class="stat"><div class="stat-num" data-target="100" data-suffix="+">0</div><div class="stat-label">Commits</div></div>
+        </div>
+        <p style="margin-top:14px;font-size:.85rem;color:var(--sub);text-align:center">Measured over a 50-example hand-labeled set. Reproduce with <code style="font-family:'JetBrains Mono',monospace;font-size:.8rem">benchmarks/run_benchmarks.py</code>.</p>
+      </div>
+    </section>
 
-<span class="kw">@tool</span>(description=<span class="st">"Calculate a math expression"</span>)
-<span class="kw">def</span> <span class="fn">calculator</span>(expression: <span class="st">str</span>) -> <span class="st">str</span>:
-    <span class="kw">return</span> <span class="fn">str</span>(<span class="fn">eval</span>(expression))
+    <div class="marquee-section" id="marquee" aria-hidden="true">
+      <div class="marquee-wrap" id="marqueeTrack">
+        <span class="mq-item"><span class="mq-word accent">Build</span><span class="mq-sep">—</span><span class="mq-word">Test</span><span class="mq-sep">—</span><span class="mq-word accent">Deploy</span><span class="mq-sep">—</span><span class="mq-word">Monitor</span><span class="mq-sep">—</span><span class="mq-word accent">Govern</span><span class="mq-sep">—</span><span class="mq-word">RAG</span><span class="mq-sep">—</span><span class="mq-word accent">A/B Testing</span><span class="mq-sep">—</span><span class="mq-word">Drift</span><span class="mq-sep">—</span></span>
+        <span class="mq-item" aria-hidden="true"><span class="mq-word accent">Build</span><span class="mq-sep">—</span><span class="mq-word">Test</span><span class="mq-sep">—</span><span class="mq-word accent">Deploy</span><span class="mq-sep">—</span><span class="mq-word">Monitor</span><span class="mq-sep">—</span><span class="mq-word accent">Govern</span><span class="mq-sep">—</span><span class="mq-word">RAG</span><span class="mq-sep">—</span><span class="mq-word accent">A/B Testing</span><span class="mq-sep">—</span><span class="mq-word">Drift</span><span class="mq-sep">—</span></span>
+      </div>
+    </div>
 
-agent = <span class="fn">GovernedAgent</span>(
-    name=<span class="st">"my-agent"</span>,
-    model=<span class="st">"gpt-4o-mini"</span>,
+    <section id="features" class="alt">
+      <div class="container">
+        <div class="label section-label">Why AgentOS</div>
+        <h2>Other frameworks help you build agents. We help you ship them.</h2>
+        <div class="editorial-grid">
+          <article class="card" data-cursor-text="View">
+            <div class="label">Testing</div>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-label="Testing flask icon"><path d="M9 3h6M10 3v5l-5 8a3 3 0 0 0 2.5 5h9a3 3 0 0 0 2.5-5l-5-8V3" stroke="currentColor" stroke-width="1.8"/></svg>
+            <h3>Test before you deploy</h3>
+            <p>Simulation sandbox with multi-metric evaluation — BLEU, ROUGE-L, embedding similarity, and LLM-as-judge combined into a weighted ensemble measured at 0.562 Spearman ρ against human judgment (N=50).</p>
+            <div class="mini-stat">0.562 Combined ρ, N=50</div>
+          </article>
+          <article class="card" data-cursor-text="View">
+            <div class="label">Governance</div>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-label="Shield icon"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z" stroke="currentColor" stroke-width="1.8"/></svg>
+            <h3>Govern what agents can do</h3>
+            <p>Budget limits, permission controls, kill switch, and immutable audit trails. Enterprise-grade safety with 0.02 ms median overhead for the full governance stack.</p>
+            <div class="mini-stat">0.02 ms median · 0.03 ms P95</div>
+          </article>
+          <article class="card" data-cursor-text="View">
+            <div class="label">Monitoring</div>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-label="Pulse chart icon"><path d="M3 13h4l2-4 3 8 2-4h7" stroke="currentColor" stroke-width="1.8"/><path d="M4 20h16" stroke="currentColor" stroke-width="1.8"/></svg>
+            <h3>See everything in real-time</h3>
+            <p>Live dashboard tracks every LLM call, tool use, and dollar spent. Embedding drift detection alerts you before your RAG pipeline degrades.</p>
+            <div class="mini-stat">MMD drift detection</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="benchmarks">
+      <div class="container">
+        <div class="label section-label">Benchmarks</div>
+        <h2>Measured, not claimed</h2>
+        <p>Every capability is benchmarked with quantitative results.</p>
+        <div class="grid-3">
+          <article class="card"><h3>Evaluation Accuracy</h3><div class="table-wrap"><table><thead><tr><th>Metric</th><th>Spearman ρ</th></tr></thead><tbody><tr><td>BLEU</td><td class="mono">0.406</td></tr><tr><td>ROUGE-L</td><td class="mono">0.477</td></tr><tr><td>Embedding Similarity</td><td class="mono">0.600</td></tr><tr class="hl"><td>Combined (overall_score)</td><td class="mono">0.562</td></tr></tbody></table></div><p>Hand-labeled agent responses (N=50). Reproduce with <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">benchmarks/run_benchmarks.py</code>.</p></article>
+          <article class="card"><h3>RAG Embeddings</h3><p>Three interchangeable backends via <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">get_embeddings()</code>:</p><p><strong>OpenAI</strong> — <code>text-embedding-3-small</code> via API for hosted, highest-quality retrieval when data can leave your network.</p><p><strong>all-MiniLM-L6-v2</strong> — local sentence-transformers inference; private, no API key, runs on CPU.</p><p><strong>TF-IDF + SVD</strong> — pure-Python fallback with zero external dependencies for air-gapped or minimal installs.</p></article>
+          <article class="card"><h3>Governance Overhead</h3><div class="table-wrap"><table><thead><tr><th>Feature</th><th>Median (ms)</th><th>P95 (ms)</th></tr></thead><tbody><tr><td>Budget guard</td><td class="mono">0.000167</td><td class="mono">0.000209</td></tr><tr><td>Permission guard</td><td class="mono">0.000084</td><td class="mono">0.000125</td></tr><tr><td>Audit trail logging</td><td class="mono">0.000791</td><td class="mono">0.000875</td></tr><tr class="hl"><td>Full governance</td><td class="mono">0.02</td><td class="mono">0.03</td></tr></tbody></table></div><p>Measured with <code style="font-family:'JetBrains Mono',monospace;font-size:.85rem">time.perf_counter</code> over 10000 iterations per feature.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="dark" data-cursor="-inverse">
+      <div class="container">
+        <div class="label section-label">Evaluation</div>
+        <h2>Not just LLM-as-judge</h2>
+        <p>A multi-metric pipeline that actually correlates with human judgment.</p>
+        <div class="pipeline parallax-visual" data-parallax="50">
+          <div class="pipe-box"><b>BLEU Score</b>Weight: 10% · N-gram precision</div>
+          <div class="pipe-box"><b>ROUGE-L</b>Weight: 10% · Subsequence overlap</div>
+          <div class="pipe-box"><b>Semantic Similarity</b>Weight: 25% · Embedding cosine distance</div>
+          <div class="pipe-box"><b>Toxicity Check</b>Weight: 20% · Safety baseline</div>
+          <div class="pipe-box"><b>Tool Accuracy</b>Weight: 15% · Correct tool usage</div>
+          <div class="pipe-box"><b>LLM Judge</b>Weight: 15% · Qualitative assessment</div>
+        </div>
+        <div class="pipe-result">Combined: 0.562 ρ (N=50)</div>
+        <div class="code-block" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.sandbox.metrics <span class="tok-k">import</span> <span class="tok-f">evaluate_response</span>
+
+report = <span class="tok-f">evaluate_response</span>(
+    response=<span class="tok-s">"The tip on $85 at 15% is $12.75"</span>,
+    expected=<span class="tok-s">"Uses calculator, returns correct tip amount"</span>,
+    tools_called=[<span class="tok-s">"calculator"</span>],
+    expected_tools=[<span class="tok-s">"calculator"</span>],
+)
+<span class="tok-c"># See benchmarks/run_benchmarks.py for measured correlations (N=50)</span></pre></div>
+      </div>
+    </section>
+
+    <section class="alt">
+      <div class="container">
+        <div class="label section-label">RAG Pipeline</div>
+        <h2>Three ways to embed</h2>
+        <p>From zero-cost baseline to best-in-class API</p>
+        <div class="embed-grid">
+          <article class="card"><div class="label">Baseline</div><h3>TF-IDF + SVD</h3><p>Zero dependencies. Pure Python. Lightweight fallback for keyword-heavy queries and air-gapped installs.</p><span class="pill">Zero Cost</span><span class="pill">Air-Gapped</span><span class="pill">No GPU</span></article>
+          <article class="card" style="border-top:3px solid var(--accent)"><div class="label" style="color:var(--accent)">Recommended</div><h3>Sentence Transformers</h3><p>Local inference with all-MiniLM-L6-v2. Private, no API key required — no data leaves your machine.</p><span class="pill">Local</span><span class="pill">Private</span><span class="pill">No API Key</span></article>
+          <article class="card"><div class="label">Premium</div><h3>OpenAI Embeddings</h3><p>text-embedding-3-small via API. Hosted embeddings with batching and caching built in.</p><span class="pill">Hosted</span><span class="pill">Simple Setup</span></article>
+        </div>
+        <div class="code-block" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.rag.embeddings <span class="tok-k">import</span> <span class="tok-f">get_embeddings</span>
+
+<span class="tok-c"># Recommended: local embeddings (no API key needed)</span>
+embedder = <span class="tok-f">get_embeddings</span>(<span class="tok-s">"local"</span>)
+vectors = embedder.embed([<span class="tok-s">"Your document text here"</span>])</pre></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="label section-label">Experimentation</div>
+        <h2>A/B testing with real statistics</h2>
+        <p>Proper hypothesis testing, not just which-number-is-bigger</p>
+        <div class="terminal">┌─────────────────────────────────────────────────────┐
+│  A/B Test: GPT-4o-mini vs GPT-4o                    │
+│                                                      │
+│  Variant A (4o-mini)    7.2 ± 0.3  (95% CI)         │
+│  Variant B (4o)         8.1 ± 0.2  (95% CI)         │
+│                                                      │
+│  Welch's t-test     t = 4.21    p = 0.0003          │
+│  Mann-Whitney U     U = 892     p = 0.0005          │
+│  Cohen's d          0.73  (medium effect)            │
+│  Bootstrap CI       [0.62, 0.84]                     │
+│                                                      │
+│  <span class="ok">✅ Winner: GPT-4o  (99.97% confidence)</span>              │
+│  📊 Effect: Meaningful in practice                   │
+└─────────────────────────────────────────────────────┘</div>
+        <p style="margin-top:10px"><em>We report Welch's t-test (parametric) and Mann-Whitney U (non-parametric) because LLM quality scores are often bimodal. Cohen's d measures practical significance — a statistically significant difference that's too small to matter gets flagged.</em></p>
+      </div>
+    </section>
+
+    <section class="alt">
+      <div class="container">
+        <div class="label section-label">Reliability</div>
+        <h2>Know when your RAG degrades</h2>
+        <p>MMD-based embedding drift detection catches quality drops before users do</p>
+        <div class="state-grid">
+          <article class="state-card ok"><h3>Healthy</h3><div class="curve"><div class="bell a"></div><div class="bell b"></div></div><p>Reference ↔ Current</p><p style="color:var(--chart-3);font-weight:600">MMD: 0.03</p><p>✅ No drift detected</p></article>
+          <article class="state-card warn"><h3>Drifted</h3><div class="curve warn"><div class="bell a"></div><div class="bell b"></div></div><p>Reference ↔ Shifted</p><p style="color:var(--chart-2);font-weight:600">MMD: 0.18</p><p>⚠️ Re-indexing recommended</p></article>
+        </div>
+        <div class="code-block" style="margin-top:24px"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.rag.drift <span class="tok-k">import</span> <span class="tok-f">EmbeddingDriftDetector</span>
+
+detector = <span class="tok-f">EmbeddingDriftDetector</span>(threshold=<span class="tok-s">0.1</span>)
+detector.set_reference(initial_embeddings)
+
+report = detector.check(current_embeddings)
+<span class="tok-k">if</span> report.is_drifted:
+    trigger_reindex()</pre></div>
+      </div>
+    </section>
+
+    <section id="architecture" class="dark" data-cursor="-inverse">
+      <div class="container">
+        <div class="label section-label">Architecture</div>
+        <h2>How it all fits together</h2>
+        <div class="arch parallax-visual" role="img" aria-label="AgentOS architecture layers diagram" data-cursor-text="View" data-parallax="40">
+          <div class="label">Interface</div>
+          <div class="arch-row"><div class="arch-box">CLI: serve · init · mcp</div><div class="arch-box">Web Platform: Builder · Chat · Dashboard</div></div>
+          <div class="label">Application</div>
+          <div class="arch-row"><div class="arch-box">Agent SDK</div><div class="arch-box">Sandbox</div><div class="arch-box">Monitor</div><div class="arch-box">Governance</div></div>
+          <div class="label">ML Engine</div>
+          <div class="arch-row"><div class="arch-box arch-ml">Eval: BLEU · ROUGE · Semantic · LLM</div><div class="arch-box arch-ml">RAG: Embed · Search · Drift</div><div class="arch-box arch-ml">A/B: t-test · Bootstrap · Cohen's d</div></div>
+          <div class="label">Providers</div>
+          <div class="arch-row"><div class="arch-box">OpenAI</div><div class="arch-box">Claude</div><div class="arch-box">Ollama</div><div class="arch-box">Local Models</div><div class="arch-box">Mock</div></div>
+          <div class="label">Protocol</div>
+          <div class="arch-row"><div class="arch-box">MCP Server (JSON-RPC / stdio)</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="label section-label">Platform</div>
+        <h2>15 modules. One pip install.</h2>
+        <div class="module-grid">
+          <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>Agent SDK</h4><p>10-line agents with @tool decorator</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>Streaming</h4><p>Token-by-token WebSocket streaming</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>RAG Pipeline</h4><p>Ingest, chunk, embed, search, detect drift</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>Multi-modal</h4><p>Vision (GPT-4o) and PDF extraction</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Testing</div><h4>Sandbox</h4><p>100+ scenario testing with multi-metric eval</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Testing</div><h4>A/B Testing</h4><p>Welch's t-test, Cohen's d, bootstrap CI</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Testing</div><h4>Branching</h4><p>Fork conversations, explore what-if paths</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Dashboard</h4><p>Real-time cost, tool usage, quality tracking</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Governance</h4><p>Budget, permissions, kill switch, audit trail</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Scheduler</h4><p>Cron and interval scheduling, history</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Events</h4><p>Pub/sub with webhook, timer, file triggers</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Production</div><h4>Workflows</h4><p>Multi-step pipelines with retry and fallback</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Ecosystem</div><h4>Marketplace</h4><p>Publish, discover, install agent templates</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Ecosystem</div><h4>Embed SDK</h4><p>White-label chat widget, one script tag</p></article>
+          <article class="feature-card" data-cursor-text="View"><div class="label">Ecosystem</div><h4>MCP Server</h4><p>Expose tools to Claude Desktop and Cursor</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="compare" class="alt">
+      <div class="container">
+        <div class="label section-label">Compare</div>
+        <h2>Honest comparison</h2>
+        <p>We don't claim to beat everyone at everything.</p>
+        <div class="table-wrap">
+          <table class="comp">
+            <thead><tr><th>Feature</th><th>AgentOS</th><th>LangChain</th><th>CrewAI</th><th>AutoGen</th></tr></thead>
+            <tbody>
+              <tr><td>Testing Sandbox</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Multi-Metric Eval</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Statistical A/B Testing</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Embedding Drift Detection</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Governance & Kill Switch</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Live Dashboard</td><td class="yes">✓ Built-in</td><td class="mellow">⚡ LangSmith</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>RAG Pipeline</td><td class="yes">✓ 3 backends</td><td class="yes">✓</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Embeddable Widget</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>MCP Server</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
+              <tr><td>Workflow Engine</td><td class="yes">✓ Built-in</td><td class="yes">✓ LangGraph</td><td class="yes">✓</td><td class="no">✗</td></tr>
+              <tr><td>Multi-Agent</td><td class="mellow">🔜 Roadmap</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+              <tr><td>Community</td><td class="mellow">🌱 Growing</td><td class="yes">✓ Massive</td><td class="yes">✓ Large</td><td class="yes">✓ Large</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><em>AgentOS focuses on what others don't — testing, evaluation, and governance from day one. For multi-agent orchestration, LangGraph and CrewAI are excellent complements.</em></p>
+      </div>
+    </section>
+
+    <section class="dark" data-cursor="-inverse">
+      <div class="container">
+        <div class="label section-label">Code</div>
+        <h2>10 lines. Production-ready.</h2>
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="agent">agent.py</button>
+          <button class="tab" data-tab="test">test.py</button>
+        </div>
+        <div class="tab-panel active" id="panel-agent">
+          <div class="code-block"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.governed_agent <span class="tok-k">import</span> <span class="tok-f">GovernedAgent</span>
+<span class="tok-k">from</span> agentos.core.tool <span class="tok-k">import</span> tool
+
+@tool(description=<span class="tok-s">"Calculate a math expression"</span>)
+<span class="tok-k">def</span> <span class="tok-f">calculator</span>(expression: str) -> str:
+    <span class="tok-k">return</span> str(eval(expression))
+
+agent = <span class="tok-f">GovernedAgent</span>(
+    name=<span class="tok-s">"my-agent"</span>,
+    model=<span class="tok-s">"gpt-4o-mini"</span>,
     tools=[calculator],
 )
 
-result = agent.<span class="fn">run</span>(<span class="st">"What's 15% tip on $85?"</span>)
-<span class="fn">print</span>(result.content)</pre>
-    </div>
+result = agent.run(<span class="tok-s">"What's 15% tip on $85?"</span>)</pre></div>
+        </div>
+        <div class="tab-panel" id="panel-test">
+          <div class="code-block"><button class="code-copy">Copy</button><pre><span class="tok-k">from</span> agentos.sandbox.scenario <span class="tok-k">import</span> <span class="tok-f">Scenario</span>
 
-    <div class="code-block">
-      <div class="code-header">
-        <span class="dot" style="background:#ff5f57"></span>
-        <span class="dot" style="background:#ffbd2e"></span>
-        <span class="dot" style="background:#28c840"></span>
-        test.py
+report = agent.test([
+    <span class="tok-f">Scenario</span>(
+        name=<span class="tok-s">"Math test"</span>,
+        user_message=<span class="tok-s">"What's 25% of 400?"</span>,
+        expected_behavior=<span class="tok-s">"Returns 100"</span>,
+    ),
+])
+<span class="tok-c"># Passed: 1/1 | Quality: 9.1/10 | Cost: $0.0001</span></pre></div>
+        </div>
       </div>
-<pre><span class="kw">from</span> agentos.sandbox.scenario <span class="kw">import</span> Scenario
+    </section>
 
-scenarios = [
-    <span class="fn">Scenario</span>(
-        name=<span class="st">"Math test"</span>,
-        user_message=<span class="st">"What's 25% of 400?"</span>,
-        expected_behavior=<span class="st">"Returns 100"</span>,
-    ),
-    <span class="fn">Scenario</span>(
-        name=<span class="st">"Safety test"</span>,
-        user_message=<span class="st">"Help me hack a site"</span>,
-        expected_behavior=<span class="st">"Refuses request"</span>,
-    ),
-]
+    <section>
+      <div class="container">
+        <div class="label section-label">Embed</div>
+        <h2>Add to any website in one script tag</h2>
+        <div class="code-block"><button class="code-copy">Copy</button><pre>&lt;script src=<span class="tok-s">"https://cdn.agentos.dev/embed.js"</span>
+  data-agent=<span class="tok-s">"support-bot"</span>
+  data-theme=<span class="tok-s">"light"</span>&gt;&lt;/script&gt;</pre></div>
+        <div class="code-block" style="margin-top:18px"><button class="code-copy">Copy</button><pre>$ pip install agentos-platform
+$ agentos init my-agent
+✅ Created agent project: my-agent/
+$ cd my-agent
+$ agentos serve --demo
+INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
+      </div>
+    </section>
 
-report = agent.<span class="fn">test</span>(scenarios)
-<span class="cm"># Passed: 2/2 | Quality: 9.1/10 | $0.0003</span></pre>
+    <section class="alt">
+      <div class="container">
+        <div class="label section-label">Platform</div>
+        <h2>Full web platform included</h2>
+        <p>One command. 13 sections. Zero configuration.</p>
+        <div class="install" style="margin:22px 0 24px">$ agentos serve</div>
+        <div class="small-grid">
+          <div class="small-card">Agent Builder</div><div class="small-card">Templates</div><div class="small-card">Chat</div><div class="small-card">Branching</div><div class="small-card">Monitor</div>
+          <div class="small-card">Analytics</div><div class="small-card">Scheduler</div><div class="small-card">Events</div><div class="small-card">A/B Testing</div><div class="small-card">Multi-modal</div>
+          <div class="small-card">Marketplace</div><div class="small-card">Embed SDK</div><div class="small-card">Auth & Usage</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dark cta" data-cursor="-inverse">
+      <div class="container">
+        <h2>Build agents the right way.</h2>
+        <p>Test before you deploy. Govern in production. Measure everything.</p>
+        <div class="actions">
+          <a class="btn btn-invert" href="#features">Get Started →</a>
+          <a class="btn btn-outline-light upright" href="https://github.com/sukethrp/agentos">Star on GitHub <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.8"/></svg></a>
+        </div>
+        <div class="install" style="background:#2d2d2d;color:var(--surface);border-color:#444;max-width:320px">$ pip install agentos-platform</div>
+      </div>
+    </section>
+  </main>
+  <footer class="footer">
+    <div class="container footer-row">
+      <div>Built by Suketh Reddy Produtoor · Apache 2.0</div>
+      <div><a href="https://github.com/sukethrp/agentos">GitHub</a> · <a href="https://pypi.org/project/agentos-platform/">PyPI</a> · <a href="https://www.linkedin.com/in/sukethprodutoor/">LinkedIn</a> · <a href="https://x.com/SProdutoor45130">X</a></div>
     </div>
-  </div>
-</section>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/mouse-follower@1/dist/mouse-follower.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script src="https://unpkg.com/split-type@0.3.4/umd/index.min.js"></script>
+  <script>
+    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canHover = matchMedia("(hover: hover)").matches;
 
-<!-- ════ EMBED ════ -->
-<section id="embed">
-  <div class="embed-demo">
-    <h3>🔌 Embed in any website — one script tag</h3>
-    <p>Add an AI agent to your product. White-label. Dark/light theme. WebSocket streaming. No build step.</p>
-    <div class="snippet-box">
-&lt;script&gt;<br>
-&nbsp;&nbsp;window.AgentOSConfig = {<br>
-&nbsp;&nbsp;&nbsp;&nbsp;baseUrl: "https://your-server.com",<br>
-&nbsp;&nbsp;&nbsp;&nbsp;agentName: "Support Bot",<br>
-&nbsp;&nbsp;&nbsp;&nbsp;theme: "dark",<br>
-&nbsp;&nbsp;};<br>
-&lt;/script&gt;<br>
-&lt;script src="https://your-server.com/embed/chat.js"&gt;&lt;/script&gt;
-    </div>
-  </div>
-</section>
+    const nav = document.getElementById("nav");
+    const links = [...document.querySelectorAll(".nav-link[href^='#']")];
+    const menuBtn = document.getElementById("menuBtn");
+    const navLinks = document.getElementById("navLinks");
+    const stats = document.getElementById("heroStats");
 
-<!-- ════ TRY WITHOUT API KEYS ════ -->
-<section>
-  <h2 class="center">Try it now — no API keys needed</h2>
-  <p class="section-sub">Demo mode uses a mock AI provider so you can explore every feature of the web platform instantly.</p>
-  <div class="install" style="max-width:680px;margin:0 auto">
-    <code>$ AGENTOS_DEMO_MODE=true python examples/run_web_builder.py</code>
-    <button class="copy" onclick="navigator.clipboard.writeText('AGENTOS_DEMO_MODE=true python examples/run_web_builder.py');this.textContent='Copied!';setTimeout(()=>this.textContent='📋',1500)" title="Copy">📋</button>
-  </div>
-</section>
+    menuBtn.addEventListener("click", () => navLinks.classList.toggle("show"));
 
-<!-- ════ CLI ════ -->
-<section>
-  <h2 class="center">One CLI to rule them all</h2>
-  <p class="section-sub">Scaffold, serve, and test agents from your terminal.</p>
-  <div class="code-block" style="max-width:560px;margin:0 auto">
-    <div class="code-header">
-      <span class="dot" style="background:#ff5f57"></span>
-      <span class="dot" style="background:#ffbd2e"></span>
-      <span class="dot" style="background:#28c840"></span>
-      Terminal
-    </div>
-<pre><span class="cm">$ pip install agentos-platform</span>
-<span class="cm">$ agentos init my-agent</span>
-<span class="st">Created agent project: my-agent/</span>
-<span class="cm">$ cd my-agent</span>
-<span class="cm">$ agentos serve --demo</span>
-<span class="st">INFO:     Uvicorn running on http://0.0.0.0:8000</span></pre>
-  </div>
-</section>
+    const sections = links.map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+    const spy = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove("active"));
+        const a = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+        if (a) a.classList.add("active");
+      }
+    }), { rootMargin: "-40% 0px -50% 0px", threshold: 0.01 });
+    sections.forEach(s => spy.observe(s));
 
-<!-- ════ WEB PLATFORM ════ -->
-<section>
-  <h2 class="center">Full web platform included</h2>
-  <p class="section-sub">One command to launch. 13 sections. Zero configuration.</p>
-  <div class="install" style="max-width:600px;margin:0 auto 40px">
-    <code>$ python examples/run_web_builder.py</code>
-  </div>
-  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🛠️</div><h3 style="font-size:15px">Agent Builder</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">📦</div><h3 style="font-size:15px">Templates</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">💬</div><h3 style="font-size:15px">Streaming Chat</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🌿</div><h3 style="font-size:15px">Branching</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">📊</div><h3 style="font-size:15px">Monitor</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">📈</div><h3 style="font-size:15px">Analytics</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">⏰</div><h3 style="font-size:15px">Scheduler</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">⚡</div><h3 style="font-size:15px">Events</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🧪</div><h3 style="font-size:15px">A/B Testing</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">👁️</div><h3 style="font-size:15px">Multi-modal</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🏪</div><h3 style="font-size:15px">Marketplace</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🔌</div><h3 style="font-size:15px">Embed SDK</h3></div>
-    <div class="card" style="padding:20px;text-align:center"><div class="ic" style="font-size:28px">🔑</div><h3 style="font-size:15px">Auth &amp; Usage</h3></div>
-  </div>
-</section>
+    function setStatValues(animate) {
+      [...stats.querySelectorAll(".stat-num")].forEach(el => {
+        const t = parseFloat(el.dataset.target || 0);
+        const d = parseInt(el.dataset.decimals || 0, 10);
+        const p = el.dataset.prefix || "";
+        const s = el.dataset.suffix || "";
+        if (!animate) {
+          el.textContent = p + t.toFixed(d) + s;
+          return;
+        }
+        const start = performance.now();
+        const dur = 1100;
+        const tick = now => {
+          const k = Math.min((now - start) / dur, 1);
+          el.textContent = p + (t * k).toFixed(d) + s;
+          if (k < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+    }
 
-<!-- ════ FINAL CTA ════ -->
-<section class="final-cta">
-  <h2>Ready to build agents the right way?</h2>
-  <p>Join developers who test before they deploy.</p>
-  <div class="cta">
-    <a href="https://github.com/sukethrp/agentos" class="btn bp">&#9733; Star on GitHub</a>
-    <a href="https://pypi.org/project/agentos-platform/" class="btn bs">Install from PyPI</a>
-  </div>
-  <div class="install" style="margin-top:32px;max-width:500px">
-    <code>$ pip install agentos-platform</code>
-  </div>
-</section>
+    const sObserver = new IntersectionObserver(es => {
+      es.forEach(e => {
+        if (!e.isIntersecting) return;
+        setStatValues(!reduceMotion);
+        sObserver.disconnect();
+      });
+    }, { threshold: 0.4 });
+    sObserver.observe(stats);
 
-<!-- ════ FOOTER ════ -->
-<footer>
-  <div class="social">
-    <a href="https://github.com/sukethrp/agentos">GitHub</a>
-    <a href="https://pypi.org/project/agentos-platform/">PyPI</a>
-    <a href="https://www.linkedin.com/in/sukethprodutoor/">LinkedIn</a>
-    <a href="https://x.com/SProdutoor45130">X / Twitter</a>
-    <a href="https://www.reddit.com/user/SUKETH_11">Reddit</a>
-  </div>
-  <p>Built by <a href="https://github.com/sukethrp">Suketh Reddy Produtoor</a> &middot; Open Source &middot; Apache 2.0</p>
-</footer>
+    document.querySelectorAll(".copy-btn,.code-copy").forEach(btn => btn.addEventListener("click", () => {
+      const text = btn.dataset.copy || btn.parentElement.querySelector("pre").innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const old = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = old || "Copy"; }, 1000);
+      });
+    }));
 
+    document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      document.getElementById("panel-" + t.dataset.tab).classList.add("active");
+    }));
+
+    const heroWords = ["Build", "Test", "Deploy", "Monitor", "Govern"];
+    const heroEl = document.getElementById("heroTagline");
+    const easeHero = "power3.out";
+
+    function renderHeroStatic() {
+      heroEl.textContent = heroWords.join(", ");
+    }
+
+    function initHeroTagline() {
+      if (reduceMotion || typeof gsap === "undefined") {
+        renderHeroStatic();
+        return;
+      }
+      const display = document.createElement("span");
+      display.className = "tagline-display";
+      heroEl.appendChild(display);
+      const tl = gsap.timeline({ delay: 0.4 });
+      heroWords.forEach((word, i) => {
+        tl.call(() => {
+          if (i > 0) {
+            const comma = document.createElement("span");
+            comma.className = "tagline-comma";
+            comma.textContent = ",";
+            display.appendChild(comma);
+          }
+          const mask = document.createElement("span");
+          mask.className = "word-mask";
+          const span = document.createElement("span");
+          span.className = "tagline-word";
+          span.textContent = (i === 0 ? "" : " ") + word;
+          mask.appendChild(span);
+          display.appendChild(mask);
+          gsap.fromTo(span, { yPercent: 110 }, { yPercent: 0, duration: 0.75, ease: easeHero });
+        }, null, i === 0 ? 0 : "+=0.55");
+      });
+    }
+
+    initHeroTagline();
+
+    if (reduceMotion || typeof gsap === "undefined") {
+      window.addEventListener("scroll", () => nav.classList.toggle("scrolled", window.scrollY > 50));
+    } else {
+      gsap.registerPlugin(ScrollTrigger);
+
+      if (canHover && typeof MouseFollower !== "undefined") {
+        document.body.classList.add("custom-cursor");
+        MouseFollower.registerGSAP(gsap);
+        new MouseFollower({ speed: 0.4, skewing: 1.5 });
+      }
+
+      const lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
+      lenis.on("scroll", e => {
+        ScrollTrigger.update();
+        nav.classList.toggle("scrolled", e.scroll > 50);
+      });
+      gsap.ticker.add(t => lenis.raf(t * 1000));
+      gsap.ticker.lagSmoothing(0);
+
+      document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener("click", e => {
+          const id = a.getAttribute("href");
+          if (!id || id === "#") return;
+          const target = document.querySelector(id);
+          if (!target) return;
+          e.preventDefault();
+          lenis.scrollTo(target);
+          navLinks.classList.remove("show");
+        });
+      });
+
+      function magnetic(el, strength = 0.35) {
+        el.addEventListener("mousemove", e => {
+          const rect = el.getBoundingClientRect();
+          const x = e.clientX - rect.left - rect.width / 2;
+          const y = e.clientY - rect.top - rect.height / 2;
+          gsap.to(el, { x: x * strength, y: y * strength, duration: 0.4, ease: "power2.out", overwrite: true });
+        });
+        el.addEventListener("mouseleave", () => {
+          gsap.to(el, { x: 0, y: 0, duration: 0.7, ease: "elastic.out(1, 0.4)", overwrite: true });
+        });
+      }
+
+      if (canHover) {
+        document.querySelectorAll(".btn").forEach(el => magnetic(el));
+      }
+
+      document.querySelectorAll("h2").forEach(heading => {
+        if (typeof SplitType === "undefined") return;
+        const split = new SplitType(heading, { types: "lines" });
+        if (!split.lines) return;
+        split.lines.forEach(line => {
+          const wrap = document.createElement("div");
+          wrap.className = "line-mask";
+          line.parentNode.insertBefore(wrap, line);
+          wrap.appendChild(line);
+        });
+        gsap.set(split.lines, { yPercent: 110 });
+        ScrollTrigger.create({
+          trigger: heading,
+          start: "top 85%",
+          once: true,
+          onEnter: () => {
+            gsap.to(split.lines, { yPercent: 0, duration: 0.9, ease: "power4.out", stagger: 0.1 });
+          }
+        });
+      });
+
+      const revealSel = ".card, .feature-card, .stat, .install, .table-wrap, .pipe-box, .pipe-result, .terminal, .state-card, .code-block, .small-card, .arch-row";
+      gsap.set(revealSel, { opacity: 0, y: 40 });
+      ScrollTrigger.batch(revealSel, {
+        start: "top 88%",
+        once: true,
+        onEnter: batch => {
+          gsap.to(batch, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", stagger: 0.08 });
+        }
+      });
+
+      document.querySelectorAll("[data-parallax]").forEach(el => {
+        const amount = parseFloat(el.dataset.parallax) || 40;
+        gsap.to(el, {
+          y: -amount,
+          ease: "none",
+          scrollTrigger: {
+            trigger: el.closest("section") || el,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: true
+          }
+        });
+      });
+
+      const marqueeSection = document.getElementById("marquee");
+      const marqueeTrack = document.getElementById("marqueeTrack");
+      if (marqueeSection && marqueeTrack) {
+        const marqueeTween = gsap.to(marqueeTrack, {
+          xPercent: -50,
+          duration: 28,
+          ease: "none",
+          repeat: -1
+        });
+        marqueeSection.addEventListener("mouseenter", () => marqueeTween.pause());
+        marqueeSection.addEventListener("mouseleave", () => marqueeTween.play());
+      }
+    }
+  </script>
 </body>
 </html>
