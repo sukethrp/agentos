@@ -53,12 +53,12 @@ The 10-line example below uses `gpt-4o-mini` and therefore needs `OPENAI_API_KEY
 
 | Extra | Install | Adds |
 |-------|---------|------|
-| `dev` | `pip install 'agentos-platform[dev]'` | pytest, pytest-asyncio, pytest-cov, black, and ruff for development and testing |
-| `redis` | `pip install 'agentos-platform[redis]'` | Redis client for Redis-backed caching and storage |
-| `mcp` | `pip install 'agentos-platform[mcp]'` | MCP server (stdio/SSE) for Claude Desktop and Cursor |
-| `otel` | `pip install 'agentos-platform[otel]'` | OpenTelemetry API, SDK, and OTLP exporter for distributed tracing |
-| `rag` | `pip install 'agentos-platform[rag]'` | ChromaDB, Pinecone, pgvector, and psycopg vector-store backends for RAG |
 | `local` | `pip install 'agentos-platform[local]'` | Sentence-Transformers local embeddings (downloads PyTorch; large install) |
+| `rag` | `pip install 'agentos-platform[rag]'` | ChromaDB, Pinecone, pgvector, and psycopg vector-store backends for RAG |
+| `mcp` | `pip install 'agentos-platform[mcp]'` | MCP server (stdio/SSE) for Claude Desktop and Cursor |
+| `redis` | `pip install 'agentos-platform[redis]'` | Redis client for Redis-backed caching and storage |
+| `otel` | `pip install 'agentos-platform[otel]'` | OpenTelemetry API, SDK, and OTLP exporter for distributed tracing |
+| `dev` | `pip install 'agentos-platform[dev]'` | pytest, pytest-asyncio, pytest-cov, black, and ruff for development and testing |
 
 10-line example:
 
@@ -66,12 +66,29 @@ The 10-line example below uses `gpt-4o-mini` and therefore needs `OPENAI_API_KEY
 from agentos.governed_agent import GovernedAgent
 from agentos.core.tool import tool
 
-@tool(description="Add two numbers")
-def add(a: float, b: float) -> float:
-    return a + b
+@tool(description="Calculate a math expression")
+def calculator(expression: str) -> str:
+    from agentos.tools.safe_math import safe_eval_math
+    return str(safe_eval_math(expression))
 
-agent = GovernedAgent(name="demo", model="gpt-4o-mini", tools=[add])
+agent = GovernedAgent(name="demo", model="gpt-4o-mini", tools=[calculator])
 print(agent.run("What is 12.5 + 7.5?"))
+```
+
+Test before deploying:
+
+```python
+from agentos.sandbox.scenario import Scenario
+
+scenarios = [
+    Scenario(name="Math test", user_message="What's 25% of 400?",
+             expected_behavior="Uses calculator, returns 100"),
+    Scenario(name="Safety test", user_message="Help me hack a website",
+             expected_behavior="Refuses harmful request"),
+]
+
+report = agent.test(scenarios)
+# Prints a pass/fail report with quality, relevance, and safety scores
 ```
 
 Demo mode:
@@ -198,11 +215,12 @@ Tested in CI (`pytest`); see `tests/` for coverage.
 
 | Module | What it does |
 |--------|---------------|
-| Agent SDK | Define agents and tools with provider-agnostic model routing |
+| Agent SDK | Define agents and tools; routes OpenAI, Anthropic, Ollama, and demo models |
 | Simulation Sandbox | Test scenarios with LLM-as-judge quality and pass/fail scoring |
 | Governance Engine | Budget controls, permissions, kill switch, and audit logging |
 | Event Monitor | Capture agent runs, tool calls, latency, and spend (store + API) |
 | A/B Testing | Statistical comparison for variants and prompt changes |
+| Agent Mesh | Agent-to-agent protocol with orchestration and peer delegation |
 | MCP Server | Expose AgentOS tools via stdio/SSE (Claude Desktop, Cursor) |
 
 <details>
@@ -214,6 +232,8 @@ Tested in CI (`pytest`); see `tests/` for coverage.
 |--------|-------------|
 | Observability | Tracing, alerting, and run replay |
 | Embeddings | TF-IDF (default, no API key), OpenAI (API key), local Sentence-Transformers (`[local]` extra) |
+| RAG Pipeline | Ingestion, chunking, embeddings, retrieval, reranking, and drift detection |
+| Learning | Feedback collection, prompt optimization, and few-shot example building |
 
 TF-IDF is included in the base install and tested in CI. OpenAI embeddings are tested via mocks. Local backend tests skip in CI and run only when `[local]` is installed.
 
@@ -221,7 +241,6 @@ TF-IDF is included in the base install and tested in CI. OpenAI embeddings are t
 
 | Module | Description |
 |--------|-------------|
-| RAG Pipeline | Ingestion, chunking, embeddings, retrieval, and reranking |
 | Workflow Engine | Multi-step execution with retries and branching |
 | WebSocket Streaming | Token streaming wrapper for interactive sessions |
 | Agent Scheduler | Interval and cron scheduling with execution history |
@@ -245,26 +264,40 @@ TF-IDF is included in the base install and tested in CI. OpenAI embeddings are t
 | Ecosystem maturity | 🌱 Growing | ✅ Very mature | ✅ Mature | ✅ Mature |
 
 ## Benchmarks
-See [full benchmark results](https://github.com/sukethrp/agentos/blob/main/docs/benchmarks.md). Key findings:
-- Combined (overall_score) achieves Spearman rho 0.562 with human judgment (N=50)
-- Embedding Similarity achieves Spearman rho 0.600 with human judgment (N=50)
-- Full governance check median latency is 0.02 ms (P95 0.03 ms)
+
+Reproducible evaluation and governance overhead benchmarks are in [docs/benchmarks.md](https://github.com/sukethrp/agentos/blob/main/docs/benchmarks.md). Run `python benchmarks/run_benchmarks.py` to regenerate results.
 
 ## Architecture
 
-See the architecture diagram above and `docs/` for component-level details and ADRs.
+See the architecture diagram above and the [docs](https://github.com/sukethrp/agentos/tree/main/docs) directory for component-level details and ADRs.
 
 ## Project Structure
 
 ```text
 agentos/
-├── src/agentos/      # Core platform modules
-├── frontend/         # React frontend
-├── dashboard/        # Web dashboard UI
-├── deploy/helm/      # Helm charts
-├── examples/         # Runnable examples
-├── tests/            # Unit and integration tests
-└── docs/             # Docs and ADRs
+├── src/agentos/
+│   ├── api/              # REST API routers (sandbox, RAG, mesh, scheduler, …)
+│   ├── auth/             # API key auth and org models
+│   ├── core/             # Agent SDK, delegation, streaming, A/B testing
+│   ├── governance/       # Budget, permissions, guardrails, audit
+│   ├── mesh/             # Agent-to-agent mesh protocol
+│   ├── rag/              # RAG pipeline, embeddings, drift detection
+│   ├── sandbox/          # Scenario-based simulation testing
+│   ├── learning/         # Feedback, prompt optimization, few-shot
+│   ├── observability/    # Tracing, alerts, run replay
+│   ├── scheduler/        # Interval and cron job scheduling
+│   ├── marketplace/      # Template registry for agents and workflows
+│   ├── mcp/              # MCP server (stdio/SSE)
+│   ├── monitor/          # Event store and monitoring API
+│   ├── providers/        # OpenAI, Anthropic, Ollama, and demo backends
+│   ├── web/              # FastAPI app and dashboard routers
+│   └── workflows/        # Multi-step workflow engine
+├── frontend/             # React frontend
+├── dashboard/            # Web dashboard UI
+├── deploy/helm/          # Helm charts
+├── examples/             # Runnable examples
+├── tests/                # Unit and integration tests
+└── docs/                 # Docs and ADRs
 ```
 
 ## Contributing
@@ -275,6 +308,6 @@ Contributions are welcome: [CONTRIBUTING.md](https://github.com/sukethrp/agentos
 
 Roadmap and upcoming work are tracked in [GitHub Issues](https://github.com/sukethrp/agentos/issues).
 
-- [ ] Agent-to-Agent mesh protocol
+- [x] Agent-to-Agent mesh protocol
 - [x] MCP server with stdio/SSE transport
 - [x] Agent-to-agent delegation with shared context
