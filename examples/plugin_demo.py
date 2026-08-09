@@ -8,13 +8,13 @@ Shows:
   5. Run queries using those tools
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from agentos.plugins import PluginManager
 from agentos.core.agent import Agent
+from agentos.plugins import PluginManager
 from agentos.tools import get_builtin_tools
 
 

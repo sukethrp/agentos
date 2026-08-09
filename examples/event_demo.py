@@ -13,12 +13,12 @@ import time
 sys.path.insert(0, "src")
 
 from agentos.core.agent import Agent
-from agentos.tools import get_builtin_tools
 from agentos.events import (
-    event_bus,
-    TimerTrigger,
     AgentCompleteTrigger,
+    TimerTrigger,
+    event_bus,
 )
+from agentos.tools import get_builtin_tools
 
 
 def divider(title: str) -> None:

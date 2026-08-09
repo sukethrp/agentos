@@ -18,13 +18,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from agentos.core.agent import Agent  # noqa: E402
-from agentos.core.multimodal import analyze_image, read_document  # noqa: E402
-from agentos.tools.vision_tool import vision_tool  # noqa: E402
-from agentos.tools.document_tool import (  # noqa: E402
-    document_reader_tool,
+from agentos.core.agent import Agent
+from agentos.core.multimodal import analyze_image, read_document
+from agentos.tools.document_tool import (
     document_qa_tool,
+    document_reader_tool,
 )
+from agentos.tools.vision_tool import vision_tool
 
 
 def demo_image_analysis():

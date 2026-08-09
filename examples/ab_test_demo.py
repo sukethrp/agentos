@@ -5,8 +5,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from agentos.core.agent import Agent  # type: ignore
 from agentos.core.ab_testing import ABTest, clone_agent  # type: ignore
+from agentos.core.agent import Agent  # type: ignore
 from agentos.tools import get_builtin_tools  # type: ignore
 
 

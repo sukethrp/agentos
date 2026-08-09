@@ -1,16 +1,18 @@
 """Run agents with the monitoring dashboard."""
 
 import sys
+
 sys.path.insert(0, "src")
 
 import threading
 import time
-import uvicorn
-from agentos.core.tool import tool
-from agentos.core.agent import Agent
-from agentos.monitor.store import store
-from agentos.monitor.server import app
 
+import uvicorn
+
+from agentos.core.agent import Agent
+from agentos.core.tool import tool
+from agentos.monitor.server import app
+from agentos.monitor.store import store
 
 # --- Tools ---
 

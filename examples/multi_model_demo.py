@@ -1,10 +1,11 @@
 """AgentOS Multi-Model Demo — Same agent, different brains."""
 
 import sys
+
 sys.path.insert(0, "src")
 
-from agentos.core.tool import tool
 from agentos.core.agent import Agent
+from agentos.core.tool import tool
 from agentos.providers.router import list_providers
 
 

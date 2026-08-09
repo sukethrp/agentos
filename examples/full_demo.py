@@ -9,14 +9,14 @@ This demo shows the ENTIRE AgentOS platform:
 """
 
 import sys
+
 sys.path.insert(0, "src")
 
-from agentos.governed_agent import GovernedAgent
 from agentos.core.tool import tool
 from agentos.governance.budget import BudgetGuard
 from agentos.governance.permissions import PermissionGuard
+from agentos.governed_agent import GovernedAgent
 from agentos.sandbox.scenario import Scenario
-
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STEP 1: Define tools (any Python function)

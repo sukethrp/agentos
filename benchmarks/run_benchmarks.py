@@ -16,7 +16,6 @@ from agentos.governance.permissions import PermissionGuard
 from agentos.rag.embeddings import get_embeddings
 from agentos.sandbox.metrics import evaluate_response
 
-
 DATA_DIR = Path("benchmarks/data")
 EVAL_DATASET = DATA_DIR / "evaluation_responses.json"
 DOCS_PATH = Path("docs/benchmarks.md")

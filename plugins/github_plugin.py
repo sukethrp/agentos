@@ -14,8 +14,8 @@ Uses only the standard library (urllib) — no httpx/requests required.
 import json
 import os
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 

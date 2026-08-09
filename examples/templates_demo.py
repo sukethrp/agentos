@@ -1,10 +1,10 @@
 """AgentOS Templates Demo — Pre-built agents ready to deploy."""
 
 import sys
+
 sys.path.insert(0, "src")
 
 from agentos.templates import list_templates, load_template
-
 
 if __name__ == "__main__":
     print("=" * 60)

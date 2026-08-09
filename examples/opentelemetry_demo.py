@@ -36,10 +36,9 @@ sys.path.insert(0, "src")
 
 os.environ.setdefault("AGENTOS_DEMO_MODE", "true")
 
-from agentos.telemetry import setup
-from agentos.core.tool import tool
 from agentos.core.agent import Agent
-
+from agentos.core.tool import tool
+from agentos.telemetry import setup
 
 # ── 1. Configure OpenTelemetry ──────────────────────────────────────────
 

@@ -19,7 +19,6 @@ from agentos.core.tool import tool
 from agentos.mesh import AgentMesh
 from agentos.tools.safe_math import safe_eval_math
 
-
 # ── Define specialist tools ──
 
 @tool(description="Calculate a math expression safely")

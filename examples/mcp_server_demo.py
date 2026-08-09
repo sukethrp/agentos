@@ -19,7 +19,6 @@ To use:
 from agentos.core.tool import tool
 from agentos.mcp import MCPServer
 
-
 # ── Define tools using the standard AgentOS @tool decorator ──────────────
 
 
