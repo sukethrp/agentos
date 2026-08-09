@@ -1,10 +1,15 @@
 # Scratch: issues to file on GitHub
 
-Not documentation. Delete this file once both issues are filed.
+Not documentation. Delete this file once all six issues are filed.
 
-Both bugs predate the `replay.py` → `run_viewer.py` rename and were deliberately
+Issues 1-2 predate the `replay.py` → `run_viewer.py` rename and were deliberately
 left unfixed by that PR so the rename stayed behavior-preserving. Line numbers
 refer to `src/agentos/observability/run_viewer.py` after the rename.
+
+Issues 3-6 were found while wiring the PROVIDER seam into `providers/router.py`
+and are likewise left unfixed, so that change stayed a pure interception edit.
+Issue 3 is a live user-facing bug; 4-6 are structural rot in the provider layer
+and are best fixed together.
 
 ---
 
@@ -114,3 +119,208 @@ Restore the glyphs, or drop the icon machinery. If restoring, note that the
 that one first or the amber glyph will still never appear. Also strip the now
 double-space in the `f"  {icon} Frame ..."` f-string if the icons are removed
 rather than restored.
+
+---
+
+## Issue 3 — Plugin-registered providers are unreachable, and the model silently falls back to OpenAI
+
+**Labels:** bug, plugins, providers
+
+### What happens
+
+A plugin can register a model provider, the registration succeeds, the plugin
+stats report it, and then the provider is never callable. Worse, asking for it
+by name does not fail loudly: the request is silently routed to OpenAI.
+
+### Repro
+
+```python
+# my_plugin.py
+def register(ctx):
+    ctx.add_provider("myllm", my_completion_fn)
+```
+
+```python
+agent = Agent(name="a", model="myllm:7b")
+agent.run("hello")     # -> attempts an OpenAI call, not my_completion_fn
+```
+
+### Why
+
+The registry and the router are two unconnected halves.
+
+`PluginContext.add_provider` stores the callable on the context:
+
+```python
+# src/agentos/plugins/base.py:42
+def add_provider(self, name: str, provider_fn: Callable) -> None:
+    """Register a model provider by name."""
+    self.providers[name] = provider_fn
+```
+
+`PluginManager.get_providers()` (`manager.py:177`) reads that dict back out. But
+nothing calls it. `providers/router.py` dispatches purely on
+`detect_provider(model)`, which recognises only `openai`, `anthropic`, and
+`ollama` — and whose final branch is:
+
+```python
+else:
+    return "openai"  # default fallback
+```
+
+So an unrecognised provider prefix does not raise, it becomes an OpenAI call
+with a model name OpenAI has never heard of. If `OPENAI_API_KEY` happens to be
+set, that is a real billed request that fails confusingly; if it is not set, the
+error names OpenAI rather than the plugin, and the user has no reason to suspect
+their plugin was never wired up.
+
+### Impact
+
+Plugin providers are the advertised extension point for adding a backend. Today
+that extension point is inert. This is a correctness bug rather than a missing
+feature, because the failure is silent and misattributed.
+
+### What the fix probably is
+
+Two independent pieces, and the second is worth doing even if the first is
+deferred:
+
+1. Have `router.py` consult `PluginManager.get_providers()` before falling back,
+   and dispatch to the registered callable when the name matches. The plugin
+   callable already has to match the `call_llm` signature to be useful, so
+   document that contract while you are there.
+2. Make `detect_provider`'s fallback loud. Silently defaulting to OpenAI for an
+   unknown prefix hides this bug and every future one like it. An explicit
+   `UnknownProviderError` naming the model string and listing known providers
+   would have surfaced this immediately.
+
+### Note for whoever picks this up
+
+The PROVIDER replay seam wraps `call_model` and `call_model_stream`, so any
+provider reachable through the router is recorded automatically. Plugin
+providers are therefore also unrecorded today, but that is a consequence of this
+bug, not a separate one: fix the dispatch and they are covered with no further
+work in the replay layer.
+
+---
+
+## Issue 4 — `providers/demo_provider.py` is orphaned dead code
+
+**Labels:** cleanup, providers
+
+### What happens
+
+`src/agentos/providers/demo_provider.py` (201 lines, exporting `call_demo` and
+`call_demo_stream`) has no importers anywhere in `src/`, `tests/`, or
+`examples/`. The only mention of it in the repository is a comment in
+`mock.py:343` referring to its signature.
+
+Demo mode does not use it. `is_demo_mode()` causes `router.py` to route to
+`mock.call_mock` / `mock.call_mock_stream` instead.
+
+### Why it matters
+
+It is a plausible-looking second implementation of the demo path. Anyone
+debugging demo-mode behavior, or trying to make the quickstart offline, will
+read it and change it, and nothing will happen. It also duplicates the
+templated-response logic in `mock.py`, so the two can drift apart silently.
+
+### What the fix probably is
+
+Delete it, or wire it in and delete the duplicated half of `mock.py`. Pick one.
+If it is kept for a future replay-backed demo provider (see
+`docs/REPLAY_INTEGRATION.md`, "Replay provider as the honest demo mode"), say so
+in its module docstring so the next reader knows it is intentionally dormant.
+
+---
+
+## Issue 5 — The `PROVIDERS` registry in `providers/__init__.py` is dead code
+
+**Labels:** cleanup, providers
+
+### What happens
+
+`src/agentos/providers/__init__.py` builds a name-to-class registry:
+
+```python
+PROVIDERS: dict[str, type] = {"mock": MockProvider}
+# ... plus AnthropicProvider and OllamaProvider, guarded by ImportError
+```
+
+Nothing outside that file ever reads `PROVIDERS`. The router does not consult
+it; the only other repository hit for the name is an unrelated
+`PHI_APPROVED_PROVIDERS` constant in `compliance/policy_engine.py`.
+
+### Why it matters
+
+It reads as the provider registry, so it is the first thing a contributor will
+try to extend when adding a backend, and extending it does nothing. It also
+carries the misleading implication that provider selection is class-based, when
+the live path is module-level functions.
+
+Note also that the registry is incomplete in a way that reveals it is unused:
+there is no `openai` entry, because no `OpenAIProvider` class exists (Issue 6).
+
+### What the fix probably is
+
+Delete it, or make it the real dispatch table. If the latter, it pairs naturally
+with Issue 3 and Issue 6: one registry that covers built-in and plugin providers
+alike, consulted by `router.py`.
+
+---
+
+## Issue 6 — The provider layer is structurally inconsistent: three classes, four backends
+
+**Labels:** refactor, providers
+
+### What happens
+
+`BaseProvider` (`providers/base.py`) declares an async interface:
+
+```python
+async def chat_completion(self, messages, tools, model, temperature, max_tokens, agent_name)
+async def stream(self, messages, tools, model, temperature, max_tokens, agent_name)
+```
+
+Three classes implement it — `MockProvider`, `AnthropicProvider`,
+`OllamaProvider` — but `openai_provider.py` has no class at all, only
+`call_llm` and `call_llm_stream`. So the abstraction covers three of the four
+backends, and the one that is the default is the one missing.
+
+Meanwhile the classes are not the live path either. `call_anthropic` and
+`call_ollama` are thin sync wrappers that construct the class and `asyncio.run`
+it:
+
+```python
+def call_anthropic(messages, tools, model=..., ...):
+    provider = AnthropicProvider()
+    return asyncio.run(provider.chat_completion(...))
+```
+
+So there are effectively two provider layers: an async class hierarchy that is
+only ever entered through sync wrappers, and the sync module functions the
+router actually dispatches to.
+
+### Why it matters
+
+- `BaseProvider` cannot be used as a single point to add cross-cutting behavior
+  (retries, recording, budget checks) because OpenAI does not go through it.
+  This is the concrete reason the replay PROVIDER seam wraps `router.call_model`
+  rather than the base class.
+- `asyncio.run` per call means an event loop is created and destroyed per
+  completion, and it will raise if ever called from inside a running loop. That
+  is a latent bug for any async caller.
+- New contributors cannot tell which layer is canonical, so new backends get
+  added to whichever one they read first.
+
+### What the fix probably is
+
+Pick one layer and make it the only one. The lower-risk direction is to treat
+the sync module functions as canonical, since that is what the router and every
+consumer already use, and delete or clearly demote `BaseProvider` and its
+subclasses. The more ambitious direction is to make the async classes canonical,
+add an `OpenAIProvider`, and give the seam an async interception path — which is
+a much larger change and would need `intercept()` to grow an async variant.
+
+Either way this should be decided in an ADR, because it determines where every
+future cross-cutting concern gets to live.

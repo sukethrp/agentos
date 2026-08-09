@@ -9,6 +9,14 @@ Design invariants (see docs/DETERMINISM.md):
    and events reference them by digest. Events stay small and greppable.
 4. `schema_version` is written into every run header. Readers refuse to load a
    major version they do not understand rather than guessing.
+
+Schema history:
+
+- 0.1.0 initial M0 schema.
+- 0.2.0 adds `RunHeader.seam_codecs` and `RunHeader.replayed_from`. Major stays
+  0, so 0.1.0 traces still load and both fields take their defaults. A legacy
+  trace therefore declares no codecs, which reads as "unknown" rather than
+  "matches"; see `Replayer` for how that is treated.
 """
 
 from __future__ import annotations
@@ -24,7 +32,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
 
-SCHEMA_VERSION = "0.1.0"
+SCHEMA_VERSION = "0.2.0"
 DIGEST_ALGO = "b2b"  # blake2b-256; swap for "b3" once blake3 is a dependency
 _NULL_DIGEST = f"{DIGEST_ALGO}:" + "0" * 64
 
@@ -106,10 +114,35 @@ class RunHeader:
     policy: str = "strict"
     redactor_version: str = "0"
     labels: dict[str, str] = field(default_factory=dict)
+    # seam kind -> fingerprint over that seam's digested field names plus its
+    # codec version. If the recorder and the replayer disagree here, every
+    # input digest is computed over a different projection and comparing them
+    # is meaningless, so `Replayer` refuses rather than reporting divergence.
+    seam_codecs: dict[str, str] = field(default_factory=dict)
+    # Set when this run was produced by replaying another. A replayed run
+    # carries the ORIGINAL timestamps and latencies in its AgentEvents, so
+    # anything aggregating runs must exclude these or the numbers are fiction.
+    replayed_from: str | None = None
 
     @staticmethod
     def new(**kwargs: Any) -> RunHeader:
         return RunHeader(run_id=uuid.uuid4().hex, **kwargs)
+
+    @property
+    def is_replay(self) -> bool:
+        return self.replayed_from is not None
+
+    def derive_replay(self, run_id: str | None = None) -> RunHeader:
+        """Header for a new run produced by replaying this one.
+
+        Keeps the recorded provenance (git sha, seed, codecs) so the replay is
+        comparable, but takes a fresh `run_id` and marks `replayed_from`.
+        """
+        d = asdict(self)
+        d["run_id"] = run_id or uuid.uuid4().hex
+        d["replayed_from"] = self.run_id
+        d["created_at_ns"] = time.time_ns()
+        return RunHeader(**d)
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)

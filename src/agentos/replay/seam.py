@@ -26,13 +26,14 @@ from __future__ import annotations
 import contextvars
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Protocol, TypeVar
 
 from .schema import (
     EventStatus,
+    RunHeader,
     SeamKind,
     TraceEvent,
     call_site_id,
@@ -50,6 +51,7 @@ __all__ = [
     "Recorder",
     "ReplayedError",
     "Replayer",
+    "SeamCodecMismatch",
     "call_site_id",
     "current_interceptor",
     "intercept",
@@ -87,6 +89,33 @@ class ReplayedError(RuntimeError):
         super().__init__(f"{error_type}: {error_message}")
         self.error_type = error_type
         self.error_message = error_message
+
+
+class SeamCodecMismatch(RuntimeError):
+    """The trace and this build disagree about what a seam's inputs mean.
+
+    Raised at `Replayer` construction, deliberately before any event is
+    compared. A codec fingerprint covers the set of digested field names plus
+    the codec version, so a mismatch means every `input_digest` in the trace was
+    computed over a different projection than the one this build produces.
+    Reporting that as ordinary divergence would blame the agent for a change in
+    the recording apparatus, which is the most expensive kind of wrong answer.
+    """
+
+    def __init__(
+        self, seam: str, recorded: str | None, current: str | None, detail: str = ""
+    ) -> None:
+        super().__init__(
+            f"seam codec mismatch for {seam!r}: trace recorded {recorded!r}, "
+            f"this build produces {current!r}. "
+            f"{detail}"
+            "The digested field set or the codec version changed, so input "
+            "digests from this trace are not comparable. Re-record the trace "
+            "with the current build, or check out the build that recorded it."
+        )
+        self.seam = seam
+        self.recorded = recorded
+        self.current = current
 
 
 class Interceptor(Protocol):
@@ -233,6 +262,35 @@ class Recorder:
         self.events.append(ev)
 
 
+def _check_seam_codecs(recorded: Mapping[str, str], current: Mapping[str, str]) -> None:
+    """Refuse to replay a trace whose seam codecs differ from this build's.
+
+    Asymmetric on purpose:
+
+    - a seam the trace declares but this build does not provide is fatal, since
+      nothing here knows how to read those payloads;
+    - a differing fingerprint is fatal, since every input digest was taken over
+      a different projection;
+    - a seam this build provides but the trace never declares is allowed. That
+      is what a 0.1.0 trace looks like after the 0.2.0 field defaults in, and
+      what a run that simply never hit the seam looks like. Unknown is not the
+      same as mismatched, and refusing here would make every pre-0.2.0 trace
+      unreadable for no evidence.
+    """
+    for seam, recorded_fp in recorded.items():
+        current_fp = current.get(seam)
+        if current_fp is None:
+            raise SeamCodecMismatch(
+                seam,
+                recorded_fp,
+                None,
+                f"This build provides no codec for {seam!r} "
+                f"(it provides: {sorted(current) or 'none'}). ",
+            )
+        if current_fp != recorded_fp:
+            raise SeamCodecMismatch(seam, recorded_fp, current_fp)
+
+
 class Replayer:
     """Serves recorded outputs. Makes zero live calls under STRICT."""
 
@@ -242,9 +300,14 @@ class Replayer:
         blobs: BlobStore,
         policy: DivergencePolicy = DivergencePolicy.STRICT,
         redactor: Callable[[Any], Any] | None = None,
+        header: RunHeader | None = None,
+        codecs: Mapping[str, str] | None = None,
     ) -> None:
+        if header is not None and codecs is not None:
+            _check_seam_codecs(header.seam_codecs, codecs)
         self.policy = policy
         self.blobs = blobs
+        self.header = header
         # Must be the SAME redactor the recorder used, or every input digest
         # mismatches and every replay looks like a divergence.
         self.redactor = redactor or (lambda x: x)

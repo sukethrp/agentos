@@ -2,6 +2,10 @@
 
 Hermetic execution replay. Distinct from `agentos.observability`, which renders
 recorded runs for humans; this module reproduces them for machines.
+
+`agentos.replay.provider` is intentionally absent from these exports. It is the
+only submodule here that imports `agentos.core`, and keeping it off the package
+surface is what lets `import agentos.replay` stay stdlib-only. See ADR-008.
 """
 
 from .schema import (
@@ -22,6 +26,7 @@ from .seam import (
     Recorder,
     ReplayedError,
     Replayer,
+    SeamCodecMismatch,
     current_interceptor,
     intercept,
     use_interceptor,
@@ -40,6 +45,7 @@ __all__ = [
     "ReplayedError",
     "Replayer",
     "RunHeader",
+    "SeamCodecMismatch",
     "SeamKind",
     "TraceEvent",
     "TraceReader",

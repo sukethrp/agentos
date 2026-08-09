@@ -7,7 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Deterministic replay now covers the `PROVIDER` seam. `providers.router`'s
+  `call_model` and `call_model_stream` route through
+  `agentos.replay.provider`, so all four backends are recorded by one edit at
+  the choke point rather than per backend. Streaming records chunk boundaries
+  as a list and replays them unmodified, so a WebSocket consumer sees the same
+  boundaries it saw live.
+
+  Two surfaces are knowingly **not** covered: plugin-registered providers,
+  which the router never dispatches to (see `docs/_issues_to_file.md` issue 3),
+  and `top_p` / `seed` / `response_format` / `stop`, which no provider in this
+  repository accepts yet.
+
+- `RunHeader.seam_codecs` records a fingerprint per seam over its digested
+  field names plus its codec version. `Replayer` refuses to replay a trace
+  whose fingerprint differs from the current build, rather than comparing
+  digests taken over different projections and blaming the agent for it.
+
+- `RunHeader.replayed_from` marks runs produced by replay. Their `AgentEvent`s
+  carry the original timestamps and latencies, so anything aggregating runs
+  must exclude them.
+
 ### Changed
+
+- Trace `SCHEMA_VERSION` is now `0.2.0`. The major version stays `0`, so
+  existing traces still load and the two new header fields take their defaults.
+  A pre-0.2.0 trace declares no seam codecs, which is treated as unknown rather
+  than as a mismatch.
 
 - **BREAKING:** Renamed `agentos.observability.replay` to
   `agentos.observability.run_viewer` to end the name collision with the new
