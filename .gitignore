@@ -50,6 +50,8 @@ Thumbs.db
 frontend/node_modules/
 frontend/dist/
 
-# AgentOS replay traces (ad hoc runs; scenario fixtures are committed)
-.agentos/runs/
-.agentos/blobs/
+# AgentOS replay traces (ad hoc runs; scenario fixtures are committed).
+# `agentos record` also writes a header index and future subdirectories under
+# .agentos/, so ignore the whole trace root rather than the two known children.
+.agentos/
+!tests/fixtures/traces/
