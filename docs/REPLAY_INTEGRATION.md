@@ -9,21 +9,48 @@ Record every nondeterministic thing an agent run touches, so the run can be
 re-executed offline byte for byte; once runs are reproducible, "which change
 broke my agent" becomes a binary search instead of a guess.
 
-## Naming and the collision with `observability/`
+## Naming and the collision with `observability/` — RESOLVED
 
-`src/agentos/observability/` already advertises "tracing, alerts, and run
-replay." That is almost certainly render-a-past-run-for-a-human. This module is
+`src/agentos/observability/` advertised "tracing, alerts, and run replay." That
+turned out to be render-a-past-run-for-a-human: a pure formatter over an
+in-memory `Trace` that re-executes nothing and crosses no seams. This module is
 re-execute-a-past-run-hermetically-for-a-machine. Different jobs, and the second
 one is the debugger.
 
-Resolution, decide this in the first PR and write it in the module docstring:
+Resolved in [ADR-008](adr/008-run-viewer-vs-hermetic-replay.md):
 
 - `agentos.observability` keeps human-facing tracing, OTel export, and alerting.
-- `agentos.replay` owns the hermetic trace format, record, replay, diff, bisect.
-- Whatever `observability` currently calls "run replay" either moves under
-  `agentos/replay/render.py` or gets renamed to `run_viewer`. Do not ship two
-  things called replay in the same package; that ambiguity will cost you every
-  time you write a README sentence about it.
+- `agentos.replay` owns the hermetic trace format, record, replay, diff, bisect,
+  and owns the word "replay" unqualified.
+- `observability/replay.py` was **renamed to `observability/run_viewer.py`**
+  (`Replay` → `RunView`, `ReplayFrame` → `ViewFrame`, `build_replay` →
+  `build_run_view`). It was NOT moved under `agentos/replay/render.py`.
+
+### Why renamed in place rather than moved
+
+The choice matters more than it looks, so the reasoning is recorded here as well
+as in the ADR.
+
+**Dependency direction.** The renderer is built entirely on
+`observability.tracer.Trace` and `observability.diagnostics.Diagnosis`. Moving
+the file under `agentos/replay/` would make the hermetic subsystem import the
+human-facing one. That is backwards: the debugger must be usable in a CI
+container with no dashboard, no alerting, and no tracer. The dashboard may
+depend on the debugger; never the reverse.
+
+**Hard rule 6.** `.cursor/rules/determinism.mdc` requires this subsystem to run
+on "a laptop with stdlib plus a hashing library." Importing `observability`
+drags in the tracing and diagnostics stack, and since `replay/__init__.py`
+re-exports eagerly, every consumer of `agentos.replay` would pay that cost.
+
+**Different data types.** The renderer consumes `Trace` and `TraceStep`; this
+subsystem produces `RunHeader` and `TraceEvent`. Relocating the file is not a
+move, it is a port to a schema that has no renderer requirement yet, while the
+trace store, the HTTP router, and the dashboard all still speak `Trace`.
+
+When a `TraceEvent` renderer is eventually wanted, add `agentos/replay/render.py`
+as new code that imports nothing from `observability`. The question does not
+arise then, which is the point.
 
 ## Seam map
 

@@ -14,6 +14,8 @@ decision, rationale, alternatives considered, and consequences.
 | [004](004-json-file-storage-over-database.md) | JSON File Storage Over a Database | Accepted |
 | [005](005-governed-agent-class-over-decorators.md) | Single GovernedAgent Class Over Separate Decorators | Accepted |
 | [006](006-agent-mesh-protocol.md) | Agent Mesh Protocol for Multi-Agent Communication | Accepted |
+| [007](007-embedding-backends.md) | Multiple Embedding Backends for RAG | Accepted |
+| [008](008-run-viewer-vs-hermetic-replay.md) | Separate `run_viewer` Rendering From Hermetic `replay` | Accepted |
 
 ## Contributing
 
