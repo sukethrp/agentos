@@ -38,7 +38,7 @@ import re
 import runpy
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 EXIT_OK = 0
@@ -62,6 +62,33 @@ class _BisectSafeParser(argparse.ArgumentParser):
         self.print_usage(sys.stderr)
         print(f"{self.prog}: error: {message}", file=sys.stderr)
         raise SystemExit(EXIT_UNTESTABLE)
+
+
+class _ToolFailure(Exception):
+    """Recorder/replayer infrastructure failed; bisect must SKIP (exit 125)."""
+
+
+class _InfraGuardedInterceptor:
+    """Wrap an interceptor so store/codec bugs are not misread as target failures.
+
+    `intercept` runs inside the target's call stack. Without this, a blob-store
+    `OSError` looks identical to the target raising, and we would exit 1 (bisect
+    BAD) for a bug in our tool. DivergenceError and ReplayedError are replay
+    verdicts and must propagate unchanged.
+    """
+
+    def __init__(self, inner: object) -> None:
+        self._inner = inner
+
+    def intercept(self, *args: object, **kwargs: object) -> object:
+        from agentos.replay import DivergenceError, ReplayedError
+
+        try:
+            return self._inner.intercept(*args, **kwargs)  # type: ignore[attr-defined]
+        except (DivergenceError, ReplayedError):
+            raise
+        except Exception as exc:
+            raise _ToolFailure(f"{type(exc).__name__}: {exc}") from exc
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -325,16 +352,25 @@ def _git_provenance(cwd: Path) -> tuple[str | None, bool]:
 
     def _git(*argv: str) -> str | None:
         try:
+            # check=False on purpose: outside a git repo (or with git missing)
+            # we degrade to None. check=True would raise and abort recording.
+            # An empty-string sha is worse than None — the drift check would
+            # compare against garbage and never fire — so nonzero returncode
+            # and empty stdout both become None.
             done = subprocess.run(
                 ["git", *argv],
                 cwd=cwd,
                 capture_output=True,
                 text=True,
                 timeout=10,
+                check=False,
             )
         except (OSError, subprocess.SubprocessError):
             return None
-        return done.stdout.strip() if done.returncode == 0 else None
+        if done.returncode != 0:
+            return None
+        out = done.stdout.strip()
+        return out or None
 
     return _git("rev-parse", "HEAD"), bool(_git("status", "--porcelain"))
 
@@ -483,36 +519,56 @@ def _cmd_record(args) -> int:
     )
 
     outcome = EXIT_OK
-    with TraceWriter(args.trace_dir, header) as writer:
-        recorder = Recorder(writer)
-        try:
-            with use_interceptor(recorder):
-                _run_target(kind, target, target_argv)
-        except SystemExit as exc:
-            # Scripts call sys.exit as a matter of course. Keep the trace, but
-            # do NOT pass the target's code through: 2 means divergence here,
-            # and 126/127 make `git bisect run` abort the whole session instead
-            # of skipping. Collapse every failure to 1, which bisect reads as
-            # an honest "bad".
-            code = exc.code if isinstance(exc.code, int) else EXIT_OK
-            if code != EXIT_OK:
-                outcome = _fail(
-                    f"agentos record: target exited {code}; reporting 1 so the "
-                    f"code cannot be confused with a replay verdict",
-                    1,
-                )
-        except (ImportError, SyntaxError, FileNotFoundError) as exc:
-            outcome = _fail(
-                f"agentos record: target could not be imported: "
-                f"{type(exc).__name__}: {exc}",
-                EXIT_UNTESTABLE,
-            )
-        except Exception as exc:  # the target's own failure, not ours
-            outcome = _fail(
-                f"agentos record: target raised {type(exc).__name__}: {exc}", 1
-            )
-        path = writer.path
-        events = len(recorder.events)
+    try:
+        with TraceWriter(args.trace_dir, header) as writer:
+            recorder = Recorder(writer)
+            with use_interceptor(_InfraGuardedInterceptor(recorder)):
+                # Target exceptions stay inside this block. Blob-store and
+                # codec bugs surface as _ToolFailure (via the guard) → 125.
+                # A bare Exception around the whole recorder would make a tool
+                # bug look like "target bad" (exit 1 / bisect BAD).
+                try:
+                    _run_target(kind, target, target_argv)
+                except SystemExit as exc:
+                    # Scripts call sys.exit as a matter of course. Keep the
+                    # trace, but do NOT pass the target's code through: 2 means
+                    # divergence here, and 126/127 make `git bisect run` abort
+                    # the session instead of skipping. Collapse to 1.
+                    code = exc.code if isinstance(exc.code, int) else EXIT_OK
+                    if code != EXIT_OK:
+                        outcome = _fail(
+                            f"agentos record: target exited {code}; reporting 1 "
+                            f"so the code cannot be confused with a replay "
+                            f"verdict",
+                            1,
+                        )
+                except (ImportError, SyntaxError, FileNotFoundError) as exc:
+                    outcome = _fail(
+                        f"agentos record: target could not be imported: "
+                        f"{type(exc).__name__}: {exc}",
+                        EXIT_UNTESTABLE,
+                    )
+                except _ToolFailure as exc:
+                    outcome = _fail(
+                        f"agentos record: recorder failed ({exc}). "
+                        f"Exiting {EXIT_UNTESTABLE} so git bisect skips.",
+                        EXIT_UNTESTABLE,
+                    )
+                except Exception as exc:  # noqa: BLE001 — target may raise anything
+                    outcome = _fail(
+                        f"agentos record: target raised "
+                        f"{type(exc).__name__}: {exc}",
+                        1,
+                    )
+            path = writer.path
+            events = len(recorder.events)
+    except Exception as exc:  # noqa: BLE001 — TraceWriter/setup can fail many ways
+        return _fail(
+            f"agentos record: recorder failed ({type(exc).__name__}: {exc}). "
+            f"This is a tool failure, not a target failure; exiting "
+            f"{EXIT_UNTESTABLE} so git bisect skips rather than marks bad.",
+            EXIT_UNTESTABLE,
+        )
 
     print(f"recorded {events} event(s) from {' '.join(target_argv)}")
     print(f"  run id: {header.run_id}")
@@ -652,21 +708,39 @@ def _cmd_replay(args) -> int:
         return _fail(f"agentos replay: {exc}", EXIT_UNTESTABLE)
 
     try:
-        with use_interceptor(replayer):
-            _run_target(kind, target, target_argv)
-    except DivergenceError as exc:
-        _print_divergence(exc, len(replayer.consumed))
-        return EXIT_DIVERGENCE
-    except SystemExit:
-        pass  # the target exited; the digest comparison below is the verdict
-    except (ImportError, SyntaxError, FileNotFoundError) as exc:
+        with use_interceptor(_InfraGuardedInterceptor(replayer)):
+            # Same split as record: target → 1, tool → 125, divergence → 2.
+            try:
+                _run_target(kind, target, target_argv)
+            except DivergenceError as exc:
+                _print_divergence(exc, len(replayer.consumed))
+                return EXIT_DIVERGENCE
+            except SystemExit:
+                pass  # target exited; the digest comparison below is the verdict
+            except (ImportError, SyntaxError, FileNotFoundError) as exc:
+                return _fail(
+                    f"agentos replay: target could not be imported: "
+                    f"{type(exc).__name__}: {exc}",
+                    EXIT_UNTESTABLE,
+                )
+            except _ToolFailure as exc:
+                return _fail(
+                    f"agentos replay: replayer failed ({exc}). "
+                    f"Exiting {EXIT_UNTESTABLE} so git bisect skips.",
+                    EXIT_UNTESTABLE,
+                )
+            except Exception as exc:  # noqa: BLE001 — target may raise anything
+                return _fail(
+                    f"agentos replay: target raised {type(exc).__name__}: {exc}",
+                    1,
+                )
+    except Exception as exc:  # noqa: BLE001 — replayer setup can fail many ways
         return _fail(
-            f"agentos replay: target could not be imported: "
-            f"{type(exc).__name__}: {exc}",
+            f"agentos replay: replayer failed ({type(exc).__name__}: {exc}). "
+            f"This is a tool failure, not a target failure; exiting "
+            f"{EXIT_UNTESTABLE} so git bisect skips rather than marks bad.",
             EXIT_UNTESTABLE,
         )
-    except Exception as exc:
-        return _fail(f"agentos replay: target raised {type(exc).__name__}: {exc}", 1)
 
     if replayer.tainted:
         return _fail(
@@ -717,7 +791,7 @@ def _cmd_trace_ls(args) -> int:
             "*" if header.git_dirty else ""
         )
         created = datetime.fromtimestamp(
-            header.created_at_ns / 1e9, tz=timezone.utc
+            header.created_at_ns / 1e9, tz=UTC
         ).strftime("%Y-%m-%d %H:%M:%SZ")
         target = " ".join(header.target) if header.target else "-"
         if header.replayed_from:

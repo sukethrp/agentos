@@ -414,6 +414,51 @@ def test_target_exiting_zero_is_success(tmp_path):
     assert run_cli("record", "--trace-dir", str(tmp_path / "t"), "--", str(script)) == 0
 
 
+def test_target_that_raises_exits_one(tmp_path, capsys):
+    """Target failure is bisect BAD (1), not SKIP (125)."""
+    script = tmp_path / "boom.py"
+    script.write_text("raise RuntimeError('target blew up')\n", encoding="utf-8")
+    code = run_cli("record", "--trace-dir", str(tmp_path / "t"), "--", str(script))
+    assert code == 1
+    assert "target raised RuntimeError" in capsys.readouterr().err
+
+
+def test_recorder_infrastructure_failure_exits_125(tmp_path, target, monkeypatch, capsys):
+    """A bug in the tool must not look like a bad target to git bisect."""
+    from agentos.replay.store import BlobStore
+
+    def boom(self, obj):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(BlobStore, "put_obj", boom)
+    code = run_cli("record", "--trace-dir", str(tmp_path / "t"), "--", str(target))
+    assert code == cli.EXIT_UNTESTABLE
+    err = capsys.readouterr().err
+    assert "recorder failed" in err
+    assert "disk full" in err
+
+
+def test_git_absent_degrades_to_none_sha_not_empty_string(
+    tmp_path, target, monkeypatch
+):
+    """Failed git must yield None, never '' — empty sha would silence drift."""
+    import subprocess as sp
+
+    real_run = sp.run
+
+    def fake_run(argv, *args, **kwargs):
+        if argv and argv[0] == "git":
+            # Explicit check=False path: nonzero + empty stdout → None upstream.
+            return sp.CompletedProcess(argv, returncode=128, stdout="", stderr="fatal")
+        return real_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(sp, "run", fake_run)
+    assert run_cli("record", "--trace-dir", str(tmp_path / "t"), "--", str(target)) == 0
+    header = read_header(tmp_path / "t", only_run_id(tmp_path / "t"))
+    assert header["git_sha"] is None
+    assert header["git_sha"] != ""
+
+
 # ── trace ls / show / gc ─────────────────────────────────────────────────────
 
 
