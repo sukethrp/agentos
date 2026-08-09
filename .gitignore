@@ -43,6 +43,16 @@ agent_data/
 .DS_Store
 Thumbs.db
 
+# Sync-service conflict copies. iCloud Drive resolves a conflict by writing
+# "cli 2.py" beside "cli.py"; those are stale duplicates of tracked files and
+# must never be committed. They also get collected by pytest and counted by
+# coverage, so see tests/conftest.py and [tool.coverage.run] for the other two
+# halves of this guard. The real fix is to keep the repo out of a synced tree.
+* [0-9].*
+* [0-9]
+* copy.*
+* copy
+
 # Logs
 *.log
 

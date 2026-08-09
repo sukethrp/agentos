@@ -111,6 +111,9 @@ addopts = "--cov=agentos --cov-report=term-missing --cov-report=xml"
 [tool.coverage.run]
 source = ["agentos"]
 branch = true
+# Sync-service conflict copies ("schema 2.py") are discovered as source files
+# and counted as wholly uncovered modules, which silently deflates the total.
+omit = ["* [0-9].py", "* copy.py"]
 
 [tool.coverage.report]
 fail_under = 25
