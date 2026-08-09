@@ -1,15 +1,16 @@
 # Scratch: issues to file on GitHub
 
-Not documentation. Delete this file once all six issues are filed.
+Not documentation. Delete this file once all seven issues are filed.
 
 Issues 1-2 predate the `replay.py` → `run_viewer.py` rename and were deliberately
 left unfixed by that PR so the rename stayed behavior-preserving. Line numbers
 refer to `src/agentos/observability/run_viewer.py` after the rename.
 
-Issues 3-6 were found while wiring the PROVIDER seam into `providers/router.py`
+Issues 3-7 were found while wiring the PROVIDER seam into `providers/router.py`
 and are likewise left unfixed, so that change stayed a pure interception edit.
 Issue 3 is a live user-facing bug; 4-6 are structural rot in the provider layer
-and are best fixed together.
+and are best fixed together; issue 7 is a known limitation of the seam that
+shipped with it.
 
 ---
 
@@ -324,3 +325,96 @@ a much larger change and would need `intercept()` to grow an async variant.
 
 Either way this should be decided in an ADR, because it determines where every
 future cross-cutting concern gets to live.
+
+---
+
+## Issue 7 — Recording a stream destroys the stream: the observer changes the observed
+
+**Labels:** bug, replay, streaming
+
+### What happens
+
+With a `Recorder` installed, `call_model_stream` stops streaming. The caller
+receives nothing until generation is complete, then receives every chunk at
+once. Token-by-token output becomes a single blocking call for the full
+duration of the completion.
+
+This is the worst possible shape for the bug, because the whole purpose of
+recording is to observe a run faithfully, and the act of observing it changes
+the timing behavior being observed. Anyone recording a run to debug a streaming
+problem will not be able to reproduce the streaming problem.
+
+### Why
+
+`record_stream` in `src/agentos/replay/provider.py` drains the generator inside
+the thunk so there is a complete chunk list to hand to the blob store:
+
+```python
+payload = intercept(
+    SeamKind.PROVIDER,
+    call_site,
+    provider_input(...),
+    lambda: encode_stream(list(thunk())),   # <- list() blocks until exhausted
+    name=f"{provider}:{model}:stream",
+)
+yield from decode_stream(payload)
+```
+
+`list(thunk())` runs to completion before `intercept` returns, so the first
+`yield` happens after the last chunk has arrived.
+
+The root cause is not this line, it is the shape of the `Interceptor` protocol.
+`intercept(seam, call_site, input_obj, thunk)` is a call-and-return contract:
+one input digest in, one output blob out, event emitted on return. A stream
+needs the event opened before the first chunk and closed on exhaustion, which
+that signature cannot express.
+
+### Impact
+
+- `StreamingAgent.stream` (`core/streaming.py`) feeds the WebSocket path.
+  Recording a run through the dashboard makes the UI appear to hang for the
+  full generation, then dump the whole response at once.
+- `StreamStats.first_token_ms` is computed from when the first chunk reaches
+  the consumer, so under recording it measures total generation time. Any
+  first-token metric collected during a recorded run is fiction.
+- A consumer that abandons the generator early (client disconnect, `break`
+  after N tokens) currently records nothing at all, because `intercept` never
+  returns and no event is emitted. The run's trace is silently missing a
+  provider call that really happened.
+
+### Proposed fix
+
+A pass-through generator: yield each chunk as it arrives, accumulate it, and
+write the event when the underlying generator is exhausted. Wrap the
+accumulation in `try/finally` so an abandoned generator still records, with the
+chunks it managed to collect, rather than recording nothing.
+
+Two things that fix has to get right, and neither is optional:
+
+1. **The protocol needs a streaming variant.** Either add `intercept_stream` to
+   the `Interceptor` protocol, implemented by `NullInterceptor`, `Recorder`, and
+   `Replayer`, or give `Recorder` an explicit open-event / append / close-event
+   API that `record_stream` drives. `intercept()` as it stands cannot hold an
+   event open across yields. `NullInterceptor`'s implementation must stay a bare
+   `yield from`, or the untraced path regresses into the same bug.
+
+2. **A truncated recording must not look complete.** An event written from a
+   `finally` after early abandonment is a partial capture, and replaying it
+   would serve a short stream as though the model had stopped there.
+   `EventStatus` has no value for this today — `OK`, `ERROR`, and `TAINTED` all
+   describe something else. Add one, and have `Replayer` refuse a truncated
+   event under `STRICT` rather than quietly re-yielding a partial stream.
+
+### Test gap this leaves today
+
+`test_untraced_streaming_stays_lazy` in `tests/test_provider_seam.py` pins the
+untraced path only: it asserts the generator does not run before iteration and
+that one live call happens on first `next()`. There is deliberately no
+equivalent test under a `Recorder`, because such a test would fail right now.
+
+The fix should add one, and it should assert laziness rather than mere
+correctness — for example, that the first chunk is delivered to the consumer
+while the underlying generator still has chunks left, which is exactly the
+property `list()` destroys. `test_stream_chunk_boundaries_replay_identically`
+already covers the content side and should keep passing unchanged; this is
+purely about when chunks arrive.
