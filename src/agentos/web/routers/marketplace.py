@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
 from agentos.marketplace import get_marketplace_store
 
 router = APIRouter(tags=["marketplace"])

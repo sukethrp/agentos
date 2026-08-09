@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from agentos.teams.runner import TeamRunner
-from agentos.teams.planner import PlannerAgent
-from agentos.teams.dag import WorkflowDAG
+
 from agentos.core.agent import Agent
+from agentos.teams.dag import WorkflowDAG
+from agentos.teams.planner import PlannerAgent
+from agentos.teams.runner import TeamRunner
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 

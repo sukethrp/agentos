@@ -15,7 +15,6 @@ import secrets
 
 from agentos.mesh.protocol import MeshMessage
 
-
 # ── Key generation ───────────────────────────────────────────────────────────
 
 

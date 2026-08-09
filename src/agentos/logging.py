@@ -28,9 +28,10 @@ import json
 import logging
 import os
 import uuid
+from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any, Generator
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Correlation context (thread-safe via contextvars)

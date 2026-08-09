@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 
-
 # ── Colour palettes ──────────────────────────────────────────────────────────
 
 _THEMES: dict[str, dict[str, str]] = {

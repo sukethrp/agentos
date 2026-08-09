@@ -11,7 +11,7 @@ from __future__ import annotations
 import random
 import time
 import uuid
-from typing import Generator
+from collections.abc import Generator
 
 from agentos.core.tool import Tool
 from agentos.core.types import AgentEvent, Message, Role, ToolCall

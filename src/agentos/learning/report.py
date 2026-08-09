@@ -14,7 +14,6 @@ from dataclasses import dataclass, field
 
 from agentos.learning.feedback import FeedbackEntry, FeedbackStore
 
-
 DAY = 86_400
 WEEK = 7 * DAY
 
@@ -157,8 +156,8 @@ def build_learning_report(
     period: str = "week",
 ) -> LearningReport:
     """Build a learning progress report from feedback data."""
-    from agentos.learning.feedback import get_feedback_store
     from agentos.learning.analyzer import auto_tag_topics
+    from agentos.learning.feedback import get_feedback_store
 
     store = store or get_feedback_store()
     entries = auto_tag_topics(store.all())

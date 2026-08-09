@@ -6,10 +6,10 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 from agentos.events import event_bus
-from agentos.workflows.steps import Step, StepResult, ParallelGroup
+from agentos.workflows.steps import ParallelGroup, Step, StepResult
 from agentos.workflows.workflow import Workflow
 
 
@@ -22,8 +22,8 @@ class WorkflowExecution:
     started_at: float
     ended_at: float | None = None
     status: str = "running"  # running|completed|failed
-    steps: Dict[str, StepResult] = field(default_factory=dict)
-    path: List[str] = field(default_factory=list)
+    steps: dict[str, StepResult] = field(default_factory=dict)
+    path: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -45,8 +45,8 @@ class WorkflowRunner:
 
     # ── Public API ──
 
-    def run(self, context: Dict[str, Any] | None = None) -> WorkflowExecution:
-        ctx: Dict[str, Any] = context.copy() if context else {}
+    def run(self, context: dict[str, Any] | None = None) -> WorkflowExecution:
+        ctx: dict[str, Any] = context.copy() if context else {}
         exec_id = uuid.uuid4().hex[:12]
         execution = WorkflowExecution(
             id=exec_id,
@@ -54,7 +54,7 @@ class WorkflowRunner:
             started_at=time.time(),
         )
 
-        results: Dict[str, StepResult] = {}
+        results: dict[str, StepResult] = {}
         last_output: str = ""
 
         try:
@@ -92,7 +92,7 @@ class WorkflowRunner:
 
     # ── Internal helpers ──
 
-    def _should_run(self, step: Step, results: Dict[str, StepResult]) -> bool:
+    def _should_run(self, step: Step, results: dict[str, StepResult]) -> bool:
         if step.when:
             cond = self.workflow.conditions.get(step.when)
             if cond:
@@ -114,15 +114,15 @@ class WorkflowRunner:
     def _build_query(
         self,
         step: Step,
-        ctx: Dict[str, Any],
-        results: Dict[str, StepResult],
+        ctx: dict[str, Any],
+        results: dict[str, StepResult],
         last_output: str,
     ) -> str:
         if callable(step.query):
             return step.query(results)
 
         # String template: provide access to last_output and per-step outputs
-        variables: Dict[str, Any] = {
+        variables: dict[str, Any] = {
             "last_output": last_output,
         }
         for name, res in results.items():
@@ -164,8 +164,8 @@ class WorkflowRunner:
     def _run_step(
         self,
         step: Step,
-        ctx: Dict[str, Any],
-        results: Dict[str, StepResult],
+        ctx: dict[str, Any],
+        results: dict[str, StepResult],
         last_output: str,
         execution: WorkflowExecution,
     ) -> tuple[StepResult, str]:
@@ -219,13 +219,13 @@ class WorkflowRunner:
     def _run_parallel_group(
         self,
         group: ParallelGroup,
-        ctx: Dict[str, Any],
-        results: Dict[str, StepResult],
+        ctx: dict[str, Any],
+        results: dict[str, StepResult],
         last_output: str,
         execution: WorkflowExecution,
-    ) -> List[StepResult]:
-        group_results: List[StepResult] = []
-        threads: List[threading.Thread] = []
+    ) -> list[StepResult]:
+        group_results: list[StepResult] = []
+        threads: list[threading.Thread] = []
         lock = threading.Lock()
 
         def run_single(s: Step):

@@ -955,7 +955,7 @@ for a in agents:
 <div class="panel" id="panel-observability">
 <div class="card">
 <h2>Root Cause Analysis</h2>
-<p style="color:var(--sub);margin-bottom:16px">Deep tracing, 5-point diagnostics, smart causal alerts, and step-by-step replay of agent interactions.</p>
+<p style="color:var(--sub);margin-bottom:16px">Deep tracing, 5-point diagnostics, smart causal alerts, and step-by-step run views of agent interactions.</p>
 
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
 <div style="background:rgba(6,6,14,0.6);padding:14px;border-radius:10px;text-align:center;border:1px solid rgba(255,255,255,0.06);backdrop-filter:blur(8px)">
@@ -995,9 +995,9 @@ for a in agents:
 
 <!-- Replay Viewer -->
 <div class="card" style="margin-top:16px">
-<h2>Interaction Replay</h2>
-<p style="color:var(--sub);font-size:13px;margin-bottom:8px">Click a failed trace above to replay it step-by-step.</p>
-<div id="rca-replay" style="min-height:80px"><div style="color:var(--sub);font-size:13px">Select a trace to replay.</div></div>
+<h2>Interaction Run View</h2>
+<p style="color:var(--sub);font-size:13px;margin-bottom:8px">Click a failed trace above to step through it frame-by-frame.</p>
+<div id="rca-run-view" style="min-height:80px"><div style="color:var(--sub);font-size:13px">Select a trace to view.</div></div>
 </div>
 
 <!-- Diagnosis Detail -->
@@ -1814,7 +1814,7 @@ async function rcaLoadTraces(){
     el.innerHTML=traces.map(t=>{
       const color=t.success?'#10b981':'#e74c3c';
       const icon=t.success?'':'';
-      return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;cursor:pointer" onclick="rcaReplay(&quot;'+t.trace_id+'&quot;)">'+
+      return '<div style="background:rgba(6,6,14,0.5);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);margin-bottom:4px;cursor:pointer" onclick="rcaRunView(&quot;'+t.trace_id+'&quot;)">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<span>'+icon+' <strong style="color:var(--accent)">'+t.agent_name+'</strong></span>'+
         '<span style="color:'+color+';font-size:12px">'+(t.success?'OK':'FAIL')+'</span></div>'+
@@ -1845,12 +1845,12 @@ async function rcaLoadAlerts(){
   }catch(e){console.error(e)}
 }
 
-async function rcaReplay(traceId){
+async function rcaRunView(traceId){
   try{
-    const r=await fetch('/api/observability/replay/'+traceId);
+    const r=await fetch('/api/observability/run-view/'+traceId);
     const d=await r.json();
     // Render frames
-    const el=document.getElementById('rca-replay');
+    const el=document.getElementById('rca-run-view');
     const frames=d.frames||[];
     el.innerHTML=frames.map(f=>{
       const colors={ok:'#1e1e3a',warn:'#fdcb6e33',fail:'#e74c3c33'};

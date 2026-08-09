@@ -1,14 +1,20 @@
 from __future__ import annotations
+
 from fastapi import APIRouter
 from pydantic import BaseModel
+
+from agentos.learning.analyzer import FeedbackAnalyzer as _FBAnalyzer
 from agentos.learning.feedback import (
     FeedbackEntry as _FBEntry,
+)
+from agentos.learning.feedback import (
     FeedbackType as _FBType,
+)
+from agentos.learning.feedback import (
     get_feedback_store as _get_fb,
 )
-from agentos.learning.analyzer import FeedbackAnalyzer as _FBAnalyzer
-from agentos.learning.prompt_optimizer import PromptOptimizer as _PromptOpt
 from agentos.learning.few_shot import FewShotBuilder as _FSBuilder
+from agentos.learning.prompt_optimizer import PromptOptimizer as _PromptOpt
 from agentos.learning.report import build_learning_report as _build_lr
 
 router = APIRouter(tags=["learning"])

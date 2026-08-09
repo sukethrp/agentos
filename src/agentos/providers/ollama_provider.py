@@ -1,12 +1,15 @@
 from __future__ import annotations
+
 import json
 import os
 import time
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+
 import httpx
 from dotenv import load_dotenv
-from agentos.core.types import Message, ToolCall, AgentEvent, Role
+
 from agentos.core.tool import Tool
+from agentos.core.types import AgentEvent, Message, Role, ToolCall
 from agentos.providers.base import BaseProvider
 
 load_dotenv()

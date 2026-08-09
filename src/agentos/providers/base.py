@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator
-from agentos.core.types import Message, AgentEvent
+from collections.abc import AsyncGenerator
+
 from agentos.core.tool import Tool
+from agentos.core.types import AgentEvent, Message
 
 
 class BaseProvider(ABC):

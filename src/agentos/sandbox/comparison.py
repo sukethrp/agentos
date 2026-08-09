@@ -1,6 +1,8 @@
 from __future__ import annotations
-from pathlib import Path
+
 import sqlite3
+from pathlib import Path
+
 from agentos.sandbox.simulation_runner import _DB_PATH, _init_db
 
 

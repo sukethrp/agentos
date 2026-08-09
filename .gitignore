@@ -49,3 +49,7 @@ Thumbs.db
 # Frontend
 frontend/node_modules/
 frontend/dist/
+
+# AgentOS replay traces (ad hoc runs; scenario fixtures are committed)
+.agentos/runs/
+.agentos/blobs/

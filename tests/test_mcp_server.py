@@ -6,13 +6,13 @@ import queue
 import socket
 import subprocess
 import sys
+import textwrap
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
-import textwrap
 
 
 @pytest.fixture(scope="session")
@@ -28,7 +28,7 @@ def _get_free_port() -> int:
 
 def _wait_for(condition, *, timeout_s: float = 10.0, interval_s: float = 0.1) -> None:
     deadline = time.time() + timeout_s
-    last_err: Optional[BaseException] = None
+    last_err: BaseException | None = None
     while time.time() < deadline:
         try:
             if condition():
@@ -45,8 +45,8 @@ def _write_json_line(fp, obj: dict[str, Any]) -> None:
 
 
 def _read_json_line(stdout, *, timeout_s: float = 10.0) -> dict[str, Any]:
-    q: "queue.Queue[str]" = queue.Queue()
-    err_q: "queue.Queue[BaseException]" = queue.Queue()
+    q: queue.Queue[str] = queue.Queue()
+    err_q: queue.Queue[BaseException] = queue.Queue()
 
     def _reader() -> None:
         try:
@@ -434,7 +434,7 @@ def echo_no_args() -> str:
         sse_headers = {"MCP-Session-Id": session_id}
         sse_url = f"http://{host}:{port}/sse"
 
-        sse_queue: "queue.Queue[tuple[int, dict[str, Any]]]" = queue.Queue()
+        sse_queue: queue.Queue[tuple[int, dict[str, Any]]] = queue.Queue()
 
         def sse_reader() -> None:
             # Use a separate streaming connection to avoid interfering with
@@ -453,8 +453,8 @@ def echo_no_args() -> str:
                             if line == "":
                                 if not event_lines:
                                     continue
-                                event_id: Optional[str] = None
-                                data_str: Optional[str] = None
+                                event_id: str | None = None
+                                data_str: str | None = None
                                 for el in event_lines:
                                     if el.startswith("id: "):
                                         event_id = el[len("id: ") :]

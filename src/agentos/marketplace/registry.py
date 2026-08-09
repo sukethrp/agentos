@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 import json
 import shutil
 from pathlib import Path
+
 from agentos.marketplace.manifest import PackageManifest
 
 _ROOT = Path.home() / ".agentos"
@@ -115,8 +117,8 @@ def publish(manifest_path: str) -> PackageManifest:
 
 
 def install(name: str, version: str | None = None) -> dict | None:
-    import sys
     import importlib
+    import sys
 
     registry = MarketplaceRegistry()
     pkg = registry.get(name, version)
@@ -135,8 +137,8 @@ def install(name: str, version: str | None = None) -> dict | None:
             sys.path.insert(0, pkg_root)
         mod = importlib.import_module(module_path)
         obj = getattr(mod, attr)
-        from agentos.marketplace.registry import _installed_tools
         from agentos.core.tool import Tool
+        from agentos.marketplace.registry import _installed_tools
 
         resolved = obj() if callable(obj) else obj
         tool_name = resolved.name if isinstance(resolved, Tool) else name

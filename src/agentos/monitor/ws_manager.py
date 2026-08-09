@@ -1,6 +1,8 @@
 from __future__ import annotations
-from fastapi import WebSocket
+
 from typing import Any
+
+from fastapi import WebSocket
 
 
 class MonitorConnectionManager:

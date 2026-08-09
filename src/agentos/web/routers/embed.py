@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 from pathlib import Path
+
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel
-from agentos.embed.widget import generate_widget, generate_widget_js, generate_snippet
+
+from agentos.embed.widget import generate_snippet, generate_widget, generate_widget_js
 
 router = APIRouter(tags=["embed"])
 _TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"

@@ -13,8 +13,8 @@ Usage:
     scheduler.start()
 """
 
+from agentos.scheduler.job import Job, JobExecution, JobStatus, parse_interval
 from agentos.scheduler.scheduler import AgentScheduler
-from agentos.scheduler.job import Job, JobStatus, JobExecution, parse_interval
 
 _default_scheduler: AgentScheduler | None = None
 
@@ -30,8 +30,8 @@ def get_scheduler() -> AgentScheduler:
 __all__ = [
     "AgentScheduler",
     "Job",
-    "JobStatus",
     "JobExecution",
-    "parse_interval",
+    "JobStatus",
     "get_scheduler",
+    "parse_interval",
 ]

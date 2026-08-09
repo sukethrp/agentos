@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from pathlib import Path
-from pydantic import BaseModel, Field
+
 import yaml
+from pydantic import BaseModel, Field
 
 
 class EvaluationScenario(BaseModel):
@@ -12,7 +14,7 @@ class EvaluationScenario(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> list["EvaluationScenario"]:
+    def from_yaml(cls, path: str | Path) -> list[EvaluationScenario]:
         p = Path(path)
         data = yaml.safe_load(p.read_text())
         if data is None:

@@ -1,11 +1,11 @@
 from agentos.core.types import (
-    Role,
-    ToolParam,
-    ToolSpec,
-    ToolCall,
-    Message,
     AgentConfig,
     AgentEvent,
+    Message,
+    Role,
+    ToolCall,
+    ToolParam,
+    ToolSpec,
 )
 
 

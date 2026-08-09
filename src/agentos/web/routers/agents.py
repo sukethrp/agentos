@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+
 from agentos.auth import User, get_optional_user
 from agentos.auth.usage import usage_tracker
 from agentos.core.ab_testing import ABTest

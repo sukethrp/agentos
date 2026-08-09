@@ -18,7 +18,6 @@ Endpoints:
 
 from __future__ import annotations
 
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -48,7 +47,6 @@ from agentos.mesh.transaction import (
     make_transact_result,
     make_verify_result,
 )
-
 
 # ── Node state ───────────────────────────────────────────────────────────────
 

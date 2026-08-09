@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Observability Demo — deep tracing, root cause analysis, and step-by-step replay.
+Observability Demo — deep tracing, root cause analysis, and step-by-step run views.
 
 This demo constructs synthetic traces (no API calls) to show:
 1. A healthy interaction (all checks pass)
@@ -8,7 +8,7 @@ This demo constructs synthetic traces (no API calls) to show:
 3. A missing tool failure (LLM calls a tool that doesn't exist)
 4. A context problem (empty system prompt)
 5. Smart alerts that explain *why* quality dropped
-6. Step-by-step replay of the failed interaction
+6. Step-by-step run view of the failed interaction
 
 Run:
     python examples/observability_demo.py
@@ -26,7 +26,7 @@ from agentos.observability.tracer import (
 )
 from agentos.observability.diagnostics import diagnose, diagnose_batch
 from agentos.observability.alerts import AlertEngine
-from agentos.observability.replay import build_replay
+from agentos.observability.run_viewer import build_run_view
 
 
 DIVIDER = "═" * 60
@@ -240,19 +240,19 @@ def main() -> None:
         print(f"    Impact: {a.impact}")
         print(f"    Fix: {a.recommendation}")
 
-    # ── 6. Replay a failed interaction ───────────────────────────────────
+    # ── 6. View a failed interaction ─────────────────────────────────────
 
-    print("\n\n🔄 STEP 5: Step-by-Step Replay (tool error)")
+    print("\n\n🔄 STEP 5: Step-by-Step Run View (tool error)")
     print("-" * 40)
 
-    replay = build_replay(tool_error, include_messages=True)
-    print(replay.text())
+    view = build_run_view(tool_error, include_messages=True)
+    print(view.text())
 
-    print("\n\n🔄 STEP 6: Step-by-Step Replay (missing tool)")
+    print("\n\n🔄 STEP 6: Step-by-Step Run View (missing tool)")
     print("-" * 40)
 
-    replay2 = build_replay(missing_tool, include_messages=True)
-    print(replay2.text())
+    view2 = build_run_view(missing_tool, include_messages=True)
+    print(view2.text())
 
     # ── Summary ──────────────────────────────────────────────────────────
 

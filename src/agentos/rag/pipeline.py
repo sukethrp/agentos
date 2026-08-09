@@ -1,13 +1,14 @@
 """RAG Pipeline — ingest → chunk → embed → store → retrieve."""
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 
 from agentos.rag.chunker import DocumentChunker
 from agentos.rag.embeddings import EmbeddingEngine
-from agentos.rag.vector_store import VectorStore
 from agentos.rag.types import SearchResult
+from agentos.rag.vector_store import VectorStore
 
 
 @dataclass

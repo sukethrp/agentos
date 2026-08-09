@@ -15,8 +15,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agentos.sandbox.scenario import Scenario, ScenarioResult, SandboxReport
-
+from agentos.sandbox.scenario import SandboxReport, Scenario, ScenarioResult
 
 # ═══════════════════════════════════════════════════════════════════
 # Scenario creation

@@ -230,7 +230,7 @@ Tested in CI (`pytest`); see `tests/` for coverage.
 
 | Module | Description |
 |--------|-------------|
-| Observability | Tracing, alerting, and run replay |
+| Observability | Tracing, alerting, and run views |
 | Embeddings | TF-IDF (default, no API key), OpenAI (API key), local Sentence-Transformers (`[local]` extra) |
 | RAG Pipeline | Ingestion, chunking, embeddings, retrieval, reranking, and drift detection |
 | Learning | Feedback collection, prompt optimization, and few-shot example building |
@@ -284,7 +284,7 @@ agentos/
 │   ├── rag/              # RAG pipeline, embeddings, drift detection
 │   ├── sandbox/          # Scenario-based simulation testing
 │   ├── learning/         # Feedback, prompt optimization, few-shot
-│   ├── observability/    # Tracing, alerts, run replay
+│   ├── observability/    # Tracing, alerts, run views
 │   ├── scheduler/        # Interval and cron job scheduling
 │   ├── marketplace/      # Template registry for agents and workflows
 │   ├── mcp/              # MCP server (stdio/SSE)

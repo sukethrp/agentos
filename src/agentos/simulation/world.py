@@ -21,9 +21,10 @@ import io
 import sys
 import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from agentos.simulation.evaluator import Evaluator, InteractionResult
 from agentos.simulation.personas import (
@@ -35,8 +36,8 @@ from agentos.simulation.report import SimulationReport, build_report
 from agentos.simulation.traffic import (
     TrafficConfig,
     TrafficPattern,
-    generate_traffic,
     describe_pattern,
+    generate_traffic,
 )
 
 

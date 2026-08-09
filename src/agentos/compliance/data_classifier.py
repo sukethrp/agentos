@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import re
 from typing import Literal
 
@@ -6,10 +7,10 @@ SSN_PATTERN = re.compile(r"\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b")
 DOB_PATTERN = re.compile(
     r"\b(?:0?[1-9]|1[0-2])[/\-](?:0?[1-9]|[12]\d|3[01])[/\-](?:19|20)\d{2}\b|\b(?:19|20)\d{2}[/\-](?:0?[1-9]|1[0-2])[/\-](?:0?[1-9]|[12]\d|3[01])\b"
 )
-MRN_PATTERN = re.compile(r"\bMRN[:\s#]*\d{6,12}\b|\b\d{6,12}\s*\(?MRN\)?\b", re.I)
+MRN_PATTERN = re.compile(r"\bMRN[:\s#]*\d{6,12}\b|\b\d{6,12}\s*\(?MRN\)?\b", re.IGNORECASE)
 PHI_INDICATORS = re.compile(
     r"\b(?:patient|ssn|social security|date of birth|dob|medical record|mrn|health insurance|hipaa)\b",
-    re.I,
+    re.IGNORECASE,
 )
 
 

@@ -23,7 +23,6 @@ from agentos.mesh.protocol import (
     MessageType,
 )
 
-
 # ── Transaction models ───────────────────────────────────────────────────────
 
 

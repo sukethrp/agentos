@@ -17,9 +17,9 @@ Usage:
 from __future__ import annotations
 
 import json
-from typing import Generator
-from urllib.request import Request, urlopen
+from collections.abc import Generator
 from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
 class AgentOSClient:

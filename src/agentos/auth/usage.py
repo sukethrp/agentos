@@ -13,8 +13,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass
-from typing import Dict, List, Literal
-
+from typing import Literal
 
 Period = Literal["day", "week", "month"]
 
@@ -63,7 +62,7 @@ class UsageTracker:
 
     # ── IO helpers ──
 
-    def _read(self) -> Dict[str, List[dict]]:
+    def _read(self) -> dict[str, list[dict]]:
         with self._lock:
             if not os.path.exists(self.path):
                 return {}
@@ -76,10 +75,9 @@ class UsageTracker:
                 except json.JSONDecodeError:
                     return {}
 
-    def _write(self, data: Dict[str, List[dict]]) -> None:
-        with self._lock:
-            with open(self.path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+    def _write(self, data: dict[str, list[dict]]) -> None:
+        with self._lock, open(self.path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
 
     # ── Public API ──
 
@@ -102,7 +100,7 @@ class UsageTracker:
         data[user_id] = records
         self._write(data)
 
-    def _get_records(self, user_id: str) -> List[UsageRecord]:
+    def _get_records(self, user_id: str) -> list[UsageRecord]:
         data = self._read()
         raw = data.get(user_id, [])
         return [UsageRecord(**r) for r in raw]

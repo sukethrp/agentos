@@ -1,6 +1,7 @@
 """Document chunking — split text, markdown, and PDF files into overlapping chunks."""
 
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -38,9 +39,7 @@ class DocumentChunker:
 
         if ext == ".pdf":
             text = self._read_pdf(p)
-        elif ext in (".md", ".markdown"):
-            text = p.read_text(encoding="utf-8")
-        elif ext in (".txt", ".text", ".rst", ".csv", ".log"):
+        elif ext in (".md", ".markdown") or ext in (".txt", ".text", ".rst", ".csv", ".log"):
             text = p.read_text(encoding="utf-8")
         else:
             text = p.read_text(encoding="utf-8")

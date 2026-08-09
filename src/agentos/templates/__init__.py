@@ -9,10 +9,10 @@ Usage:
     agent.run("I need help with my order")
 """
 
+from agentos.templates.code_reviewer import create_code_reviewer_agent
 from agentos.templates.customer_support import create_customer_support_agent
 from agentos.templates.research_assistant import create_research_agent
 from agentos.templates.sales_agent import create_sales_agent
-from agentos.templates.code_reviewer import create_code_reviewer_agent
 
 TEMPLATES = {
     "customer-support": {

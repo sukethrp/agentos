@@ -17,14 +17,15 @@ Usage:
 """
 
 from __future__ import annotations
-import time
+
 import json
-from typing import Iterable
+import time
+from collections.abc import Iterable
 
 from pydantic import BaseModel, Field
 
-from agentos.core.agent import Agent
 from agentos.core.ab_testing import ABTest, ABTestReport
+from agentos.core.agent import Agent
 from agentos.tools import get_builtin_tools
 
 

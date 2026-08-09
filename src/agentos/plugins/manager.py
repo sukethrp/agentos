@@ -16,6 +16,7 @@ Both styles receive a PluginContext to register tools, providers, etc.
 """
 
 from __future__ import annotations
+
 import importlib.util
 import os
 import sys

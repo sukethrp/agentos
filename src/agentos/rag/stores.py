@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import os
 
 from agentos.rag.base_store import BaseVectorStore
@@ -230,6 +231,7 @@ class PgVectorStore(BaseVectorStore):
         self, query_embedding: list[float], top_k: int = 5, threshold: float = 0.0
     ) -> list[SearchResult]:
         import json
+
         from pgvector.psycopg import Vector
 
         cur = self._conn.cursor()

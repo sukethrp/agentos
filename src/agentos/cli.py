@@ -12,9 +12,9 @@ Usage:
 """
 
 import argparse
-import os
 import importlib
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
@@ -71,6 +71,7 @@ def main():
         if args.demo:
             os.environ["AGENTOS_DEMO_MODE"] = "true"
         import uvicorn
+
         from agentos.web.app import app
         uvicorn.run(app, host=args.host, port=args.port)
 

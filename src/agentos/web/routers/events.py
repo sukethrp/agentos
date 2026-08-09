@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from fastapi import APIRouter
+
 from agentos.events import event_bus
 from agentos.web.deps import get_webhook_trigger
 

@@ -1,0 +1,46 @@
+---
+description: Determinism contract for the AgentOS trace/replay/bisect subsystem
+globs:
+  - "src/agentos/**"
+  - "tests/**"
+alwaysApply: true
+---
+
+# Determinism rules
+
+Read `docs/DETERMINISM.md` before changing anything under `src/agentos/replay/`.
+That document is normative. If your change contradicts it, amend the document
+in the same commit or do not make the change.
+
+## Hard rules
+
+1. Nondeterminism enters ONLY through a seam. If you need the clock, RNG, the
+   network, the filesystem, or an env var inside `agentos/`, wrap it in
+   `intercept(SeamKind.X, CS_..., input_obj, thunk)`. Never call it directly.
+2. Call site ids are module plus qualname plus label. Never line numbers.
+   Declare them as module-level constants named `CS_*`, never inline.
+3. Wall clock never affects control flow. Recording it is fine; branching on it
+   is a bug.
+4. Payloads go to the blob store. Events stay small. Do not inline prompts or
+   completions into `TraceEvent.attrs`.
+5. Do not add fields to `equivalence_view()` without bumping `SCHEMA_VERSION`
+   and adding a migration note. Every existing trace becomes unreadable
+   otherwise.
+6. New dependencies need a reason in the PR description. This subsystem should
+   run on a laptop with stdlib plus a hashing library.
+7. Every new seam ships with a record/replay round-trip test proving zero live
+   calls under `DivergencePolicy.STRICT`.
+
+## Style
+
+- Type hints everywhere; `from __future__ import annotations` at the top.
+- Dataclasses over dicts for anything that gets serialized.
+- Error messages must localize the problem for the user, for example
+  "inputs differ at seq=41, root cause is at or before seq=40". A bare
+  `AssertionError` is not acceptable in this subsystem; it IS the debugger.
+- No broad `except Exception: pass`. Record the error into the event and re-raise.
+
+## When you are unsure
+
+Write the failing test first, name the invariant it protects in the docstring,
+then implement. Do not silently widen a contract to make a test pass.

@@ -1,10 +1,13 @@
 from __future__ import annotations
+
 import os
 import uuid as _uuid
 from pathlib import Path as _Path
+
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
 from agentos.core.multimodal import analyze_image, read_document
 from agentos.monitor.store import store
 from agentos.web.deps import get_upload_dir

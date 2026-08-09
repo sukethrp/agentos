@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 import re
 from pathlib import Path
-from agentos.rag.chunker import DocumentChunker, Chunk
-from agentos.rag.embeddings import EmbeddingEngine
+
 from agentos.rag.base_store import BaseVectorStore
+from agentos.rag.chunker import Chunk, DocumentChunker
 from agentos.rag.config import rag_config
+from agentos.rag.embeddings import EmbeddingEngine
 
 
 def _chunk_fixed(

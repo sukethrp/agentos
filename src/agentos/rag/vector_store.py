@@ -1,6 +1,7 @@
 """In-memory vector store with cosine similarity search."""
 
 from __future__ import annotations
+
 import json
 import math
 from dataclasses import dataclass, field

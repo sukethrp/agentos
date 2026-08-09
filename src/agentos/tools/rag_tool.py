@@ -1,9 +1,9 @@
 """RAG Tool — gives any AgentOS agent the ability to search ingested documents."""
 
 from __future__ import annotations
+
 from agentos.core.tool import Tool, tool
 from agentos.rag.pipeline import RAGPipeline
-
 
 # Module-level default pipeline (lazy-initialized)
 _default_pipeline: RAGPipeline | None = None

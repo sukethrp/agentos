@@ -1,7 +1,7 @@
-"""Replay — step through a failed interaction to see exactly what went wrong.
+"""Run viewer — step through a failed interaction to see exactly what went wrong.
 
 Given a :class:`Trace`, produce a human-readable (and machine-parseable)
-step-by-step replay that shows:
+step-by-step view that shows:
 
 * The full message context at each LLM call
 * The tool selected and why
@@ -10,6 +10,11 @@ step-by-step replay that shows:
 * Where the chain broke
 
 Can be printed to the console or serialised for the web UI.
+
+This is NOT hermetic replay. Nothing here re-executes a run: it renders a
+:class:`Trace` that has already been recorded, and it touches no seams.
+Hermetic record/replay lives in :mod:`agentos.replay`, which reproduces runs
+for machines; this module renders them for humans.
 """
 
 from __future__ import annotations
@@ -17,13 +22,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from agentos.observability.tracer import Trace, TraceStep, StepType
-from agentos.observability.diagnostics import Diagnosis, diagnose, Severity
+from agentos.observability.diagnostics import Diagnosis, Severity, diagnose
+from agentos.observability.tracer import StepType, Trace, TraceStep
 
 
 @dataclass
-class ReplayFrame:
-    """One frame in the step-by-step replay."""
+class ViewFrame:
+    """One frame in the step-by-step run view."""
 
     frame_index: int = 0
     label: str = ""
@@ -44,13 +49,13 @@ class ReplayFrame:
 
 
 @dataclass
-class Replay:
-    """Complete step-by-step replay of an interaction."""
+class RunView:
+    """Complete step-by-step view of an interaction."""
 
     trace_id: str = ""
     agent_name: str = ""
     user_query: str = ""
-    frames: list[ReplayFrame] = field(default_factory=list)
+    frames: list[ViewFrame] = field(default_factory=list)
     diagnosis: Diagnosis | None = None
     failure_frame: int | None = None
 
@@ -66,10 +71,10 @@ class Replay:
         }
 
     def text(self) -> str:
-        """Pretty-print the replay for console output."""
+        """Pretty-print the run view for console output."""
         lines = [
             "=" * 70,
-            f"  REPLAY — Trace {self.trace_id}  [{self.agent_name}]",
+            f"  RUN VIEW — Trace {self.trace_id}  [{self.agent_name}]",
             "=" * 70,
             f"  Query: {self.user_query}",
             "",
@@ -99,14 +104,14 @@ class Replay:
         return "\n".join(lines)
 
 
-# ── Replay builder ───────────────────────────────────────────────────────────
+# ── RunView builder ──────────────────────────────────────────────────────────
 
 
-def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
-    """Build a step-by-step replay from a trace with full diagnosis."""
+def build_run_view(trace: Trace, include_messages: bool = False) -> RunView:
+    """Build a step-by-step run view from a trace with full diagnosis."""
     diag = diagnose(trace)
 
-    replay = Replay(
+    view = RunView(
         trace_id=trace.trace_id,
         agent_name=trace.agent_name,
         user_query=trace.user_query,
@@ -120,8 +125,8 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
         f"Model: {trace.model}\n"
         f"System prompt: {trace.system_prompt[:120]}{'…' if len(trace.system_prompt) > 120 else ''}"
     )
-    replay.frames.append(
-        ReplayFrame(
+    view.frames.append(
+        ViewFrame(
             frame_index=frame_idx,
             label="SETUP — Agent initialised",
             detail=setup_detail,
@@ -133,8 +138,8 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
     )
     frame_idx += 1
 
-    replay.frames.append(
-        ReplayFrame(
+    view.frames.append(
+        ViewFrame(
             frame_index=frame_idx,
             label="USER QUERY",
             detail=trace.user_query,
@@ -144,14 +149,14 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
 
     for step in trace.steps:
         frame = _step_to_frame(step, frame_idx, diag, include_messages)
-        replay.frames.append(frame)
-        if frame.is_failure_point and replay.failure_frame is None:
-            replay.failure_frame = frame_idx
+        view.frames.append(frame)
+        if frame.is_failure_point and view.failure_frame is None:
+            view.failure_frame = frame_idx
         frame_idx += 1
 
     if trace.success:
-        replay.frames.append(
-            ReplayFrame(
+        view.frames.append(
+            ViewFrame(
                 frame_index=frame_idx,
                 label="OUTCOME — Success",
                 detail=f"Final response ({len(trace.final_response)} chars): {trace.final_response[:200]}",
@@ -159,25 +164,25 @@ def build_replay(trace: Trace, include_messages: bool = False) -> Replay:
             )
         )
     else:
-        replay.frames.append(
-            ReplayFrame(
+        view.frames.append(
+            ViewFrame(
                 frame_index=frame_idx,
                 label="OUTCOME — Failed",
                 detail=trace.error or "Agent did not produce a successful response",
                 severity="fail",
-                is_failure_point=replay.failure_frame is None,
+                is_failure_point=view.failure_frame is None,
             )
         )
-        if replay.failure_frame is None:
-            replay.failure_frame = frame_idx
+        if view.failure_frame is None:
+            view.failure_frame = frame_idx
 
-    return replay
+    return view
 
 
 def _step_to_frame(
     step: TraceStep, frame_idx: int, diag: Diagnosis, include_messages: bool
-) -> ReplayFrame:
-    """Convert a TraceStep into a ReplayFrame."""
+) -> ViewFrame:
+    """Convert a TraceStep into a ViewFrame."""
 
     is_failure = step.is_error
     # Also mark as failure if the diagnosis points to this step
@@ -202,7 +207,7 @@ def _step_to_frame(
                 content = (m.get("content") or "")[:80]
                 detail_lines.append(f"  [{role}] {content}")
 
-        return ReplayFrame(
+        return ViewFrame(
             frame_index=frame_idx,
             label=f"LLM CALL (step {step.step_index})",
             detail="\n".join(detail_lines),
@@ -226,7 +231,7 @@ def _step_to_frame(
         if step.is_error:
             detail_lines.append(f"Error: {step.error_message[:200]}")
 
-        return ReplayFrame(
+        return ViewFrame(
             frame_index=frame_idx,
             label=f"TOOL CALL — {step.tool_name} (step {step.step_index})",
             detail="\n".join(detail_lines),
@@ -236,7 +241,7 @@ def _step_to_frame(
         )
 
     elif step.step_type == StepType.FINAL_ANSWER:
-        return ReplayFrame(
+        return ViewFrame(
             frame_index=frame_idx,
             label=f"FINAL ANSWER (step {step.step_index})",
             detail=step.response_text[:300],
@@ -245,7 +250,7 @@ def _step_to_frame(
         )
 
     elif step.step_type == StepType.ERROR:
-        return ReplayFrame(
+        return ViewFrame(
             frame_index=frame_idx,
             label=f"ERROR (step {step.step_index})",
             detail=step.error_message,
@@ -253,7 +258,7 @@ def _step_to_frame(
             is_failure_point=True,
         )
 
-    return ReplayFrame(
+    return ViewFrame(
         frame_index=frame_idx,
         label=f"STEP {step.step_index} ({step.step_type.value})",
         detail=step.decision,

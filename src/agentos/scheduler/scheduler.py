@@ -1,10 +1,12 @@
 """AgentScheduler — run agents on schedules using threading."""
 
 from __future__ import annotations
+
 import io
 import sys
 import threading
 import time
+
 from agentos.core.agent import Agent
 from agentos.core.tool import Tool
 from agentos.scheduler.job import Job, JobStatus, parse_interval

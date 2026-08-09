@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import tempfile
 from pathlib import Path as _Path
+
 from fastapi import FastAPI
+
 from agentos.events import WebhookTrigger
 from agentos.scheduler import get_scheduler
 

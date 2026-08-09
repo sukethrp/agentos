@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from fastapi import APIRouter
+
 from agentos.mesh.mesh_router import get_mesh_router
 
 router = APIRouter(prefix="/mesh", tags=["mesh"])

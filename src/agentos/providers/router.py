@@ -10,12 +10,22 @@ Usage:
 """
 
 from __future__ import annotations
-from typing import Generator
-from agentos.core.types import Message, AgentEvent
+
+from collections.abc import Generator
+
 from agentos.core.tool import Tool
-from agentos.logging import get_logger, get_correlation
+from agentos.core.types import AgentEvent, Message
+from agentos.logging import get_correlation, get_logger
+from agentos.replay.provider import record_completion, record_stream
+from agentos.replay.schema import SeamKind
+from agentos.replay.seam import call_site_id
 
 _log = get_logger("agentos.providers")
+
+# Call site ids are (module, qualname, seam, label), never line numbers, so
+# reformatting this file does not invalidate the trace corpus.
+CS_CALL_MODEL = call_site_id(__name__, "call_model", SeamKind.PROVIDER)
+CS_CALL_MODEL_STREAM = call_site_id(__name__, "call_model_stream", SeamKind.PROVIDER)
 
 
 # Provider registry
@@ -56,6 +66,18 @@ def detect_provider(model: str) -> str:
         return "openai"  # default fallback
 
 
+def resolve_provider(model: str) -> str:
+    """The backend that will actually serve this call.
+
+    Not the same as `detect_provider`: demo mode overrides the model name and
+    routes everything to the mock. Recording the detected provider instead of
+    the resolved one would describe a call that never happened.
+    """
+    from agentos.demo import is_demo_mode
+
+    return "mock" if is_demo_mode() else detect_provider(model)
+
+
 def call_model(
     model: str,
     messages: list[dict],
@@ -64,10 +86,37 @@ def call_model(
     max_tokens: int = 1024,
     agent_name: str = "agent",
 ) -> tuple[Message, AgentEvent]:
-    """Route to the correct provider based on model name."""
-    from agentos.demo import is_demo_mode
+    """Route to the correct provider based on model name.
 
-    if is_demo_mode():
+    The single choke point for non-streaming completions, and therefore the
+    PROVIDER seam for all backends at once.
+    """
+    provider = resolve_provider(model)
+    return record_completion(
+        CS_CALL_MODEL,
+        provider=provider,
+        model=model,
+        messages=messages,
+        tools=tools,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        agent_name=agent_name,
+        thunk=lambda: _dispatch_completion(
+            provider, model, messages, tools, temperature, max_tokens, agent_name
+        ),
+    )
+
+
+def _dispatch_completion(
+    provider: str,
+    model: str,
+    messages: list[dict],
+    tools: list[Tool],
+    temperature: float,
+    max_tokens: int,
+    agent_name: str,
+) -> tuple[Message, AgentEvent]:
+    if provider == "mock":
         from agentos.providers.mock import call_mock
 
         return call_mock(
@@ -75,7 +124,6 @@ def call_model(
             max_tokens=max_tokens, agent_name=agent_name,
         )
 
-    provider = detect_provider(model)
     _log.debug(
         "provider.route",
         extra={**get_correlation(), "provider": provider, "model": model},
@@ -130,9 +178,32 @@ def call_model_stream(
     max_tokens: int = 1024,
     agent_name: str = "agent",
 ) -> Generator[str | tuple[str, Message, AgentEvent], None, None]:
-    from agentos.demo import is_demo_mode
+    provider = resolve_provider(model)
+    yield from record_stream(
+        CS_CALL_MODEL_STREAM,
+        provider=provider,
+        model=model,
+        messages=messages,
+        tools=tools,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        agent_name=agent_name,
+        thunk=lambda: _dispatch_stream(
+            provider, model, messages, tools, temperature, max_tokens, agent_name
+        ),
+    )
 
-    if is_demo_mode():
+
+def _dispatch_stream(
+    provider: str,
+    model: str,
+    messages: list[dict],
+    tools: list[Tool],
+    temperature: float,
+    max_tokens: int,
+    agent_name: str,
+) -> Generator[str | tuple[str, Message, AgentEvent], None, None]:
+    if provider == "mock":
         from agentos.providers.mock import call_mock_stream
 
         yield from call_mock_stream(
@@ -140,8 +211,6 @@ def call_model_stream(
             max_tokens=max_tokens, agent_name=agent_name,
         )
         return
-
-    provider = detect_provider(model)
 
     if provider == "openai":
         from agentos.providers.openai_provider import call_llm_stream
@@ -178,13 +247,11 @@ def call_model_stream(
             agent_name=agent_name,
         )
     else:
-        msg, event = call_model(
-            model,
-            messages,
-            tools,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            agent_name=agent_name,
+        # Deliberately _dispatch_completion and not call_model: this is already
+        # inside the stream seam, and going back through call_model would record
+        # a second nested PROVIDER event for one logical call.
+        msg, event = _dispatch_completion(
+            provider, model, messages, tools, temperature, max_tokens, agent_name
         )
         if msg.tool_calls:
             yield ("tool_calls", msg, event)

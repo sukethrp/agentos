@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, Query
+
 from agentos.monitor.store import store
 
 router = APIRouter(tags=["analytics"])
@@ -8,7 +10,7 @@ def _bucket_key(ts: float, granularity: str) -> str:
     """Convert a unix timestamp to a bucket key string."""
     import datetime
 
-    dt = datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc)
+    dt = datetime.datetime.fromtimestamp(ts, tz=datetime.UTC)
     if granularity == "hour":
         return dt.strftime("%Y-%m-%d %H:00")
     elif granularity == "week":

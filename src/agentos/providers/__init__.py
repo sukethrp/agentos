@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from agentos.providers.mock import MockProvider
 
 PROVIDERS: dict[str, type] = {"mock": MockProvider}

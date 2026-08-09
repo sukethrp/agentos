@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import pytest
-from agentos.compliance.audit_logger import AuditLogger, AuditEvent
+
+from agentos.compliance.audit_logger import AuditEvent, AuditLogger
 from agentos.compliance.data_classifier import DataClassifier
 from agentos.compliance.policy_engine import PolicyEngine, PolicyViolationError
 

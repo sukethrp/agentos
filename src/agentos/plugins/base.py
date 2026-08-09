@@ -16,8 +16,10 @@ Example:
 """
 
 from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 
 @dataclass
@@ -63,11 +65,9 @@ class BasePlugin:
 
     def on_load(self, ctx: PluginContext) -> None:
         """Called when the plugin is loaded. Override to register tools/providers."""
-        pass
 
     def on_unload(self) -> None:
         """Called when the plugin is unloaded. Override for cleanup."""
-        pass
 
     def register_tool(self, ctx: PluginContext, tool: Any) -> None:
         """Convenience: register a Tool instance on the context."""

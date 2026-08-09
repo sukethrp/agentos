@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 import asyncio
 import os
 import sys
 import types
 from pathlib import Path
 from unittest.mock import patch
+
 import pytest
 
 try:
@@ -19,12 +21,12 @@ _src = Path(__file__).resolve().parent.parent / "src"
 if _src.exists() and str(_src) not in sys.path:
     sys.path.insert(0, str(_src))
 
-from agentos.core.types import Message, AgentEvent, Role  # noqa: E402
-from agentos.core.tool import Tool  # noqa: E402
-from agentos.governance.budget import BudgetGuard  # noqa: E402
-from agentos.governance.permissions import PermissionGuard  # noqa: E402
-from agentos.governance.audit import AuditLog  # noqa: E402
-from agentos.sandbox.scenario import Scenario, ScenarioResult  # noqa: E402
+from agentos.core.tool import Tool
+from agentos.core.types import AgentEvent, Message, Role
+from agentos.governance.audit import AuditLog
+from agentos.governance.budget import BudgetGuard
+from agentos.governance.permissions import PermissionGuard
+from agentos.sandbox.scenario import Scenario, ScenarioResult
 
 
 class MockProvider:

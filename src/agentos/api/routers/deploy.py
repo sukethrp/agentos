@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+
 from agentos.deploy.k8s_deployer import (
+    AgentDeployConfig,
+    KubernetesConfig,
     deploy_agent,
     scale_agent,
     teardown_agent,
-    KubernetesConfig,
-    AgentDeployConfig,
 )
 
 router = APIRouter(prefix="/deploy", tags=["deploy"])

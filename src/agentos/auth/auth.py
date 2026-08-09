@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from typing import Optional
 
 from fastapi import Header, HTTPException, status
 
@@ -46,7 +45,7 @@ def create_user(
     return user
 
 
-def authenticate(api_key: str) -> Optional[User]:
+def authenticate(api_key: str) -> User | None:
     """Return the user for this API key, or None if not found."""
     if not api_key:
         return None
@@ -68,14 +67,14 @@ def get_current_user(x_api_key: str = Header(..., alias="X-API-Key")) -> User:
 
 
 def get_optional_user(
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-) -> Optional[User]:
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> User | None:
     """FastAPI dependency that authenticates if a key is provided, but allows anonymous access."""
     if not x_api_key:
         return None
     return authenticate(x_api_key)
 
 
-def get_user_by_email(email: str) -> Optional[User]:
+def get_user_by_email(email: str) -> User | None:
     """Convenience helper for login flows."""
     return default_store.get_by_email(email)

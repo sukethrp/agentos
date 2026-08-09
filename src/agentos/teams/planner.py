@@ -1,7 +1,8 @@
 from __future__ import annotations
-import json
-from agentos.providers.router import call_model
 
+import json
+
+from agentos.providers.router import call_model
 
 PLANNER_PROMPT = """Given this goal, produce a JSON list of subtasks. Each subtask has: task (str), agent_id (str), depends_on (list of indices 0-based, or empty).
 

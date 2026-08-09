@@ -5,26 +5,26 @@ automatically analyse patterns, optimise system prompts, and build
 few-shot examples from the best interactions.  No fine-tuning needed.
 """
 
+from agentos.learning.analyzer import (
+    AnalysisReport,
+    FeedbackAnalyzer,
+    ToolAnalysis,
+    TopicAnalysis,
+    detect_topic,
+)
 from agentos.learning.feedback import (
     FeedbackEntry,
     FeedbackStore,
     FeedbackType,
     get_feedback_store,
 )
-from agentos.learning.analyzer import (
-    AnalysisReport,
-    FeedbackAnalyzer,
-    TopicAnalysis,
-    ToolAnalysis,
-    detect_topic,
+from agentos.learning.few_shot import (
+    FewShotBuilder,
+    FewShotExample,
 )
 from agentos.learning.prompt_optimizer import (
     PromptOptimizer,
     PromptPatch,
-)
-from agentos.learning.few_shot import (
-    FewShotBuilder,
-    FewShotExample,
 )
 from agentos.learning.report import (
     LearningReport,
@@ -32,19 +32,19 @@ from agentos.learning.report import (
 )
 
 __all__ = [
+    "AnalysisReport",
+    "FeedbackAnalyzer",
     "FeedbackEntry",
     "FeedbackStore",
     "FeedbackType",
-    "get_feedback_store",
-    "AnalysisReport",
-    "FeedbackAnalyzer",
-    "TopicAnalysis",
-    "ToolAnalysis",
-    "detect_topic",
-    "PromptOptimizer",
-    "PromptPatch",
     "FewShotBuilder",
     "FewShotExample",
     "LearningReport",
+    "PromptOptimizer",
+    "PromptPatch",
+    "ToolAnalysis",
+    "TopicAnalysis",
     "build_learning_report",
+    "detect_topic",
+    "get_feedback_store",
 ]
