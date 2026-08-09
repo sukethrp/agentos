@@ -1,12 +1,12 @@
 """AgentOS Multi-Agent Team Demo — Agents working together."""
 
 import sys
+
 sys.path.insert(0, "src")
 
 from agentos.core.agent import Agent
-from agentos.core.tool import tool
 from agentos.core.team import AgentTeam
-
+from agentos.core.tool import tool
 
 # --- Tools ---
 

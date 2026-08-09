@@ -1,8 +1,9 @@
 import sys
+
 sys.path.insert(0, "src")
 
-from agentos.core.tool import tool
 from agentos.core.agent import Agent
+from agentos.core.tool import tool
 
 
 @tool(description="Calculate a math expression like '2 + 2' or '100 * 3.14'")

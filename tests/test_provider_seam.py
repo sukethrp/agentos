@@ -13,6 +13,8 @@ import pytest
 
 from agentos.core.tool import Tool
 from agentos.core.types import AgentEvent, Message
+from agentos.providers import mock as mock_mod
+from agentos.providers.router import call_model, call_model_stream
 from agentos.replay import (
     BlobStore,
     DivergencePolicy,
@@ -33,8 +35,6 @@ from agentos.replay.provider import (
     provider_seam_codecs,
     tracing_disabled,
 )
-from agentos.providers import mock as mock_mod
-from agentos.providers.router import call_model, call_model_stream
 
 MODEL = "gpt-4o-mini"
 MESSAGES = [

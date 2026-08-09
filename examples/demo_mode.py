@@ -24,7 +24,6 @@ sys.path.insert(0, "src")
 from agentos.core.agent import Agent
 from agentos.core.tool import tool
 
-
 # ── Define tools (same as quickstart) ────────────────────────────
 
 

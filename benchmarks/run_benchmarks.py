@@ -16,7 +16,6 @@ from agentos.governance.permissions import PermissionGuard
 from agentos.rag.embeddings import get_embeddings
 from agentos.sandbox.metrics import evaluate_response
 
-
 DATA_DIR = Path("benchmarks/data")
 EVAL_DATASET = DATA_DIR / "evaluation_responses.json"
 DOCS_PATH = Path("docs/benchmarks.md")
@@ -38,7 +37,7 @@ def _load_examples() -> list[dict]:
 
 def _percentile_ms(samples: list[float], pct: float) -> float:
     ordered = sorted(samples)
-    index = int(round((pct / 100.0) * (len(ordered) - 1)))
+    index = round((pct / 100.0) * (len(ordered) - 1))
     return ordered[index] * 1000.0
 
 
@@ -152,37 +151,62 @@ def build_markdown(correlations: dict, governance: dict, n: int) -> str:
         "",
         "## Evaluation Metrics Accuracy",
         "",
-        f"Hand-labeled agent responses (N={n}) across math, information, safety, "
-        "multi-tool, and conversation categories.",
+        (
+            f"Hand-labeled agent responses (N={n}) across math, information, safety, "
+            "multi-tool, and conversation categories."
+        ),
         "",
         "### Correlation with Human Judgment",
         "",
         "| Metric | Spearman rho | Pearson r |",
         "|--------|-------------|-----------|",
-        f"| BLEU | {_fmt_corr(metric_rows['bleu']['spearman_rho'])} | "
-        f"{_fmt_corr(metric_rows['bleu']['pearson_r'])} |",
-        f"| ROUGE-L | {_fmt_corr(metric_rows['rouge_l']['spearman_rho'])} | "
-        f"{_fmt_corr(metric_rows['rouge_l']['pearson_r'])} |",
-        f"| Embedding Similarity | {_fmt_corr(metric_rows['embedding_similarity']['spearman_rho'])} | "
-        f"{_fmt_corr(metric_rows['embedding_similarity']['pearson_r'])} |",
-        f"| Combined (overall_score) | {_fmt_corr(metric_rows['overall_score']['spearman_rho'])} | "
-        f"{_fmt_corr(metric_rows['overall_score']['pearson_r'])} |",
+        (
+            f"| BLEU | {_fmt_corr(metric_rows['bleu']['spearman_rho'])} | "
+            f"{_fmt_corr(metric_rows['bleu']['pearson_r'])} |"
+        ),
+        (
+            f"| ROUGE-L | {_fmt_corr(metric_rows['rouge_l']['spearman_rho'])} | "
+            f"{_fmt_corr(metric_rows['rouge_l']['pearson_r'])} |"
+        ),
+        (
+            f"| Embedding Similarity | "
+            f"{_fmt_corr(metric_rows['embedding_similarity']['spearman_rho'])} | "
+            f"{_fmt_corr(metric_rows['embedding_similarity']['pearson_r'])} |"
+        ),
+        (
+            f"| Combined (overall_score) | "
+            f"{_fmt_corr(metric_rows['overall_score']['spearman_rho'])} | "
+            f"{_fmt_corr(metric_rows['overall_score']['pearson_r'])} |"
+        ),
         "",
         "## Governance Overhead",
         "",
-        f"Measured with `time.perf_counter` over {int(governance['budget_guard']['iterations'])} "
-        "iterations per feature.",
+        (
+            f"Measured with `time.perf_counter` over "
+            f"{int(governance['budget_guard']['iterations'])} iterations per feature."
+        ),
         "",
         "| Feature | Median (ms) | P95 (ms) |",
         "|---------|------------|----------|",
-        f"| Budget guard | {_fmt_ms(governance['budget_guard']['median_ms'])} | "
-        f"{_fmt_ms(governance['budget_guard']['p95_ms'])} |",
-        f"| Permission guard | {_fmt_ms(governance['permission_guard']['median_ms'])} | "
-        f"{_fmt_ms(governance['permission_guard']['p95_ms'])} |",
-        f"| Audit trail logging | {_fmt_ms(governance['audit_trail_logging']['median_ms'])} | "
-        f"{_fmt_ms(governance['audit_trail_logging']['p95_ms'])} |",
-        f"| Full governance | {_fmt_ms(governance['full_governance']['median_ms'])} | "
-        f"{_fmt_ms(governance['full_governance']['p95_ms'])} |",
+        (
+            f"| Budget guard | {_fmt_ms(governance['budget_guard']['median_ms'])} | "
+            f"{_fmt_ms(governance['budget_guard']['p95_ms'])} |"
+        ),
+        (
+            f"| Permission guard | "
+            f"{_fmt_ms(governance['permission_guard']['median_ms'])} | "
+            f"{_fmt_ms(governance['permission_guard']['p95_ms'])} |"
+        ),
+        (
+            f"| Audit trail logging | "
+            f"{_fmt_ms(governance['audit_trail_logging']['median_ms'])} | "
+            f"{_fmt_ms(governance['audit_trail_logging']['p95_ms'])} |"
+        ),
+        (
+            f"| Full governance | "
+            f"{_fmt_ms(governance['full_governance']['median_ms'])} | "
+            f"{_fmt_ms(governance['full_governance']['p95_ms'])} |"
+        ),
         "",
     ]
     return "\n".join(lines)

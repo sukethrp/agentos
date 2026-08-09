@@ -19,16 +19,17 @@ To use the LLM judge (costs ~$0.02):
 from __future__ import annotations
 
 import sys
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from agentos.core.agent import Agent  # noqa: E402
-from agentos.simulation import (  # noqa: E402
-    SimulatedWorld,
-    WorldConfig,
-    TrafficPattern,
+from agentos.core.agent import Agent
+from agentos.simulation import (
     ALL_PERSONAS,
+    SimulatedWorld,
+    TrafficPattern,
+    WorldConfig,
 )
 
 

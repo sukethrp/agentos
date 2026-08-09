@@ -6,10 +6,9 @@ from pathlib import Path
 
 sys.path.insert(0, "src")
 
+from agentos.core.agent import Agent
 from agentos.rag import RAGPipeline
 from agentos.tools.rag_tool import create_rag_tool
-from agentos.core.agent import Agent
-
 
 # ── Create sample documents ──
 

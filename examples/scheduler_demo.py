@@ -5,10 +5,9 @@ import time
 
 sys.path.insert(0, "src")
 
-from agentos.scheduler import AgentScheduler
 from agentos.core.agent import Agent
+from agentos.scheduler import AgentScheduler
 from agentos.tools import get_builtin_tools
-
 
 if __name__ == "__main__":
     print("=" * 60)

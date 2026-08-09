@@ -21,6 +21,13 @@ _src = Path(__file__).resolve().parent.parent / "src"
 if _src.exists() and str(_src) not in sys.path:
     sys.path.insert(0, str(_src))
 
+# A sync service resolving a conflict writes "test_foo 2.py" next to
+# "test_foo.py". That matches pytest's test_*.py glob, so the stale copy is
+# collected as a second module and every test in it is counted twice. The
+# failure mode is silent: the suite stays green and the count quietly inflates,
+# which is worse than a break because nobody investigates a passing run.
+collect_ignore_glob = ["* [0-9].py", "* copy.py"]
+
 from agentos.core.tool import Tool
 from agentos.core.types import AgentEvent, Message, Role
 from agentos.governance.audit import AuditLog
@@ -51,10 +58,12 @@ def mock_provider():
 @pytest.fixture
 def tmp_audit_log(tmp_path):
     log_path = str(tmp_path / "audit.log")
-    with patch.dict(os.environ, {"AGENTOS_AUDIT_LOG": log_path}):
-        with patch("agentos.compliance.audit_logger.AUDIT_LOG_PATH", log_path):
-            with patch("agentos.compliance.audit_logger._audit_logger", None):
-                yield log_path
+    with (
+        patch.dict(os.environ, {"AGENTOS_AUDIT_LOG": log_path}),
+        patch("agentos.compliance.audit_logger.AUDIT_LOG_PATH", log_path),
+        patch("agentos.compliance.audit_logger._audit_logger", None),
+    ):
+        yield log_path
 
 
 @pytest.fixture

@@ -1,14 +1,14 @@
 """AgentOS Governance Demo — Budget, Permissions, Kill Switch, Audit."""
 
 import sys
+
 sys.path.insert(0, "src")
 
-from agentos.core.tool import tool
 from agentos.core.agent import Agent
+from agentos.core.tool import tool
 from agentos.governance.budget import BudgetGuard
-from agentos.governance.permissions import PermissionGuard
 from agentos.governance.guardrails import GovernanceEngine
-
+from agentos.governance.permissions import PermissionGuard
 
 # --- Tools ---
 

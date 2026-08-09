@@ -20,12 +20,11 @@ import random
 import textwrap
 import time
 
-from agentos.learning.feedback import FeedbackStore, FeedbackType
 from agentos.learning.analyzer import FeedbackAnalyzer
-from agentos.learning.prompt_optimizer import PromptOptimizer
+from agentos.learning.feedback import FeedbackStore, FeedbackType
 from agentos.learning.few_shot import FewShotBuilder
+from agentos.learning.prompt_optimizer import PromptOptimizer
 from agentos.learning.report import build_learning_report
-
 
 DIVIDER = "═" * 60
 

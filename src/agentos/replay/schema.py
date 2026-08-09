@@ -17,6 +17,12 @@ Schema history:
   0, so 0.1.0 traces still load and both fields take their defaults. A legacy
   trace therefore declares no codecs, which reads as "unknown" rather than
   "matches"; see `Replayer` for how that is treated.
+- 0.3.0 adds `RunHeader.target`, the argv a run was launched with. A 0.2.0
+  trace loads with `target=None`, which replay reports as "records no target"
+  rather than guessing. Execution identity belongs in a typed field, not in
+  `labels`: labels are free-form metadata that any caller may set, and
+  something replay depends on to re-execute a run must not be squatting in a
+  namespace anyone can overwrite.
 """
 
 from __future__ import annotations
@@ -32,7 +38,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
 
-SCHEMA_VERSION = "0.2.0"
+SCHEMA_VERSION = "0.3.0"
 DIGEST_ALGO = "b2b"  # blake2b-256; swap for "b3" once blake3 is a dependency
 _NULL_DIGEST = f"{DIGEST_ALGO}:" + "0" * 64
 
@@ -123,6 +129,12 @@ class RunHeader:
     # carries the ORIGINAL timestamps and latencies in its AgentEvents, so
     # anything aggregating runs must exclude these or the numbers are fiction.
     replayed_from: str | None = None
+    # The argv this run was launched with, normalized so it can be re-executed
+    # directly: ["script.py", ...] or ["-m", "package.module", ...]. Written
+    # through the run's redactor, because argv routinely carries secrets passed
+    # as flags and a trace is an artifact people commit and share. `None` means
+    # the trace predates 0.3.0 and cannot be replayed.
+    target: list[str] | None = None
 
     @staticmethod
     def new(**kwargs: Any) -> RunHeader:

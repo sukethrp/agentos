@@ -10,8 +10,9 @@ Usage:
     tools = pm.get_tools_list()  # includes "translate"
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from agentos.core.tool import Tool
@@ -58,7 +59,7 @@ def _translate(text: str, target_language: str = "Spanish") -> str:
         return f'"{text}" in {target_language} → "{translated}"'
 
     # Fallback: tell the agent this phrase isn't in our phrasebook
-    available_langs = ", ".join(["Spanish", "French", "German", "Japanese", "Italian"])
+    available_langs = "Spanish, French, German, Japanese, Italian"
     available_phrases = ", ".join(sorted(phrasebook.keys()))
     return (
         f"[mock translator] Cannot translate \"{text}\" to {target_language}. "

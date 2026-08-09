@@ -8,7 +8,6 @@ sys.path.insert(0, "src")
 from agentos.core.streaming import StreamingAgent
 from agentos.tools import get_builtin_tools
 
-
 if __name__ == "__main__":
     print("=" * 60)
     print("🚀 AgentOS — Streaming Demo")

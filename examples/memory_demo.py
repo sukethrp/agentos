@@ -1,11 +1,12 @@
 """AgentOS Memory Demo — Agents that remember."""
 
 import sys
+
 sys.path.insert(0, "src")
 
-from agentos.core.tool import tool
 from agentos.core.agent import Agent
 from agentos.core.memory import Memory
+from agentos.core.tool import tool
 
 
 @tool(description="Calculate a math expression")

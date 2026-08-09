@@ -6,9 +6,11 @@ Demo mode (no API keys required):
 
 import os
 import sys
+
 sys.path.insert(0, "src")
 
 import uvicorn
+
 from agentos.web.app import app
 
 if __name__ == "__main__":

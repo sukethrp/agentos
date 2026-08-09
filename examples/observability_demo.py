@@ -19,15 +19,14 @@ from __future__ import annotations
 import json
 import textwrap
 
+from agentos.observability.alerts import AlertEngine
+from agentos.observability.diagnostics import diagnose, diagnose_batch
+from agentos.observability.run_viewer import build_run_view
 from agentos.observability.tracer import (
     Trace,
     TraceBuilder,
     TraceStore,
 )
-from agentos.observability.diagnostics import diagnose, diagnose_batch
-from agentos.observability.alerts import AlertEngine
-from agentos.observability.run_viewer import build_run_view
-
 
 DIVIDER = "═" * 60
 

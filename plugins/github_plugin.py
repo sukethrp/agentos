@@ -14,8 +14,8 @@ Uses only the standard library (urllib) — no httpx/requests required.
 import json
 import os
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -46,7 +46,7 @@ def _github_request(endpoint: str, method: str = "GET", body: dict | None = None
     except urllib.error.HTTPError as e:
         error_body = e.read().decode() if e.fp else ""
         return {"error": f"HTTP {e.code}: {e.reason}", "detail": error_body[:500]}
-    except Exception as e:
+    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as e:
         return {"error": str(e)}
 
 

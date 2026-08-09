@@ -8,13 +8,13 @@ Shows:
   5. Run queries using those tools
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from agentos.plugins import PluginManager
 from agentos.core.agent import Agent
+from agentos.plugins import PluginManager
 from agentos.tools import get_builtin_tools
 
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
             tokens = sum(e.tokens_used for e in agent.events)
             print(f"   🤖 Agent: {content[:200]}")
             print(f"      💰 ${cost:.4f} | 🎫 {tokens} tokens")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — demo: surface any agent failure
             print(f"   ❌ Error: {e}")
         print()
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         try:
             result = agent.run("List my GitHub repositories using the list_repos tool")
             print(f"   🤖 Agent: {result.content[:300]}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — demo: surface any agent failure
             print(f"   ❌ Error: {e}")
     else:
         print("   ⚠️  GITHUB_TOKEN not set — skipping GitHub tool test.")
@@ -131,7 +131,7 @@ if __name__ == "__main__":
             try:
                 output = list_repos_tool.fn(username="python")
                 print(f"   {output[:300]}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — demo: surface any tool failure
                 print(f"   ❌ Error: {e}")
 
     # ── Summary ──

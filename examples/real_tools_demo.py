@@ -1,12 +1,17 @@
 """AgentOS Real Tools Demo — Agents connected to REAL APIs."""
 
 import sys
+
 sys.path.insert(0, "src")
 
 from agentos.core.agent import Agent
 from agentos.core.tool import tool
-from agentos.tools.http_tool import weather_tool, web_search_tool, news_tool, create_api_tool
-
+from agentos.tools.http_tool import (
+    create_api_tool,
+    news_tool,
+    weather_tool,
+    web_search_tool,
+)
 
 # --- Create real tools ---
 real_weather = weather_tool()

@@ -6,6 +6,9 @@ on:
   pull_request:
 
 jobs:
+  # Lint and test are independent on purpose. A lint failure must never hide
+  # whether the suite passes — that is how main stayed dark while pytest never
+  # ran in Actions.
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -15,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -27,17 +30,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install .[dev]
 
-      - name: Run ruff linter
-        run: |
-          ruff check .
-
+      # No --maxfail: report every failure in one CI run.
       - name: Run pytest with coverage
         run: |
-          pytest --maxfail=1 --disable-warnings --junitxml=test-results.xml
+          pytest --disable-warnings --junitxml=test-results.xml
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
           fail_ci_if_error: false
@@ -45,10 +45,102 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: pytest-results-${{ matrix.python-version }}
           path: |
             test-results.xml
             coverage.xml
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # Need full history so we can diff against the PR base (or first parent on push).
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install "ruff>=0.1.0"
+
+      - name: Ruff on changed files (blocking on pull_request)
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          mapfile -t CHANGED < <(
+            git diff --name-only --diff-filter=ACMRTUXB "$BASE"...HEAD \
+              | grep -E '\.py$' || true
+          )
+          if [ "${#CHANGED[@]}" -eq 0 ]; then
+            echo "No Python files changed; nothing to lint."
+            exit 0
+          fi
+          echo "Linting ${#CHANGED[@]} changed file(s) against BASE=$BASE:"
+          printf '  %s\n' "${CHANGED[@]}"
+          ruff check "${CHANGED[@]}"
+
+      - name: Ruff on changed files (blocking on push to main)
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          # On a PR merge commit, HEAD^1 is the previous main tip, so the
+          # changed set equals exactly what the PR changed. Never fall back to
+          # linting the full tree — that would block main on legacy debt.
+          if ! BASE="$(git rev-parse --verify HEAD^1 2>/dev/null)"; then
+            echo "No first parent for HEAD (or rev-parse failed); skipping changed-file lint."
+            exit 0
+          fi
+          mapfile -t CHANGED < <(
+            git diff --name-only --diff-filter=ACMRTUXB "$BASE"...HEAD \
+              | grep -E '\.py$' || true
+          )
+          if [ "${#CHANGED[@]}" -eq 0 ]; then
+            echo "No Python files changed vs BASE=$BASE; nothing to lint."
+            exit 0
+          fi
+          echo "Linting ${#CHANGED[@]} changed file(s) against BASE=$BASE (HEAD^1):"
+          printf '  %s\n' "${CHANGED[@]}"
+          ruff check "${CHANGED[@]}"
+
+      - name: Legacy ruff debt (advisory, non-blocking)
+        # Full-tree count stays visible so the number can only trend down.
+        # Never fail the job for legacy findings; the ratchet above owns new code.
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          echo "::notice title=Legacy ruff debt::Full-tree ruff statistics (advisory; does not fail CI)"
+          set +e
+          STATS="$(ruff check . --statistics 2>&1)"
+          RC=$?
+          set -e
+          printf '%s\n' "$STATS"
+          TOTAL="$(printf '%s\n' "$STATS" | sed -nE 's/^Found ([0-9]+) error.*$/\1/p' | tail -1)"
+          if [ -z "${TOTAL:-}" ]; then
+            if [ "$RC" -eq 0 ]; then
+              TOTAL=0
+            else
+              TOTAL="unknown"
+            fi
+          fi
+          {
+            echo "## Legacy ruff debt (advisory)"
+            echo ""
+            echo "**${TOTAL}** findings on full tree. Tracked in [#34](https://github.com/sukethrp/agentos/issues/34)."
+            echo ""
+            echo "This step is non-blocking. The changed-file ratchet above is what keeps main green."
+            echo ""
+            echo '```'
+            printf '%s\n' "$STATS"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Always succeed: advisory only.
+          true

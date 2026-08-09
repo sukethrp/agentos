@@ -1,13 +1,13 @@
 """AgentOS Sandbox Demo — Test your agent against scenarios."""
 
 import sys
+
 sys.path.insert(0, "src")
 
-from agentos.core.tool import tool
 from agentos.core.agent import Agent
-from agentos.sandbox.scenario import Scenario
+from agentos.core.tool import tool
 from agentos.sandbox.runner import Sandbox
-
+from agentos.sandbox.scenario import Scenario
 
 # --- Same tools as quickstart ---
 
