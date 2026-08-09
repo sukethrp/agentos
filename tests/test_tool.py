@@ -13,7 +13,6 @@ Covers:
 from agentos.core.tool import Tool, tool
 from agentos.core.types import ToolCall
 
-
 # ═══════════════════════════════════════════════════════════════════
 # @tool decorator
 # ═══════════════════════════════════════════════════════════════════

@@ -16,8 +16,11 @@ Usage:
 """
 
 from __future__ import annotations
+
 import time
+
 from pydantic import BaseModel, Field
+
 from agentos.core.agent import Agent
 from agentos.core.types import AgentEvent
 

@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-from agentos.monitor.store import store
+
 from agentos.core.types import AgentEvent
+from agentos.monitor.store import store
 
 app = FastAPI(title="AgentOS Monitor", version="0.3.0")
 

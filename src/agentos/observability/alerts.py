@@ -15,12 +15,13 @@ from __future__ import annotations
 import statistics
 import time
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
-from agentos.observability.tracer import Trace, TraceStore, StepType, get_trace_store
 from agentos.observability.diagnostics import Diagnosis, Severity, diagnose
+from agentos.observability.tracer import StepType, Trace, TraceStore, get_trace_store
 
 
 class AlertLevel(str, Enum):

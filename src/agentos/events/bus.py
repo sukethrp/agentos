@@ -8,14 +8,16 @@ Usage:
 """
 
 from __future__ import annotations
+
 import fnmatch
 import io
 import sys
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 
 @dataclass

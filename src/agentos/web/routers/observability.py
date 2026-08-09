@@ -1,12 +1,16 @@
 from __future__ import annotations
+
 from fastapi import APIRouter
+
+from agentos.observability.alerts import AlertEngine as _ObsAlertEngine
+from agentos.observability.diagnostics import diagnose as _obs_diagnose
+from agentos.observability.run_viewer import build_run_view as _obs_build_run_view
 from agentos.observability.tracer import (
-    get_trace_store as _obs_trace_store,
     TraceBuilder,
 )
-from agentos.observability.diagnostics import diagnose as _obs_diagnose
-from agentos.observability.alerts import AlertEngine as _ObsAlertEngine
-from agentos.observability.run_viewer import build_run_view as _obs_build_run_view
+from agentos.observability.tracer import (
+    get_trace_store as _obs_trace_store,
+)
 
 router = APIRouter(tags=["observability"])
 

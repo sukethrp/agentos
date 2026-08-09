@@ -1,13 +1,14 @@
 from __future__ import annotations
-from agentos.observability.tracer import (
-    TraceBuilder,
-    TraceStore,
-    Trace,
-    TraceStep,
-    StepType,
-)
+
 from agentos.observability.alerts import AlertEngine
 from agentos.observability.run_viewer import build_run_view
+from agentos.observability.tracer import (
+    StepType,
+    Trace,
+    TraceBuilder,
+    TraceStep,
+    TraceStore,
+)
 
 
 def test_tracer_span():

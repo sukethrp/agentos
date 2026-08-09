@@ -39,15 +39,20 @@ Design decisions:
 """
 
 from __future__ import annotations
+
 import asyncio
 import hashlib
 import json
 import uuid
-from typing import TYPE_CHECKING, Generator
+from collections.abc import Generator
+from typing import TYPE_CHECKING
+
 from cachetools import TTLCache
 
 if TYPE_CHECKING:
     from agentos.mcp import MCPServer
+from agentos.core.memory import Memory
+from agentos.core.tool import Tool
 from agentos.core.types import (
     AgentConfig,
     AgentEvent,
@@ -57,11 +62,9 @@ from agentos.core.types import (
     ToolExecutionContext,
     ToolResult,
 )
-from agentos.core.tool import Tool
-from agentos.core.memory import Memory
+from agentos.logging import correlation, get_logger
 from agentos.providers.router import call_model as call_llm
 from agentos.providers.router import call_model_stream as call_llm_stream
-from agentos.logging import correlation, get_logger
 from agentos.telemetry import (
     agent_span,
     llm_span,
@@ -468,7 +471,7 @@ class Agent:
                         return (result_str, latency_ms)
                     # Catch tool execution errors gracefully so one bad tool
                     # doesn't crash the entire agent run.
-                    except asyncio.TimeoutError as e:
+                    except TimeoutError as e:
                         last_err = e
                         # Exponential back-off before retrying.
                         if attempt < tool.max_retries:

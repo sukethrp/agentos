@@ -33,10 +33,12 @@ objects, enums) authors can override ``Tool.params`` after construction.
 """
 
 from __future__ import annotations
-import time
+
 import inspect
-from typing import Callable
-from agentos.core.types import ToolSpec, ToolParam, ToolCall, ToolResult
+import time
+from collections.abc import Callable
+
+from agentos.core.types import ToolCall, ToolParam, ToolResult, ToolSpec
 
 
 class Tool:

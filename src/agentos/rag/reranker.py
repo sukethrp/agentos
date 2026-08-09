@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from agentos.rag.types import SearchResult
 
 

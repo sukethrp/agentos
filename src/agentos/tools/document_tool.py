@@ -7,8 +7,8 @@ Usage:
 
 from __future__ import annotations
 
-from agentos.core.tool import Tool
 from agentos.core.multimodal import read_document
+from agentos.core.tool import Tool
 
 
 def document_reader_tool(max_chars: int = 50_000) -> Tool:

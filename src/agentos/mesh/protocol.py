@@ -19,7 +19,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── Message types ────────────────────────────────────────────────────────────
 
 class MessageType(str, Enum):

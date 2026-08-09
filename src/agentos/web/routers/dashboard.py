@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from fastapi import APIRouter
+
 from agentos.demo import is_demo_mode
 from agentos.monitor.store import store
 from agentos.web.deps import get_app

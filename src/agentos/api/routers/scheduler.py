@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from agentos.scheduler import get_scheduler
+
 from agentos.core.agent import Agent
+from agentos.scheduler import get_scheduler
 
 router = APIRouter(prefix="/scheduler", tags=["scheduler"])
 

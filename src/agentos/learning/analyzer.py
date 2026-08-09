@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 
 from agentos.learning.feedback import FeedbackEntry, FeedbackStore, FeedbackType
 
-
 # ── Topic detection ──────────────────────────────────────────────────────────
 
 _TOPIC_KEYWORDS: dict[str, list[str]] = {

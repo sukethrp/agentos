@@ -47,7 +47,7 @@ import random
 import re
 import time
 import uuid
-from typing import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
 
 from agentos.core.tool import Tool
 from agentos.core.types import AgentEvent, Message, Role, ToolCall

@@ -1,10 +1,13 @@
 from __future__ import annotations
+
 from unittest.mock import patch
+
 import pytest
+
 from agentos.core.types import Message, Role
+from agentos.teams.dag import WorkflowDAG
 from agentos.teams.planner import PlannerAgent
 from agentos.teams.runner import TeamRunner
-from agentos.teams.dag import WorkflowDAG
 
 
 def test_planner_decomposes_goal():

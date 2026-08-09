@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-import uuid
 import threading
+import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any, AsyncIterator, Optional
+from typing import Any
 
 from agentos.core.agent import Agent
 from agentos.core.tool import Tool
@@ -15,9 +16,9 @@ from agentos.mcp.adapter import toolspec_to_input_schema
 
 try:
     # SSE transport uses FastAPI/Starlette.
+    import uvicorn
     from fastapi import FastAPI, Request
     from fastapi.responses import JSONResponse, Response, StreamingResponse
-    import uvicorn
 except Exception:  # pragma: no cover
     FastAPI = None  # type: ignore[assignment]
     Request = None  # type: ignore[assignment]
@@ -51,7 +52,7 @@ class StdioTransport:
         self._stdout = stdout
         self._write_lock = threading.Lock()
 
-    def read_message(self) -> Optional[dict[str, Any]]:
+    def read_message(self) -> dict[str, Any] | None:
         raw = self._stdin.buffer.readline()
         if not raw:
             return None
@@ -109,17 +110,17 @@ class MCPProtocolHandler:
     handler so tool discovery/execution logic stays consistent.
     """
 
-    def __init__(self, server: "MCPServer") -> None:
+    def __init__(self, server: MCPServer) -> None:
         self._server = server
 
     def dispatch_sync(
         self, msg: dict[str, Any], *, session_id: str
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         return self._server._dispatch_message(msg, session_id=session_id)
 
     async def dispatch_async(
         self, msg: dict[str, Any], *, session_id: str
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         # Tool execution uses asyncio.run internally in Agent, so we call it
         # from a worker thread to avoid "asyncio.run() cannot be called from
         # a running event loop" errors.
@@ -208,7 +209,7 @@ class SseTransport:
     async def _sse_event_stream(
         self,
         *,
-        request: "Request",
+        request: Request,
         session_id: str,
     ) -> AsyncIterator[str]:
         s = await self._get_session(session_id)
@@ -255,7 +256,7 @@ class SseTransport:
         app = FastAPI(title="AgentOS MCP SSE Transport", version="0.3.1")
 
         @app.get(self._sse_path)
-        async def sse_endpoint(request: "Request") -> StreamingResponse:
+        async def sse_endpoint(request: Request) -> StreamingResponse:
             session_id = request.headers.get("MCP-Session-Id")
             if not session_id:
                 return JSONResponse(
@@ -276,7 +277,7 @@ class SseTransport:
             )
 
         @app.post(self._messages_path)
-        async def messages_endpoint(request: "Request") -> Response:
+        async def messages_endpoint(request: Request) -> Response:
             body = await request.json()
             if not isinstance(body, dict):
                 return JSONResponse(status_code=400, content={"error": "Invalid body"})
@@ -383,7 +384,7 @@ class MCPServer:
             )
 
     @classmethod
-    def from_agent(cls, agent: Agent, *, name: str | None = None) -> "MCPServer":
+    def from_agent(cls, agent: Agent, *, name: str | None = None) -> MCPServer:
         # Reuse the agent instance to keep its tool cache/retries behavior.
         server = cls(
             name=name or agent.config.name,
@@ -494,7 +495,7 @@ class MCPServer:
 
     def _dispatch_message(
         self, msg: dict[str, Any], *, session_id: str
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         # Requests have a non-null id; notifications omit id entirely.
         is_request = ("id" in msg) and (msg.get("id") is not None)
         id_ = msg.get("id")
@@ -669,4 +670,4 @@ class MCPServer:
         await asyncio.to_thread(self.run)
 
 
-__all__ = ["MCPServer", "StdioTransport", "SseTransport", "MCPProtocolHandler"]
+__all__ = ["MCPProtocolHandler", "MCPServer", "SseTransport", "StdioTransport"]

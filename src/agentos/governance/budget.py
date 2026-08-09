@@ -36,6 +36,7 @@ boundary is bounded by ``max_per_action``.
 """
 
 from __future__ import annotations
+
 import time
 
 

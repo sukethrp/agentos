@@ -1,15 +1,22 @@
 from __future__ import annotations
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from agentos.mesh.protocol import MeshMessage as _MeshMsg, MeshIdentity as _MeshId
+
 from agentos.mesh.discovery import get_registry as _get_mesh_registry
-from agentos.mesh.transaction import get_ledger as _get_mesh_ledger
+from agentos.mesh.protocol import MeshIdentity as _MeshId
+from agentos.mesh.protocol import MeshMessage as _MeshMsg
+from agentos.mesh.server import (
+    get_node as _get_mesh_node,
+)
 from agentos.mesh.server import (
     handle_message as _mesh_handle,
-    get_node as _get_mesh_node,
+)
+from agentos.mesh.server import (
     init_node as _mesh_init_node,
 )
+from agentos.mesh.transaction import get_ledger as _get_mesh_ledger
 
 router = APIRouter(tags=["mesh"])
 

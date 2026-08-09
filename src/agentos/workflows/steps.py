@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -15,8 +16,8 @@ class StepResult:
     status: str = "pending"  # pending|running|completed|failed|skipped|fallback
     cost: float = 0.0
     duration_ms: float = 0.0
-    error: Optional[str] = None
-    data: Dict[str, Any] = field(default_factory=dict)
+    error: str | None = None
+    data: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -26,8 +27,8 @@ class Step:
     name: str
     agent: Any  # agentos.core.agent.Agent
     query: Any  # str | Callable[[Dict[str, StepResult]], str]
-    when: Optional[str] = None
-    when_not: Optional[str] = None
+    when: str | None = None
+    when_not: str | None = None
     max_retries: int = 0
     fallback_agent: Any = None
     fallback_query: Any = None
@@ -38,8 +39,8 @@ class Condition:
     """Named condition that can be referenced by later steps."""
 
     name: str
-    predicate: Callable[[StepResult, Dict[str, StepResult]], bool]
-    source_step: Optional[str] = None
+    predicate: Callable[[StepResult, dict[str, StepResult]], bool]
+    source_step: str | None = None
 
 
 @dataclass
@@ -47,4 +48,4 @@ class ParallelGroup:
     """Group of steps that should run in parallel."""
 
     name: str
-    steps: List[Step] = field(default_factory=list)
+    steps: list[Step] = field(default_factory=list)

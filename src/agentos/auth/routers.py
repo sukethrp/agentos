@@ -1,16 +1,18 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from agentos.auth.auth import get_current_user
+from agentos.auth.models import User
 from agentos.auth.org_models import Role
 from agentos.auth.org_store import (
+    add_org_member,
     create_org,
     get_org,
     list_org_members,
-    add_org_member,
     remove_org_member,
 )
-from agentos.auth.auth import get_current_user
-from agentos.auth.models import User
 
 router = APIRouter(tags=["auth"])
 

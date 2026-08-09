@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 import asyncio
 from typing import Any
+
 from agentos.core.agent import Agent
-from agentos.teams.dag import WorkflowDAG
-from agentos.governance.guardrails import GovernanceEngine
 from agentos.governance.budget import BudgetGuard
+from agentos.governance.guardrails import GovernanceEngine
 from agentos.monitor.ws_manager import broadcast_team_node_event
+from agentos.teams.dag import WorkflowDAG
 
 
 def _safe_eval(expr: str, outputs: dict[str, str]) -> bool:

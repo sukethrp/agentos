@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from agentos.sandbox.simulation_runner import SimulationRunner, get_run_report
+
+from agentos.core.agent import Agent
 from agentos.sandbox.comparison import ComparisonReport
 from agentos.sandbox.evaluation_scenario import EvaluationScenario
-from agentos.core.agent import Agent
+from agentos.sandbox.simulation_runner import SimulationRunner, get_run_report
 
 router = APIRouter(prefix="/sandbox", tags=["sandbox"])
 

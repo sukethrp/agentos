@@ -22,8 +22,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from agentos.observability.tracer import Trace, TraceStep, StepType
-from agentos.observability.diagnostics import Diagnosis, diagnose, Severity
+from agentos.observability.diagnostics import Diagnosis, Severity, diagnose
+from agentos.observability.tracer import StepType, Trace, TraceStep
 
 
 @dataclass

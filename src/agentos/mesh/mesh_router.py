@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 import asyncio
 import os
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable
-from pydantic import BaseModel, Field
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
+from typing import Any
+
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
 load_dotenv()
 
@@ -15,7 +18,7 @@ class MeshMessage(BaseModel):
     receiver: str | None
     topic: str
     payload: dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     correlation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
 
 
@@ -157,8 +160,9 @@ class MeshRouter:
         if not self._redis_url:
             return
         try:
-            from redis.asyncio import Redis
             import json
+
+            from redis.asyncio import Redis
 
             r = Redis.from_url(self._redis_url, decode_responses=True)
             self._redis = r

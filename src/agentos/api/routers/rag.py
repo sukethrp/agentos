@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from agentos.rag.ingestion import IngestionPipeline
+
+from agentos.rag.ingestion import IngestionPipeline, _store_registry
 from agentos.rag.pipeline import RAGPipeline
-from agentos.rag.ingestion import _store_registry
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 

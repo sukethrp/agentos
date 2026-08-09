@@ -1,12 +1,15 @@
 from __future__ import annotations
+
 import asyncio
 import json
 import time
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+
 from anthropic import AsyncAnthropic, RateLimitError
 from dotenv import load_dotenv
-from agentos.core.types import Message, ToolCall, AgentEvent, Role
+
 from agentos.core.tool import Tool
+from agentos.core.types import AgentEvent, Message, Role, ToolCall
 from agentos.providers.base import BaseProvider
 
 load_dotenv()

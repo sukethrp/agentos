@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from agentos.marketplace.registry import MarketplaceRegistry, publish, install
+
+from agentos.marketplace.registry import MarketplaceRegistry, install, publish
 
 router = APIRouter(prefix="/marketplace", tags=["marketplace"])
 

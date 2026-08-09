@@ -1,13 +1,15 @@
 from __future__ import annotations
+
 import asyncio
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from pydantic import BaseModel, Field
 
 
 class AuditEvent(BaseModel):
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     agent_id: str = ""
     user_id: str = ""
     action_type: str = ""

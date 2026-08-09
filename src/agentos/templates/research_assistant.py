@@ -2,10 +2,10 @@
 
 from agentos.core.agent import Agent
 from agentos.tools.http_tool import (
-    web_search_tool,
-    weather_tool,
-    news_tool,
     calculator_tool,
+    news_tool,
+    weather_tool,
+    web_search_tool,
 )
 
 

@@ -9,8 +9,9 @@ they degrade to no-ops.  Install the ``otel`` extra to enable:
 from __future__ import annotations
 
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from agentos.core.types import AgentEvent
@@ -35,9 +36,9 @@ _ATTR_TOOL = "agentos.tool.name"
 
 
 def _try_init() -> None:
-    global _HAS_OTEL, _tracer, _meter  # noqa: PLW0603
-    global _llm_token_counter, _llm_cost_counter, _llm_latency_hist  # noqa: PLW0603
-    global _tool_latency_hist, _agent_run_counter  # noqa: PLW0603
+    global _HAS_OTEL, _tracer, _meter
+    global _llm_token_counter, _llm_cost_counter, _llm_latency_hist
+    global _tool_latency_hist, _agent_run_counter
     if _tracer is not None:
         return
     try:

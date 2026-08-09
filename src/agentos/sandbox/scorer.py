@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import json
 import os
+
 from agentos.demo import is_demo_mode
 from agentos.sandbox.evaluation_scenario import EvaluationScenario
 from agentos.sandbox.metrics import bleu_score, lexical_overlap, rouge_l_score
-
 
 JUDGE_PROMPT = """Score the agent's response against the expected output.
 

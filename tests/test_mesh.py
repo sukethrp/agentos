@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
-from agentos.mesh.mesh_router import MeshRouter, MeshMessage
+
+from agentos.mesh.mesh_router import MeshMessage, MeshRouter
 
 
 @pytest.fixture

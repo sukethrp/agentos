@@ -10,10 +10,12 @@ Usage:
 """
 
 from __future__ import annotations
-from typing import Generator
-from agentos.core.types import Message, AgentEvent
+
+from collections.abc import Generator
+
 from agentos.core.tool import Tool
-from agentos.logging import get_logger, get_correlation
+from agentos.core.types import AgentEvent, Message
+from agentos.logging import get_correlation, get_logger
 
 _log = get_logger("agentos.providers")
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+
 from agentos.auth import User, create_user, get_current_user, get_user_by_email
 from agentos.auth.usage import usage_tracker
 

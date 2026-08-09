@@ -19,14 +19,16 @@ Usage:
 """
 
 from __future__ import annotations
+
 import asyncio
 import time
+from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass
-from typing import AsyncGenerator, Generator
+
 from agentos.core.agent import Agent
-from agentos.core.types import AgentEvent, Message
-from agentos.core.tool import Tool
 from agentos.core.memory import Memory
+from agentos.core.tool import Tool
+from agentos.core.types import AgentEvent, Message
 
 
 @dataclass

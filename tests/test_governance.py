@@ -16,11 +16,10 @@ from __future__ import annotations
 import json
 import time
 
-from agentos.governance.budget import BudgetGuard
-from agentos.governance.permissions import PermissionGuard
 from agentos.governance.audit import AuditLog
+from agentos.governance.budget import BudgetGuard
 from agentos.governance.guardrails import GovernanceEngine
-
+from agentos.governance.permissions import PermissionGuard
 
 # ═══════════════════════════════════════════════════════════════════
 # BudgetGuard

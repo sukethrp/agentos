@@ -17,15 +17,14 @@ from __future__ import annotations
 import copy
 import math
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 import numpy as np
 from pydantic import BaseModel, Field
 
 from agentos.core.agent import Agent
 from agentos.core.memory import Memory
-from agentos.sandbox.scenario import Scenario
 from agentos.sandbox.runner import Sandbox
+from agentos.sandbox.scenario import Scenario
 
 
 @dataclass
@@ -37,15 +36,15 @@ class ABTestResult:
     n_queries: int
     mean_a: float
     mean_b: float
-    ci_a: Tuple[float, float]
-    ci_b: Tuple[float, float]
+    ci_a: tuple[float, float]
+    ci_b: tuple[float, float]
     welch_t_statistic: float
     welch_p_value: float
     mann_whitney_u: float
     mann_whitney_p: float
     cohens_d: float
     effect_interpretation: str
-    winner: Optional[str]
+    winner: str | None
     confidence: float
 
     def summary(self) -> str:
@@ -64,7 +63,7 @@ class ABTestResult:
         )
 
 
-def welch_t_test(scores_a: List[float], scores_b: List[float]) -> Tuple[float, float]:
+def welch_t_test(scores_a: list[float], scores_b: list[float]) -> tuple[float, float]:
     """Welch's t-test for unequal variances."""
     if len(scores_a) < 2 or len(scores_b) < 2:
         return 0.0, 1.0
@@ -94,7 +93,7 @@ def welch_t_test(scores_a: List[float], scores_b: List[float]) -> Tuple[float, f
     return float(t_stat), float(max(0.0, min(1.0, p_value)))
 
 
-def cohens_d(scores_a: List[float], scores_b: List[float]) -> Tuple[float, str]:
+def cohens_d(scores_a: list[float], scores_b: list[float]) -> tuple[float, str]:
     """Cohen's d effect size with interpretation."""
     if len(scores_a) < 2 or len(scores_b) < 2:
         return 0.0, "negligible"
@@ -121,10 +120,10 @@ def cohens_d(scores_a: List[float], scores_b: List[float]) -> Tuple[float, str]:
 
 
 def bootstrap_ci(
-    scores: List[float],
+    scores: list[float],
     n_bootstrap: int = 1000,
     ci: float = 0.95,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """Bootstrap confidence interval for the mean."""
     if not scores:
         return 0.0, 0.0
@@ -158,8 +157,8 @@ def estimate_sample_size(effect_size: float, alpha: float = 0.05, power: float =
 
 
 def run_ab_test(
-    scores_a: List[float],
-    scores_b: List[float],
+    scores_a: list[float],
+    scores_b: list[float],
     name_a: str = "Variant A",
     name_b: str = "Variant B",
     significance_level: float = 0.05,
@@ -177,8 +176,8 @@ def run_ab_test(
         return 0.5 * math.erfc(x / math.sqrt(2.0))
 
     def _mann_whitney_two_sided_fallback(
-        a: List[float], b: List[float]
-    ) -> Tuple[float, float]:
+        a: list[float], b: list[float]
+    ) -> tuple[float, float]:
         """Compute Mann–Whitney U and a two-sided p-value without SciPy.
 
         Uses rank-sum + normal approximation (with tie correction).
@@ -273,7 +272,7 @@ def run_ab_test(
 
     # Winner gate: use Mann–Whitney significance only. If significant, pick
     # the variant with the higher mean.
-    winner: Optional[str] = None
+    winner: str | None = None
     if u_p < significance_level:
         winner = name_a if mean_a > mean_b else name_b
 
@@ -351,7 +350,7 @@ class ABTestReport(BaseModel):
     winner: str  # "agent_a" | "agent_b" | "tie"
     confidence: float = 0.0  # 0.0–1.0 based on simple binomial test
     scores: dict[str, ABTestScores] = Field(default_factory=dict)
-    per_query: List[ABTestPerQueryResult] = Field(default_factory=list)
+    per_query: list[ABTestPerQueryResult] = Field(default_factory=list)
 
     def print_report(self) -> None:
         print(f"\n{'=' * 60}")
@@ -399,7 +398,7 @@ class ABTest:
         self.agent_b = clone_agent(agent_b, agent_b.config.name + "-B")
         self.pass_threshold = pass_threshold
 
-    def run_test(self, queries: List[str], num_runs: int = 10) -> ABTestReport:
+    def run_test(self, queries: list[str], num_runs: int = 10) -> ABTestReport:
         """Run the same queries on both agents and compare.
 
         Args:
@@ -410,7 +409,7 @@ class ABTest:
         if not queries:
             raise ValueError("queries must not be empty")
 
-        scenarios: List[Scenario] = []
+        scenarios: list[Scenario] = []
         for run_idx in range(num_runs):
             for i, q in enumerate(queries):
                 scenarios.append(
@@ -430,10 +429,10 @@ class ABTest:
         map_a = {r.scenario_name: r for r in report_a.results}
         map_b = {r.scenario_name: r for r in report_b.results}
 
-        per_query: List[ABTestPerQueryResult] = []
+        per_query: list[ABTestPerQueryResult] = []
         wins_a = wins_b = ties = 0
-        overall_a: List[float] = []
-        overall_b: List[float] = []
+        overall_a: list[float] = []
+        overall_b: list[float] = []
 
         for s in scenarios:
             ra = map_a.get(s.name)

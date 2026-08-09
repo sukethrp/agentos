@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from agentos.observability.tracer import Trace, StepType
+from agentos.observability.tracer import StepType, Trace
 
 
 class Severity(str, Enum):

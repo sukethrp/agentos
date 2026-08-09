@@ -1,6 +1,8 @@
 from __future__ import annotations
-from agentos.core.types import AgentEvent
+
 import time
+
+from agentos.core.types import AgentEvent
 
 
 class AgentStore:

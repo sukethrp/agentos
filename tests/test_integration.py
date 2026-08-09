@@ -24,7 +24,7 @@ from agentos.governance.budget import BudgetGuard
 from agentos.governance.permissions import PermissionGuard
 from agentos.governed_agent import GovernedAgent
 from agentos.monitor.store import AgentStore
-from agentos.sandbox.scenario import Scenario, SandboxReport
+from agentos.sandbox.scenario import SandboxReport, Scenario
 
 
 def _calculator(expression: str) -> str:

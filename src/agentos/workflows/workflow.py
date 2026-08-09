@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Sequence
+from typing import Any
 
-from agentos.workflows.steps import Step, Condition, ParallelGroup
+from agentos.workflows.steps import Condition, ParallelGroup, Step
 
 
 @dataclass
@@ -13,8 +14,8 @@ class Workflow:
     """A multi-step agent workflow with optional branching and parallelism."""
 
     name: str
-    steps: List[Any] = field(default_factory=list)  # Step | ParallelGroup
-    conditions: Dict[str, Condition] = field(default_factory=dict)
+    steps: list[Any] = field(default_factory=list)  # Step | ParallelGroup
+    conditions: dict[str, Condition] = field(default_factory=dict)
 
     # ── Fluent API ──
 
@@ -31,7 +32,7 @@ class Workflow:
         max_retries: int = 0,
         fallback_agent: Any | None = None,
         fallback_query: Any | None = None,
-    ) -> "Workflow":
+    ) -> Workflow:
         """Append a sequential step to the workflow.
 
         Args:
@@ -56,7 +57,7 @@ class Workflow:
         self._last_step = step
         return self
 
-    def condition(self, name: str, fn: Callable[[str], bool]) -> "Workflow":
+    def condition(self, name: str, fn: Callable[[str], bool]) -> Workflow:
         """Define a condition that can be referenced by later steps.
 
         The provided function receives the output string from the source step.
@@ -79,7 +80,7 @@ class Workflow:
         self,
         name: str,
         steps: Sequence[tuple[str, Any, Any]],
-    ) -> "Workflow":
+    ) -> Workflow:
         """Add a parallel group of steps.
 
         Args:
@@ -92,6 +93,6 @@ class Workflow:
         self._last_step = None
         return self
 
-    def build(self) -> "Workflow":
+    def build(self) -> Workflow:
         """Finalize the workflow (currently a no-op, returns self)."""
         return self

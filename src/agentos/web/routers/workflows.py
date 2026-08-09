@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import uuid as _uuid
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
 from agentos.web.deps import get_workflows_store
 
 router = APIRouter(tags=["workflows"])
@@ -23,10 +26,12 @@ def workflows_run(workflow_id: str):
     if workflow_id not in get_workflows_store():
         return JSONResponse({"error": "workflow not found"}, status_code=404)
     import asyncio
+
+    import yaml
+
+    from agentos.core.agent import Agent
     from agentos.teams.dag import WorkflowDAG
     from agentos.teams.runner import TeamRunner
-    from agentos.core.agent import Agent
-    import yaml
 
     w = get_workflows_store()[workflow_id]
     try:

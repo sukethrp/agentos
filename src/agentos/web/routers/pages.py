@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 from pathlib import Path
+
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, HTMLResponse
+
 from agentos.demo import is_demo_mode
 
 router = APIRouter(tags=["pages"])

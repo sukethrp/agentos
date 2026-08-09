@@ -7,8 +7,8 @@ Usage:
 
 from __future__ import annotations
 
-from agentos.core.tool import Tool
 from agentos.core.multimodal import analyze_image
+from agentos.core.tool import Tool
 
 
 def vision_tool(model: str = "gpt-4o") -> Tool:

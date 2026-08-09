@@ -8,7 +8,6 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
-from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -57,30 +56,29 @@ class UserStore:
                     return {"users": []}
 
     def _write(self, data: dict) -> None:
-        with self._lock:
-            with open(self.path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+        with self._lock, open(self.path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
 
     # ── CRUD helpers ──
 
-    def list_users(self) -> List[User]:
+    def list_users(self) -> list[User]:
         data = self._read()
         return [User(**u) for u in data.get("users", [])]
 
-    def get_by_id(self, user_id: str) -> Optional[User]:
+    def get_by_id(self, user_id: str) -> User | None:
         for u in self.list_users():
             if u.id == user_id:
                 return u
         return None
 
-    def get_by_email(self, email: str) -> Optional[User]:
+    def get_by_email(self, email: str) -> User | None:
         email = email.lower().strip()
         for u in self.list_users():
             if u.email.lower() == email:
                 return u
         return None
 
-    def get_by_api_key(self, api_key: str) -> Optional[User]:
+    def get_by_api_key(self, api_key: str) -> User | None:
         for u in self.list_users():
             if u.api_key == api_key:
                 return u

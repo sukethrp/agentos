@@ -15,9 +15,9 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Generator
 from dataclasses import dataclass
 from enum import Enum
-from typing import Generator
 
 
 class TrafficPattern(str, Enum):

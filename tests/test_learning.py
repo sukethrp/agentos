@@ -1,5 +1,6 @@
 from __future__ import annotations
-from agentos.learning.feedback import FeedbackStore, FeedbackEntry, FeedbackType
+
+from agentos.learning.feedback import FeedbackEntry, FeedbackStore, FeedbackType
 from agentos.learning.few_shot import FewShotBuilder
 from agentos.learning.prompt_optimizer import PromptOptimizer
 

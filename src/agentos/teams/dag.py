@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from pathlib import Path
-import yaml
+
 import networkx as nx
+import yaml
 
 
 class WorkflowDAG:
@@ -18,7 +20,7 @@ class WorkflowDAG:
             self._graph.add_edge(e["source"], e["target"], **attrs)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "WorkflowDAG":
+    def from_yaml(cls, path: str | Path) -> WorkflowDAG:
         p = Path(path)
         data = yaml.safe_load(p.read_text())
         nodes = data.get("nodes", [])

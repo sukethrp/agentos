@@ -1,5 +1,5 @@
 from agentos.teams.dag import WorkflowDAG
 from agentos.teams.planner import PlannerAgent
-from agentos.teams.runner import TeamRunner, ResultAggregator
+from agentos.teams.runner import ResultAggregator, TeamRunner
 
-__all__ = ["WorkflowDAG", "PlannerAgent", "TeamRunner", "ResultAggregator"]
+__all__ = ["PlannerAgent", "ResultAggregator", "TeamRunner", "WorkflowDAG"]

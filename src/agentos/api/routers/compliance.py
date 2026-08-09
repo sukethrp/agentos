@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import json
 import os
+
 from fastapi import APIRouter, Query
+
 from agentos.compliance.audit_logger import AUDIT_LOG_PATH
 
 router = APIRouter(prefix="/compliance", tags=["compliance"])

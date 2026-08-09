@@ -8,7 +8,6 @@ space has drifted significantly.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
 
 import numpy as np
 
@@ -86,10 +85,10 @@ class EmbeddingDriftDetector:
 
     def __init__(self, threshold: float = 0.1):
         self.threshold = threshold
-        self._reference: Optional[np.ndarray] = None
-        self._ref_mean: Optional[np.ndarray] = None
+        self._reference: np.ndarray | None = None
+        self._ref_mean: np.ndarray | None = None
 
-    def set_reference(self, embeddings: List[List[float]]) -> None:
+    def set_reference(self, embeddings: list[list[float]]) -> None:
         """Set the reference embedding distribution."""
         reference = np.array(embeddings, dtype=float)
         if reference.ndim != 2 or len(reference) == 0:
@@ -97,7 +96,7 @@ class EmbeddingDriftDetector:
         self._reference = reference
         self._ref_mean = reference.mean(axis=0)
 
-    def check(self, current_embeddings: List[List[float]]) -> DriftReport:
+    def check(self, current_embeddings: list[list[float]]) -> DriftReport:
         """Check current embeddings against reference for drift."""
         if self._reference is None or self._ref_mean is None:
             raise RuntimeError("Call set_reference() first")

@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+
 from agentos.monitor.store import store
 from agentos.monitor.ws_manager import get_monitor_manager
 

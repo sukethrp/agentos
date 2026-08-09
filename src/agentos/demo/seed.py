@@ -10,7 +10,6 @@ import time
 
 from agentos.core.types import AgentEvent
 
-
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 
@@ -215,8 +214,8 @@ _SAMPLE_MARKETPLACE_AGENTS = [
 
 def seed_marketplace() -> None:
     """Populate the marketplace with sample agent templates."""
-    from agentos.marketplace.store import get_marketplace_store
     from agentos.marketplace.models import AgentConfig
+    from agentos.marketplace.store import get_marketplace_store
 
     mkt = get_marketplace_store()
 

@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
 from agentos.core.branching import get_or_create_tree, get_tree, list_trees
 from agentos.monitor.store import store
 

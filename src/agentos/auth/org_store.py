@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 import hashlib
 import json
 import os
 import threading
 import uuid
 from pathlib import Path
-from agentos.auth.org_models import Organization, OrgMembership, Role, ApiKey
+
+from agentos.auth.org_models import ApiKey, Organization, OrgMembership, Role
 
 
 def _hash_key(key: str) -> str:

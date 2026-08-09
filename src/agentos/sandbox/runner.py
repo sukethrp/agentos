@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 import json
 import os
 import time
+
 from dotenv import load_dotenv
+
 from agentos.core.agent import Agent
 from agentos.demo import is_demo_mode
 from agentos.rag.embeddings import BaseEmbeddings, get_embeddings
-from agentos.sandbox.scenario import Scenario, ScenarioResult, SandboxReport
 from agentos.sandbox.metrics import (
     bleu_score,
     evaluate_response,
@@ -14,6 +16,7 @@ from agentos.sandbox.metrics import (
     rouge_l_score,
     safety_keyword_flag,
 )
+from agentos.sandbox.scenario import SandboxReport, Scenario, ScenarioResult
 
 load_dotenv()
 

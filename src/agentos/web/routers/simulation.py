@@ -1,14 +1,17 @@
 from __future__ import annotations
+
 import threading as _sim_threading
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
 from agentos.simulation import (
-    SimulatedWorld,
-    WorldConfig,
-    TrafficPattern,
-    SimulationReport,
     ALL_PERSONAS,
+    SimulatedWorld,
+    SimulationReport,
+    TrafficPattern,
+    WorldConfig,
 )
 from agentos.tools import get_builtin_tools
 

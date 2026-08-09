@@ -13,7 +13,6 @@ from typing import Any, Literal
 from agentos.core.agent import Agent
 from agentos.core.tool import Tool
 
-
 DelegationStatus = Literal["success", "failure", "timeout"]
 
 _log = logging.getLogger("agentos.delegation")
@@ -473,7 +472,7 @@ class DelegationManager:
         finally:
             # Reset contextvars for this thread.
             try:
-                if "token_reset" in locals():  # noqa: SIM102
+                if "token_reset" in locals():
                     t_shared, t_cancel, t_id, t_parent, t_depth = token_reset
                     self._current_shared_context_key.reset(t_shared)
                     self._current_cancel_event.reset(t_cancel)
@@ -590,8 +589,8 @@ class DelegationManager:
 
 
 __all__ = [
-    "SharedContext",
+    "DelegationManager",
     "DelegationRequest",
     "DelegationResponse",
-    "DelegationManager",
+    "SharedContext",
 ]

@@ -1,11 +1,14 @@
 from __future__ import annotations
-import time
+
 import json
-from typing import Generator
-from openai import OpenAI
+import time
+from collections.abc import Generator
+
 from dotenv import load_dotenv
-from agentos.core.types import Message, ToolCall, AgentEvent, Role
+from openai import OpenAI
+
 from agentos.core.tool import Tool
+from agentos.core.types import AgentEvent, Message, Role, ToolCall
 
 load_dotenv()
 
