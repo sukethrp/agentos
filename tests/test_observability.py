@@ -7,7 +7,7 @@ from agentos.observability.tracer import (
     StepType,
 )
 from agentos.observability.alerts import AlertEngine
-from agentos.observability.replay import build_replay
+from agentos.observability.run_viewer import build_run_view
 
 
 def test_tracer_span():
@@ -42,9 +42,9 @@ def test_alert_threshold():
     assert len(tool_alerts) >= 1
 
 
-def test_replay_records_and_replays():
+def test_run_view_renders_a_frame_per_step():
     builder = TraceBuilder(
-        agent_name="replay-agent", model="gpt-4o", system_prompt="Help"
+        agent_name="run-view-agent", model="gpt-4o", system_prompt="Help"
     )
     builder.set_query("test query")
     builder.add_llm_call(
@@ -53,12 +53,12 @@ def test_replay_records_and_replays():
     builder.add_tool_call("tool1", {"q": "x"}, result="ok", latency_ms=10.0)
     builder.add_final_answer("done")
     trace = builder.finish()
-    replay = build_replay(trace, include_messages=False)
-    assert replay.trace_id == trace.trace_id
-    assert replay.agent_name == trace.agent_name
-    assert replay.user_query == trace.user_query
-    assert len(replay.frames) >= 4
-    step_labels = [f.label for f in replay.frames]
+    view = build_run_view(trace, include_messages=False)
+    assert view.trace_id == trace.trace_id
+    assert view.agent_name == trace.agent_name
+    assert view.user_query == trace.user_query
+    assert len(view.frames) >= 4
+    step_labels = [f.label for f in view.frames]
     assert any("LLM" in lb or "SETUP" in lb for lb in step_labels)
     assert any("TOOL" in lb for lb in step_labels)
     assert any("ANSWER" in lb or "OUTCOME" in lb for lb in step_labels)

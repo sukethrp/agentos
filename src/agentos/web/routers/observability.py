@@ -6,7 +6,7 @@ from agentos.observability.tracer import (
 )
 from agentos.observability.diagnostics import diagnose as _obs_diagnose
 from agentos.observability.alerts import AlertEngine as _ObsAlertEngine
-from agentos.observability.replay import build_replay as _obs_build_replay
+from agentos.observability.run_viewer import build_run_view as _obs_build_run_view
 
 router = APIRouter(tags=["observability"])
 
@@ -50,14 +50,17 @@ async def obs_alerts(agent: str = ""):
     return [a.to_dict() for a in alerts]
 
 
-@router.get("/api/observability/replay/{trace_id}")
-async def obs_replay(trace_id: str):
+@router.get("/api/observability/run-view/{trace_id}")
+# Deprecated alias, kept for external clients pinned to the old path.
+# Remove in v0.5.0; no in-repo caller uses it.
+@router.get("/api/observability/replay/{trace_id}", deprecated=True)
+async def obs_run_view(trace_id: str):
     ts = _obs_trace_store()
     t = ts.get(trace_id)
     if not t:
         return {"error": "Trace not found"}
-    replay = _obs_build_replay(t, include_messages=True)
-    return replay.to_dict()
+    view = _obs_build_run_view(t, include_messages=True)
+    return view.to_dict()
 
 
 @router.post("/api/observability/seed-demo")

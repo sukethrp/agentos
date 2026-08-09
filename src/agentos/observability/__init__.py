@@ -1,8 +1,11 @@
 """AgentOS Observability — deep tracing, root cause analysis, and smart alerts.
 
 Trace every decision an agent makes, diagnose failures at the exact step
-that went wrong, generate causal alerts, and replay interactions
+that went wrong, generate causal alerts, and view past interactions
 frame-by-frame.
+
+This package renders recorded runs for humans. Hermetic record/replay, which
+re-executes runs for machines, lives in :mod:`agentos.replay`.
 """
 
 from agentos.observability.tracer import (
@@ -25,10 +28,10 @@ from agentos.observability.alerts import (
     AlertLevel,
     SmartAlert,
 )
-from agentos.observability.replay import (
-    Replay,
-    ReplayFrame,
-    build_replay,
+from agentos.observability.run_viewer import (
+    RunView,
+    ViewFrame,
+    build_run_view,
 )
 
 __all__ = [
@@ -46,7 +49,7 @@ __all__ = [
     "AlertEngine",
     "AlertLevel",
     "SmartAlert",
-    "Replay",
-    "ReplayFrame",
-    "build_replay",
+    "RunView",
+    "ViewFrame",
+    "build_run_view",
 ]
