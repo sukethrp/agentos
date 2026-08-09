@@ -1,1 +1,0 @@
-python -c "import agentos; print(agentos.__file__)"
