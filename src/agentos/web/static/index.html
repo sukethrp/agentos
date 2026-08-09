@@ -1854,9 +1854,10 @@ async function rcaRunView(traceId){
     const frames=d.frames||[];
     el.innerHTML=frames.map(f=>{
       const colors={ok:'#1e1e3a',warn:'#fdcb6e33',fail:'#e74c3c33'};
-      const icons={ok:'',warn:'',fail:''};
+      const icons={ok:'·',warn:'⚠',fail:'✗'};
       const border=f.is_failure_point?'2px solid #e74c3c':'1px solid #1e1e3a';
-      return '<div style="background:rgba(6,6,14,0.6);padding:10px;border-radius:6px;border:'+border+';margin-bottom:6px">'+
+      const bg=colors[f.severity]||colors.ok;
+      return '<div style="background:'+bg+';padding:10px;border-radius:6px;border:'+border+';margin-bottom:6px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center">'+
         '<strong style="color:var(--accent)">'+(icons[f.severity]||'')+' '+f.label+'</strong>'+
         (f.is_failure_point?'<span style="color:#e74c3c;font-size:11px;font-weight:700">← FAILURE POINT</span>':'')+
@@ -1869,7 +1870,7 @@ async function rcaRunView(traceId){
     const diag=d.diagnosis;
     if(diag){
       const del2=document.getElementById('rca-diagnosis');
-      const sevIcons={pass:'',warn:'',fail:''};
+      const sevIcons={pass:'·',warn:'⚠',fail:'✗'};
       del2.innerHTML='<div style="margin-bottom:8px"><strong>Root cause:</strong> <span style="color:#e74c3c">'+diag.root_cause+'</span></div>'+
         (diag.checks||[]).map(c=>
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+

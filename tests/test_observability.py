@@ -63,3 +63,54 @@ def test_run_view_renders_a_frame_per_step():
     assert any("LLM" in lb or "SETUP" in lb for lb in step_labels)
     assert any("TOOL" in lb for lb in step_labels)
     assert any("ANSWER" in lb or "OUTCOME" in lb for lb in step_labels)
+
+
+def test_step_to_frame_warn_when_diagnosis_is_warn_not_fail():
+    """Amber path: root-cause step at WARN severity must not collapse to ok/fail."""
+    from agentos.observability.diagnostics import Diagnosis, Severity
+    from agentos.observability.run_viewer import _step_to_frame
+
+    step = TraceStep(
+        step_type=StepType.LLM_CALL,
+        step_index=2,
+        is_error=False,
+        tokens_used=10,
+        cost_usd=0.0,
+        latency_ms=5.0,
+        messages_snapshot=[],
+        available_tools=[],
+    )
+    diag = Diagnosis(
+        overall_severity=Severity.WARN,
+        root_cause_step=2,
+        root_cause="soft warning",
+    )
+    frame = _step_to_frame(step, frame_idx=0, diag=diag, include_messages=False)
+    assert frame.severity == "warn"
+
+
+def test_step_to_frame_fail_when_step_errors():
+    from agentos.observability.diagnostics import Diagnosis, Severity
+    from agentos.observability.run_viewer import _step_to_frame
+
+    step = TraceStep(
+        step_type=StepType.TOOL_CALL,
+        step_index=1,
+        is_error=True,
+        tool_name="x",
+        tool_arguments={},
+        tool_result="err",
+    )
+    diag = Diagnosis(overall_severity=Severity.PASS)
+    frame = _step_to_frame(step, frame_idx=0, diag=diag, include_messages=False)
+    assert frame.severity == "fail"
+
+
+def test_run_view_text_includes_severity_icons():
+    builder = TraceBuilder(agent_name="icons", model="gpt-4o", system_prompt="Help")
+    builder.set_query("q")
+    builder.add_llm_call([], [], tokens=1, latency_ms=1.0)
+    builder.add_final_answer("ok")
+    view = build_run_view(builder.finish(), include_messages=False)
+    text = view.text()
+    assert "·" in text or "✗" in text or "⚠" in text
