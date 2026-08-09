@@ -54,10 +54,10 @@ def demo_document_reading():
     print("=" * 60)
 
     # Create a sample document
-    sample_doc = tempfile.NamedTemporaryFile(
+    with tempfile.NamedTemporaryFile(
         mode="w", suffix=".md", delete=False, prefix="agentos_demo_"
-    )
-    sample_doc.write("""# AgentOS Architecture Overview
+    ) as sample_doc:
+        sample_doc.write("""# AgentOS Architecture Overview
 
 ## Core Components
 
@@ -99,19 +99,19 @@ AgentOS supports multiple deployment options:
 - Docker deployment with `docker-compose up -d`
 - Cloud deployment via CI/CD with GitHub Actions
 """)
-    sample_doc.close()
+        doc_path = sample_doc.name
 
-    print(f"\nReading document: {sample_doc.name}")
+    print(f"\nReading document: {doc_path}")
     print("-" * 40)
 
-    content = read_document(sample_doc.name)
+    content = read_document(doc_path)
     print(f"Document length: {len(content):,} characters")
     print(f"Preview:\n{content[:200]}...")
     print()
 
     # Clean up
-    os.unlink(sample_doc.name)
-    return sample_doc.name
+    os.unlink(doc_path)
+    return doc_path
 
 
 def demo_agent_with_vision():

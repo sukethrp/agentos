@@ -58,10 +58,12 @@ def mock_provider():
 @pytest.fixture
 def tmp_audit_log(tmp_path):
     log_path = str(tmp_path / "audit.log")
-    with patch.dict(os.environ, {"AGENTOS_AUDIT_LOG": log_path}):
-        with patch("agentos.compliance.audit_logger.AUDIT_LOG_PATH", log_path):
-            with patch("agentos.compliance.audit_logger._audit_logger", None):
-                yield log_path
+    with (
+        patch.dict(os.environ, {"AGENTOS_AUDIT_LOG": log_path}),
+        patch("agentos.compliance.audit_logger.AUDIT_LOG_PATH", log_path),
+        patch("agentos.compliance.audit_logger._audit_logger", None),
+    ):
+        yield log_path
 
 
 @pytest.fixture

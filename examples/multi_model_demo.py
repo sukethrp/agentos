@@ -64,7 +64,7 @@ if __name__ == "__main__":
             tools=[calculator, get_weather],
         )
         claude_agent.run(query)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — demo: surface any provider/agent failure
         print(f"   ⚠️ Claude error: {e}")
         print("   (Make sure ANTHROPIC_API_KEY is set in .env)")
 
@@ -82,7 +82,7 @@ if __name__ == "__main__":
         ollama_agent.run(query)
     except ConnectionError:
         print("   ⚠️ Ollama not running. Start it with: ollama serve")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — demo: surface any provider/agent failure
         print(f"   ⚠️ Ollama error: {e}")
 
     print("\n" + "=" * 60)

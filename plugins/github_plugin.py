@@ -46,7 +46,7 @@ def _github_request(endpoint: str, method: str = "GET", body: dict | None = None
     except urllib.error.HTTPError as e:
         error_body = e.read().decode() if e.fp else ""
         return {"error": f"HTTP {e.code}: {e.reason}", "detail": error_body[:500]}
-    except Exception as e:
+    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as e:
         return {"error": str(e)}
 
 
