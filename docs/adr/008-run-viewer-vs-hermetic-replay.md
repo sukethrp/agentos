@@ -101,4 +101,5 @@ Trade-offs:
 - When a `TraceEvent` renderer is needed, add `agentos/replay/render.py` as new
   code. It must not import `agentos.observability`.
 - Two pre-existing bugs in the renderer were deliberately left unfixed by the
-  rename so the change stayed behavior-preserving. See `docs/_issues_to_file.md`.
+  rename so the change stayed behavior-preserving. See sukethrp/agentos#24 and
+  sukethrp/agentos#25.

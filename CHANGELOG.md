@@ -17,9 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   boundaries it saw live.
 
   Two surfaces are knowingly **not** covered: plugin-registered providers,
-  which the router never dispatches to (see `docs/_issues_to_file.md` issue 3),
-  and `top_p` / `seed` / `response_format` / `stop`, which no provider in this
+  which the router never dispatches to (sukethrp/agentos#26), and
+  `top_p` / `seed` / `response_format` / `stop`, which no provider in this
   repository accepts yet.
+
+  Recording a stream currently materializes it, so a traced caller loses
+  token-by-token delivery (sukethrp/agentos#30).
 
 - `RunHeader.seam_codecs` records a fingerprint per seam over its digested
   field names plus its codec version. `Replayer` refuses to replay a trace
