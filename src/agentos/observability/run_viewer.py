@@ -81,9 +81,12 @@ class RunView:
         ]
 
         for f in self.frames:
-            icon = (
-                "" if f.is_failure_point else ("" if f.severity == "warn" else "")
-            )
+            if f.is_failure_point or f.severity == "fail":
+                icon = "✗"
+            elif f.severity == "warn":
+                icon = "⚠"
+            else:
+                icon = "·"
             pointer = " ← FAILURE POINT" if f.is_failure_point else ""
             lines.append(f"  {icon} Frame {f.frame_index}: {f.label}{pointer}")
             if f.detail:
@@ -95,7 +98,7 @@ class RunView:
             lines.append("  ─── Diagnosis ───")
             lines.append(f"  Root cause: {self.diagnosis.root_cause}")
             for c in self.diagnosis.checks:
-                sev_icon = {"pass": "", "warn": "", "fail": ""}.get(
+                sev_icon = {"pass": "·", "warn": "⚠", "fail": "✗"}.get(
                     c.severity.value, "?"
                 )
                 lines.append(f"    {sev_icon} {c.check_name}: {c.title}")
@@ -185,14 +188,25 @@ def _step_to_frame(
     """Convert a TraceStep into a ViewFrame."""
 
     is_failure = step.is_error
-    # Also mark as failure if the diagnosis points to this step
+    # Also mark as failure if the diagnosis points to this step at FAIL severity.
     if (
         diag.root_cause_step == step.step_index
         and diag.overall_severity == Severity.FAIL
     ):
         is_failure = True
 
-    severity = "fail" if is_failure else ("warn" if step.is_error else "ok")
+    # Middle tier: step is fine on its own, but diagnostics flag it as the root
+    # of a WARN-level diagnosis. Previously the "warn" arm was dead because it
+    # required step.is_error while is_failure was already True in that case.
+    if is_failure:
+        severity = "fail"
+    elif (
+        diag.root_cause_step == step.step_index
+        and diag.overall_severity == Severity.WARN
+    ):
+        severity = "warn"
+    else:
+        severity = "ok"
 
     if step.step_type == StepType.LLM_CALL:
         detail_lines = [
