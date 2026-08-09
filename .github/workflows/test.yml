@@ -37,7 +37,8 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v5
+        # v6 keeps files/fail_ci_if_error and pins github-script@v8 (Node 24).
+        uses: codecov/codecov-action@v6
         with:
           files: coverage.xml
           fail_ci_if_error: false
@@ -45,7 +46,8 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v5
+        # v5 still targets Node 20; v6 is Node 24 and clears the runner deprecation.
+        uses: actions/upload-artifact@v6
         with:
           name: pytest-results-${{ matrix.python-version }}
           path: |
