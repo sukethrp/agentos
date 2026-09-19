@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentos-platform"
 version = "0.4.0"
-description = "The Operating System for AI Agents — Build, Test, Deploy, Monitor, and Govern."
+description = "Deterministic record, replay, and git-bisect for AI agent runs. Reproduce a broken run byte-for-byte offline, then binary search to the commit that broke it."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
@@ -13,6 +13,11 @@ authors = [
     {name = "Suketh Reddy Produtoor", email = "produtoor.s@northeastern.edu"},
 ]
 keywords = [
+    "determinism",
+    "debugging",
+    "record-replay",
+    "bisect",
+    "observability",
     "ai",
     "agents",
     "llm",
@@ -33,6 +38,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Debuggers",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Framework :: FastAPI",

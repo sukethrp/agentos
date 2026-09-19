@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AgentOS — The Operating System for AI Agents</title>
-  <meta name="description" content="Build, test, deploy, monitor, and govern AI agents. Open source. 15 modules. 10 lines to start." />
-  <meta property="og:title" content="AgentOS — The Operating System for AI Agents" />
-  <meta property="og:description" content="Build, test, deploy, monitor, and govern AI agents with built-in testing, governance, and monitoring." />
+  <title>AgentOS — record, replay, and git-bisect for agent runs</title>
+  <meta name="description" content="Deterministic record, replay, and git-bisect for AI agent runs. Reproduce a broken run byte-for-byte offline, then binary search to the commit that broke it." />
+  <meta property="og:title" content="AgentOS — record, replay, and git-bisect for agent runs" />
+  <meta property="og:description" content="Deterministic record, replay, and git-bisect for AI agent runs. Reproduce a broken run byte-for-byte offline, then binary search to the commit that broke it." />
+  <meta name="twitter:title" content="AgentOS — record, replay, and git-bisect for agent runs" />
+  <meta name="twitter:description" content="Deterministic record, replay, and git-bisect for AI agent runs. Reproduce a broken run byte-for-byte offline, then binary search to the commit that broke it." />
   <meta property="og:url" content="https://agentos-mocha.vercel.app" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -197,7 +199,8 @@
       <div class="brand">AgentOS</div>
       <button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">☰</button>
       <div class="nav-links" id="navLinks">
-        <a href="#features" class="nav-link">Features</a>
+        <a href="#debug" class="nav-link">Debugger</a>
+        <a href="#features" class="nav-link">Platform</a>
         <a href="#benchmarks" class="nav-link">Benchmarks</a>
         <a href="#architecture" class="nav-link">Architecture</a>
         <a href="#compare" class="nav-link">Compare</a>
@@ -210,11 +213,11 @@
   <main>
     <section class="hero">
       <div class="container">
-        <div class="badge">v0.3.1 · Open Source · Apache 2.0</div>
-        <h1 class="hero-tagline" id="heroTagline" aria-label="Build, Test, Deploy, Monitor, Govern"></h1>
-        <p class="hero-sub">Build, test, deploy, monitor, and govern AI agents — from prototype to production.</p>
+        <div class="badge">v0.4.0 · Open Source · Apache 2.0</div>
+        <h1 class="hero-tagline" id="heroTagline" aria-label="Record, Replay, Diff, Bisect"></h1>
+        <p class="hero-sub">An agent run breaks. You changed nine things, and you cannot reproduce the failure because the model returns something different every time.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="#features">Get Started →</a>
+          <a class="btn btn-primary" href="#debug">Get Started →</a>
           <a class="btn btn-secondary upright" href="https://github.com/sukethrp/agentos">Star on GitHub
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.8"/></svg>
           </a>
@@ -238,15 +241,39 @@
 
     <div class="marquee-section" id="marquee" aria-hidden="true">
       <div class="marquee-wrap" id="marqueeTrack">
-        <span class="mq-item"><span class="mq-word accent">Build</span><span class="mq-sep">—</span><span class="mq-word">Test</span><span class="mq-sep">—</span><span class="mq-word accent">Deploy</span><span class="mq-sep">—</span><span class="mq-word">Monitor</span><span class="mq-sep">—</span><span class="mq-word accent">Govern</span><span class="mq-sep">—</span><span class="mq-word">RAG</span><span class="mq-sep">—</span><span class="mq-word accent">A/B Testing</span><span class="mq-sep">—</span><span class="mq-word">Drift</span><span class="mq-sep">—</span></span>
-        <span class="mq-item" aria-hidden="true"><span class="mq-word accent">Build</span><span class="mq-sep">—</span><span class="mq-word">Test</span><span class="mq-sep">—</span><span class="mq-word accent">Deploy</span><span class="mq-sep">—</span><span class="mq-word">Monitor</span><span class="mq-sep">—</span><span class="mq-word accent">Govern</span><span class="mq-sep">—</span><span class="mq-word">RAG</span><span class="mq-sep">—</span><span class="mq-word accent">A/B Testing</span><span class="mq-sep">—</span><span class="mq-word">Drift</span><span class="mq-sep">—</span></span>
+        <span class="mq-item"><span class="mq-word accent">Record</span><span class="mq-sep">—</span><span class="mq-word">Replay</span><span class="mq-sep">—</span><span class="mq-word accent">Diff</span><span class="mq-sep">—</span><span class="mq-word">Bisect</span><span class="mq-sep">—</span><span class="mq-word accent">Test</span><span class="mq-sep">—</span><span class="mq-word">Govern</span><span class="mq-sep">—</span><span class="mq-word accent">Monitor</span><span class="mq-sep">—</span><span class="mq-word">RAG</span><span class="mq-sep">—</span></span>
+        <span class="mq-item" aria-hidden="true"><span class="mq-word accent">Record</span><span class="mq-sep">—</span><span class="mq-word">Replay</span><span class="mq-sep">—</span><span class="mq-word accent">Diff</span><span class="mq-sep">—</span><span class="mq-word">Bisect</span><span class="mq-sep">—</span><span class="mq-word accent">Test</span><span class="mq-sep">—</span><span class="mq-word">Govern</span><span class="mq-sep">—</span><span class="mq-word accent">Monitor</span><span class="mq-sep">—</span><span class="mq-word">RAG</span><span class="mq-sep">—</span></span>
       </div>
     </div>
 
-    <section id="features" class="alt">
+    <section id="debug" class="alt">
+      <div class="container">
+        <div class="label section-label">Debugger</div>
+        <h2>Bisect the commit that broke the run</h2>
+        <p><code style="font-family:var(--font-mono);font-size:.9rem">agentos bisect</code> takes a recording of the broken run and uses hermetic replay as a git oracle. Matching the recording is git-bad. The report is the culprit commit plus the first seam where the inputs diverged.</p>
+        <div class="terminal" data-cursor-text="Copy">$ AGENTOS_DEMO_MODE=true agentos bisect --trace B.jsonl --good 272d51dbb5ad
+
+culprit: 7f7d94864b04d7dc3d2da7f77e05b1a0bdba07d1
+subject: culprit: prompt becomes beta
+last_good: d9364ef0768ed7c4dc808ffd2bc04ae6fe1593b1
+first_divergence: First divergence at seq=1 (input_changed, provider/b2b:47dd2c12382826196d2e, ordinal 0). There is no common prefix; the first event is already a divergence.
+
+good (context=3):
+&gt;    1  provider  b2b:47dd2c12382826196d2e   0  ok      root
+
+bad (context=3):
+&gt;    1  provider  b2b:47dd2c12382826196d2e   0  ok      root
+
+input at the divergence:
+  input blobs are not in the store; comparison used digests only.</div>
+        <p style="margin-top:14px">Content-addressed traces, seam interception at the model router, alignment on <code style="font-family:var(--font-mono);font-size:.85rem">(seam, call_site, agent_id)</code>. <code style="font-family:var(--font-mono);font-size:.85rem">pip install agentos-platform</code> (v0.4.0). Exit codes 0 / 2 / 125 are a contract — 2 is divergence, 125 is untestable.</p>
+      </div>
+    </section>
+
+    <section id="features">
       <div class="container">
         <div class="label section-label">Why AgentOS</div>
-        <h2>Other frameworks help you build agents. We help you ship them.</h2>
+        <h2>Then the rest of the platform: test, govern, monitor.</h2>
         <div class="editorial-grid">
           <article class="card" data-cursor-text="View">
             <div class="label">Testing</div>
@@ -379,9 +406,9 @@ report = detector.check(current_embeddings)
         <h2>How it all fits together</h2>
         <div class="arch parallax-visual" role="img" aria-label="AgentOS architecture layers diagram" data-cursor-text="View" data-parallax="40">
           <div class="label">Interface</div>
-          <div class="arch-row"><div class="arch-box">CLI: serve · init · mcp</div><div class="arch-box">Web Platform: Builder · Chat · Dashboard</div></div>
+          <div class="arch-row"><div class="arch-box">CLI: record · replay · diff · bisect · serve · mcp</div><div class="arch-box">Web Platform: Builder · Chat · Dashboard</div></div>
           <div class="label">Application</div>
-          <div class="arch-row"><div class="arch-box">Agent SDK</div><div class="arch-box">Sandbox</div><div class="arch-box">Monitor</div><div class="arch-box">Governance</div></div>
+          <div class="arch-row"><div class="arch-box">Agent SDK</div><div class="arch-box">Replay</div><div class="arch-box">Sandbox</div><div class="arch-box">Monitor</div><div class="arch-box">Governance</div></div>
           <div class="label">ML Engine</div>
           <div class="arch-row"><div class="arch-box arch-ml">Eval: BLEU · ROUGE · Semantic · LLM</div><div class="arch-box arch-ml">RAG: Embed · Search · Drift</div><div class="arch-box arch-ml">A/B: t-test · Bootstrap · Cohen's d</div></div>
           <div class="label">Providers</div>
@@ -395,8 +422,9 @@ report = detector.check(current_embeddings)
     <section>
       <div class="container">
         <div class="label section-label">Platform</div>
-        <h2>15 modules. One pip install.</h2>
+        <h2>Replay, plus the rest of the platform.</h2>
         <div class="module-grid">
+          <article class="feature-card" data-cursor-text="View"><div class="label">Debugger</div><h4>Replay</h4><p>Record, replay, diff, bisect. Provider seam. Exit 0/2/125.</p></article>
           <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>Agent SDK</h4><p>10-line agents with @tool decorator</p></article>
           <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>Streaming</h4><p>Token-by-token WebSocket streaming</p></article>
           <article class="feature-card" data-cursor-text="View"><div class="label">Core</div><h4>RAG Pipeline</h4><p>Ingest, chunk, embed, search, detect drift</p></article>
@@ -425,6 +453,7 @@ report = detector.check(current_embeddings)
           <table class="comp">
             <thead><tr><th>Feature</th><th>AgentOS</th><th>LangChain</th><th>CrewAI</th><th>AutoGen</th></tr></thead>
             <tbody>
+              <tr><td>Hermetic record/replay</td><td class="yes">✓ Replay + git bisect</td><td class="mellow">LangSmith traces; re-run is live</td><td class="mellow">Logging / tracing</td><td class="mellow">Event logs / Studio</td></tr>
               <tr><td>Testing Sandbox</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
               <tr><td>Multi-Metric Eval</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
               <tr><td>Statistical A/B Testing</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
@@ -435,12 +464,12 @@ report = detector.check(current_embeddings)
               <tr><td>Embeddable Widget</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
               <tr><td>MCP Server</td><td class="yes">✓ Built-in</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td></tr>
               <tr><td>Workflow Engine</td><td class="yes">✓ Built-in</td><td class="yes">✓ LangGraph</td><td class="yes">✓</td><td class="no">✗</td></tr>
-              <tr><td>Multi-Agent</td><td class="mellow">🔜 Roadmap</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
-              <tr><td>Community</td><td class="mellow">🌱 Growing</td><td class="yes">✓ Massive</td><td class="yes">✓ Large</td><td class="yes">✓ Large</td></tr>
+              <tr><td>Multi-Agent</td><td class="yes">✓ Mesh + delegation</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+              <tr><td>Community</td><td class="mellow">🌱 1 star, growing</td><td class="yes">✓ Massive</td><td class="yes">✓ Large</td><td class="yes">✓ Large</td></tr>
             </tbody>
           </table>
         </div>
-        <p><em>AgentOS focuses on what others don't — testing, evaluation, and governance from day one. For multi-agent orchestration, LangGraph and CrewAI are excellent complements.</em></p>
+        <p><em>Hermetic replay means intercepted provider calls, zero live model calls under STRICT — not every seam in the process. LangGraph time-travel restores a checkpoint and continues live. For multi-agent orchestration, LangGraph and CrewAI are excellent complements.</em></p>
       </div>
     </section>
 
@@ -515,10 +544,10 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
 
     <section class="dark cta" data-cursor="-inverse">
       <div class="container">
-        <h2>Build agents the right way.</h2>
-        <p>Test before you deploy. Govern in production. Measure everything.</p>
+        <h2>Record the broken run. Bisect the commit.</h2>
+        <p>Then test, govern, and measure the rest.</p>
         <div class="actions">
-          <a class="btn btn-invert" href="#features">Get Started →</a>
+          <a class="btn btn-invert" href="#debug">Get Started →</a>
           <a class="btn btn-outline-light upright" href="https://github.com/sukethrp/agentos">Star on GitHub <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.8"/></svg></a>
         </div>
         <div class="install" style="background:#2d2d2d;color:var(--surface);border-color:#444;max-width:320px">$ pip install agentos-platform</div>
@@ -604,7 +633,7 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
       document.getElementById("panel-" + t.dataset.tab).classList.add("active");
     }));
 
-    const heroWords = ["Build", "Test", "Deploy", "Monitor", "Govern"];
+    const heroWords = ["Record", "Replay", "Diff", "Bisect"];
     const heroEl = document.getElementById("heroTagline");
     const easeHero = "power3.out";
 
