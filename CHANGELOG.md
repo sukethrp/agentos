@@ -30,6 +30,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `agentos bisect --trace B.jsonl --good <sha> [--bad <sha>] [--no-diff]`.
+  Wraps `git bisect run` with `agentos replay --bisect` as the oracle (sha
+  mismatch expected; equivalent is git-bad because B is the *bad* recording).
+  `--allow-drift` is not used: it would keep honest 0/2 codes and git would
+  treat "matches the bug" as good. On success, re-records at last-good, diffs
+  that against B, and prints the culprit commit together with
+  `first_divergence`. `--no-diff` stops at the culprit because that re-record
+  makes live provider calls. Original HEAD is restored on every exit path.
+  Up-front exit `125` for a dirty tree, a tainted trace, a codec mismatch, or
+  a schema major mismatch.
+
 - `agentos diff <good.jsonl> <bad.jsonl> [--context N] [--json]`. Aligns two
   traces per `agent_id` on the identity key `(seam, call_site, agent_id)` and
   reports the first divergence. Exit codes match replay: `0` identical, `2`

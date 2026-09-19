@@ -169,45 +169,36 @@ Acceptance: three concurrent delegated agents, two provider calls each, recorded
 once, replayed ten times, identical trace_digest every time.
 ```
 
-### M5. Structural diff
+### M5. Structural diff — shipped (`agentos diff`)
 
-```
-@docs/DETERMINISM.md
-
-src/agentos/replay/diff.py: align two execution graphs, report the FIRST
-divergence.
-
-Align per agent_id by identity key (seam, call_site, agent_id) via
-difflib.SequenceMatcher, not by ordinal and not by seq, so an inserted first
-call at a site is one insertion rather than N input_changed. Classify aligned
-pairs: unchanged, input_changed, output_changed, status_changed; unaligned
-left is deleted, unaligned right is inserted.
-
-DiffReport dataclass plus a human renderer showing the first divergence with
-three events of context each side and a unified diff of the two input blobs at
-that point. Structured alignment on identity keys is correct, and difflib is
-the right tool for that alignment and for rendering those two blobs.
-difflib on the raw jsonl text is still wrong.
-```
+`first_divergence` is `changes[0]` of the aligned sequences. Do not wrap this
+in a `bisect steps` command.
 
 ### M6. Bisect
 
 ```
-@docs/DETERMINISM.md
+@docs/DETERMINISM.md @src/agentos/replay/diff.py @src/agentos/cli.py
 
-agentos bisect steps --good G.jsonl --bad B.jsonl
-  binary search aligned steps for the earliest divergence, using diff.py
+agentos bisect --trace B.jsonl --good <sha> [--bad <sha>, default HEAD]
 
-agentos bisect commits --trace B.jsonl --good <sha> --bad <sha>
-  wrap `git bisect run agentos replay B.jsonl --assert-equivalent`, returning
-  exit 125 for untestable commits (schema mismatch, import error) so git skips
-  rather than counting them bad
+One command. `bisect steps` is cancelled.
 
-agentos bisect config --trace B.jsonl --axis prompt
-  reuse the A/B testing comparison in core/ to bisect the prompt axis
+1. Refuse up front, exit 125: dirty tree, tainted trace, codec mismatch
+   against current code, schema major mismatch.
+2. git bisect run `agentos replay --bisect`. That is NOT `--allow-drift`.
+   `--bisect` treats git_sha mismatch as expected and inverts 0/2 so matching
+   the recorded (bad) behavior is git-bad. `--allow-drift` stays the human
+   override with honest codes.
+3. On culprit: check out last-good, re-record, diff against B, print ONE
+   report with the culprit AND first_divergence. `--no-diff` stops at the
+   culprit (the re-record makes live provider calls).
+4. Restore original HEAD and `git bisect reset` on every exit path
+   (try/finally), including ctrl-C.
 
-One report prints the culprit commit AND the first divergent step. That pairing
-is the value proposition; do not ship them as separate commands.
+Verify the git contract end to end against a throwaway repo: ~10 commits,
+one changes recorded behavior, record at the tip, assert the culprit.
+A commit that fails to import must be SKIP, not BAD, and the search must
+still find the culprit. HEAD restored after every test.
 ```
 
 ### M7. Surface it
