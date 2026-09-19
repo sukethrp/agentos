@@ -1015,11 +1015,11 @@ def _bisect_body(args, session) -> int:
     from agentos.replay.bisect import (
         BISECT_ENV,
         GitError,
+        bisect_log,
         commit_subject,
         first_bad_ref,
         in_work_tree,
         last_good_sha,
-        parse_first_bad,
         porcelain,
     )
     from agentos.replay.diff import IncomparableError, compare_paths, render_human
@@ -1118,12 +1118,23 @@ def _bisect_body(args, session) -> int:
         "strict",
     ]
     done = session.run(run_argv, env=env)
+    # Streams are merged (stderr→stdout) so this is git's real order.
     _echo_captured(sys.stdout, done.stdout or "")
-    _echo_captured(sys.stderr, done.stderr or "")
+    if done.stderr:
+        _echo_captured(sys.stderr, done.stderr)
 
-    named = parse_first_bad(done.stdout or "", done.stderr or "")
-    if named is None:
-        extra = (done.stderr or done.stdout or "").strip()
+    log = bisect_log(session.repo)
+    if log:
+        print("agentos bisect: git bisect log:", file=sys.stderr)
+        print(log, file=sys.stderr)
+
+    # refs/bisect/bad exists from `bisect start` (the original --bad). A
+    # successful run (exit 0) updates it to the first bad commit. All-skip
+    # leaves the original --bad in place and exits non-zero; that is not a
+    # verdict.
+    culprit = first_bad_ref(session.repo) if done.returncode == 0 else None
+    if culprit is None:
+        extra = (log or done.stdout or "").strip()
         hint = f"\n{extra}" if extra else ""
         return _fail(
             "agentos bisect: git bisect run did not name a first bad commit "
@@ -1131,9 +1142,6 @@ def _bisect_body(args, session) -> int:
             f"or the range never changed behavior.{hint}",
             EXIT_UNTESTABLE,
         )
-
-    ref = first_bad_ref(session.repo) or session.current_head()
-    culprit = ref if ref.startswith(named) or named.startswith(ref[:12]) else named
 
     try:
         subject = commit_subject(session.repo, culprit)

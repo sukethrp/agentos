@@ -39,7 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `first_divergence`. `--no-diff` stops at the culprit because that re-record
   makes live provider calls. Original HEAD is restored on every exit path.
   Up-front exit `125` for a dirty tree, a tainted trace, a codec mismatch, or
-  a schema major mismatch.
+  a schema major mismatch. The culprit is `refs/bisect/bad` after
+  `git bisect run` exits 0, not a grep of git's "first bad commit" sentence
+  (quoted as `'bad'` on some git versions, and not always on stdout).
 
 - `agentos diff <good.jsonl> <bad.jsonl> [--context N] [--json]`. Aligns two
   traces per `agent_id` on the identity key `(seam, call_site, agent_id)` and

@@ -213,6 +213,16 @@ skips them all. With `--allow-drift` as the run command, git would treat
 "matches the bug" as good and name the wrong commit. `AGENTOS_BISECT=oracle`
 is the env-var form of `--bisect`.
 
+**Culprit.** After `git bisect run` returns 0 and *before* `git bisect reset`,
+`git rev-parse refs/bisect/bad` is the first bad commit. The ref exists from
+`bisect start` (the original `--bad`), so a non-zero run — all-skip, abort —
+is not a verdict even though the ref is still populated. Git's human-readable
+"first bad commit" sentence is not a contract: wording (`bad` vs `'bad'`) and
+stream (stdout vs stderr) both vary by version. `git bisect log` is copied
+into the report before reset so the session is reproducible. `git bisect run`
+output is captured with stderr merged onto stdout so the report order matches
+what git actually printed.
+
 **On culprit found.** Check out last-good (the closest known-good ancestor, not
 `first_bad^`, which may have been skipped), re-record the target, diff that
 against B, print **one** report with the culprit commit and `first_divergence`.

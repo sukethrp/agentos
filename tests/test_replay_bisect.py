@@ -23,8 +23,8 @@ from agentos.replay.bisect import (
     BisectSession,
     bisect_in_progress,
     env_is_bisect_mode,
+    first_bad_ref,
     oracle_exit,
-    parse_first_bad,
     rev_parse,
     run_git,
 )
@@ -91,6 +91,25 @@ def _git_env() -> dict[str, str]:
     return env
 
 
+def git_version() -> str:
+    done = subprocess.run(
+        ["git", "--version"], capture_output=True, text=True, check=False
+    )
+    return (done.stdout or done.stderr or "git --version produced no output").strip()
+
+
+def bisect_marks(text: str) -> list[str]:
+    """`git bisect good|bad|skip` lines from a captured `git bisect log`."""
+    marks: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("git bisect ") and not stripped.startswith(
+            "git bisect start"
+        ):
+            marks.append(stripped)
+    return marks
+
+
 def git(repo: Path, *argv: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     done = subprocess.run(
         [
@@ -136,7 +155,14 @@ class History:
 
 
 def build_history(root: Path, *, with_skip: bool) -> History:
-    """~10 commits; one changes recorded behavior. Optional broken-import SKIP."""
+    """Linear history with >=10 commits in GOOD..BAD so git actually bisects.
+
+    An earlier fixture jumped from n3 (good) to the culprit to n8–n10, so the
+    search range was 4 commits and git reported "0 revisions left to test".
+    That only proves git can compare two endpoints, not that the search
+    converges. Skip sits at the first midpoint of the longer range so the
+    SKIP-vs-BAD contract is actually exercised.
+    """
     repo = root / "repo"
     repo.mkdir()
     git(repo, "init", "-b", "main")
@@ -145,13 +171,19 @@ def build_history(root: Path, *, with_skip: bool) -> History:
     (repo / "notes.txt").write_text("n0\n", encoding="utf-8")
     commit(repo, "n0 initial alpha")
 
-    for i in range(1, 4):
+    for i in range(1, 3):
         (repo / "notes.txt").write_text(f"n{i}\n", encoding="utf-8")
         commit(repo, f"n{i} still alpha")
     good = git(repo, "rev-parse", "HEAD").stdout.strip()
 
+    # Unknown-good half: n3–n7 still match the pre-culprit recording.
+    for i in range(3, 8):
+        (repo / "notes.txt").write_text(f"n{i}\n", encoding="utf-8")
+        commit(repo, f"n{i} still alpha")
+
     skip_sha: str | None = None
     if with_skip:
+        # 12-commit GOOD..BAD range; first midpoint is this skip commit.
         write_target(
             repo,
             prompt="alpha",
@@ -167,10 +199,18 @@ def build_history(root: Path, *, with_skip: bool) -> History:
     (repo / "notes.txt").write_text("culprit\n", encoding="utf-8")
     culprit = commit(repo, "culprit: prompt becomes beta")
 
-    for i in range(8, 11):
+    for i in range(8, 12):
         (repo / "notes.txt").write_text(f"n{i}\n", encoding="utf-8")
         commit(repo, f"n{i} still beta")
     head = git(repo, "rev-parse", "HEAD").stdout.strip()
+    n_range = int(
+        git(repo, "rev-list", "--count", f"{good}..{head}").stdout.strip()
+    )
+    if n_range < 10:
+        raise AssertionError(
+            f"GOOD..HEAD is {n_range} commits; need >= 10 so bisect searches "
+            f"({git_version()})"
+        )
     return History(repo=repo, good=good, skip=skip_sha, culprit=culprit, head=head)
 
 
@@ -241,11 +281,16 @@ def test_oracle_exit_inverts_only_the_replay_verdicts():
     assert oracle_exit(1) == 1
 
 
-def test_parse_first_bad_requires_the_sentence():
-    sha = "a" * 40
-    assert parse_first_bad(f"{sha} is the first bad commit\n", "") == sha
-    assert parse_first_bad("There are only skipped commits left to test.\n", "") is None
-    assert parse_first_bad("We cannot bisect more!\n", "") is None
+def test_first_bad_ref_is_populated_at_start_so_run_exit_is_the_verdict(history):
+    """refs/bisect/bad names the original --bad from start; that is not a result."""
+    session = BisectSession(repo=history.repo)
+    session.capture_head()
+    session.start(history.head, history.good)
+    try:
+        assert first_bad_ref(history.repo) == history.head
+    finally:
+        session.restore()
+    assert_head_restored(history)
 
 
 def test_env_is_bisect_mode(monkeypatch):
@@ -360,11 +405,16 @@ def test_bisect_names_the_culprit_and_first_divergence(
     )
     captured = capsys.readouterr()
     out = captured.out + captured.err
-    assert code == cli.EXIT_OK, out
-    assert f"culprit: {history.culprit}" in captured.out
+    assert code == cli.EXIT_OK, f"{git_version()}\n{out}"
+    assert f"culprit: {history.culprit}" in captured.out, f"{git_version()}\n{out}"
     assert "first_divergence:" in captured.out
     assert "input_changed" in captured.out
     assert "live provider calls" in captured.err
+    marks = bisect_marks(captured.err)
+    assert len(marks) >= 2, (
+        f"{git_version()}: search only marked {marks}; fixture range is too "
+        "small if git reports 0 revisions left after the first probe"
+    )
     assert_head_restored(history)
     assert live_calls["n"] >= 1
 
@@ -389,10 +439,15 @@ def test_no_diff_stops_at_the_culprit_without_rerecording(
         "--no-diff",
     )
     captured = capsys.readouterr()
-    assert code == cli.EXIT_OK, captured.out + captured.err
-    assert f"culprit: {history.culprit}" in captured.out
+    out = captured.out + captured.err
+    assert code == cli.EXIT_OK, f"{git_version()}\n{out}"
+    assert f"culprit: {history.culprit}" in captured.out, f"{git_version()}\n{out}"
     assert "first_divergence:" not in captured.out
     assert live_calls["n"] == after_record, "--no-diff must not make live calls"
+    marks = bisect_marks(captured.err)
+    assert len(marks) >= 2, (
+        f"{git_version()}: search only marked {marks}; fixture range is too small"
+    )
     assert_head_restored(history)
 
 
@@ -419,11 +474,71 @@ def test_skip_commit_is_not_marked_bad_and_search_still_finds_culprit(
     )
     captured = capsys.readouterr()
     out = captured.out + captured.err
-    assert code == cli.EXIT_OK, out
-    assert f"culprit: {h.culprit}" in captured.out
+    assert code == cli.EXIT_OK, f"{git_version()}\n{out}"
+    assert f"culprit: {h.culprit}" in captured.out, f"{git_version()}\n{out}"
     assert h.skip not in captured.out.split("culprit:", 1)[1].splitlines()[0]
-    assert "skip" in out.lower() or SKIP_IMPORT in out
+    assert "skip" in out.lower() or SKIP_IMPORT in out, f"{git_version()}\n{out}"
+    marks = bisect_marks(captured.err)
+    assert len(marks) >= 2, (
+        f"{git_version()}: search only marked {marks}; fixture range is too small"
+    )
     assert_head_restored(h)
+
+
+def test_culprit_is_read_from_refs_bisect_bad_not_git_prose(
+    history, tmp_path, monkeypatch, capsys
+):
+    """Result detection must survive git output that has no parseable sentence.
+
+    Git 2.41+ (typical CI) prints `is the first 'bad' commit` with quotes,
+    often on stderr; macOS git may print the unquoted form on stdout. Either
+    way, grepping that line is not a contract. Strip every such sentence from
+    the captured output; the culprit must still come from refs/bisect/bad.
+    """
+    real_run = BisectSession.run
+
+    def mute_prose(self, argv, *, env):
+        done = real_run(self, argv, env=env)
+        return subprocess.CompletedProcess(
+            done.args,
+            done.returncode,
+            stdout="bisect run finished; prose deliberately removed\n",
+            stderr="no first-bad sentence here either\n",
+        )
+
+    monkeypatch.chdir(history.repo)
+    trace_dir = tmp_path / "traces"
+    run_id = record_at_tip(history, trace_dir, monkeypatch)
+    monkeypatch.setattr(BisectSession, "run", mute_prose)
+    capsys.readouterr()
+
+    code = run_cli(
+        "bisect",
+        "--trace",
+        run_id,
+        "--trace-dir",
+        str(trace_dir),
+        "--good",
+        history.good,
+        "--no-diff",
+    )
+    captured = capsys.readouterr()
+    out = captured.out + captured.err
+    assert code == cli.EXIT_OK, f"{git_version()}\n{out}"
+    assert f"culprit: {history.culprit}" in captured.out, f"{git_version()}\n{out}"
+    assert_head_restored(history)
+
+
+def test_bisect_module_does_not_grep_first_bad_prose():
+    """Parsing git's first-bad sentence is how CI reported success as 125."""
+    import agentos.replay.bisect as bisect_mod
+
+    assert not hasattr(bisect_mod, "parse_first_bad")
+    marker = " is the first bad commit"
+    bisect_src = Path(bisect_mod.__file__).read_text(encoding="utf-8")
+    cli_src = Path(cli.__file__).read_text(encoding="utf-8")
+    assert marker not in bisect_src
+    assert marker not in cli_src
 
 
 def test_without_bisect_mode_git_skips_every_tested_commit(
@@ -460,8 +575,13 @@ def test_without_bisect_mode_git_skips_every_tested_commit(
             check=False,
         )
         text = (done.stdout or "") + (done.stderr or "")
-        assert "is the first bad commit" not in text
-        assert "skip" in text.lower() or "125" in text
+        # Interior commits are 125; git must not narrow refs/bisect/bad off HEAD.
+        named = first_bad_ref(history.repo)
+        assert named == history.head, (
+            f"{git_version()}: without --bisect, refs/bisect/bad must stay "
+            f"at the original --bad (HEAD), not the culprit; got {named}\n{text}"
+        )
+        assert "skip" in text.lower() or "125" in text, f"{git_version()}\n{text}"
     finally:
         git(history.repo, "bisect", "reset", check=False)
         git(history.repo, "checkout", "--quiet", "-f", history.head, check=False)

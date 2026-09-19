@@ -195,10 +195,13 @@ One command. `bisect steps` is cancelled.
 4. Restore original HEAD and `git bisect reset` on every exit path
    (try/finally), including ctrl-C.
 
-Verify the git contract end to end against a throwaway repo: ~10 commits,
-one changes recorded behavior, record at the tip, assert the culprit.
-A commit that fails to import must be SKIP, not BAD, and the search must
-still find the culprit. HEAD restored after every test.
+Verify the git contract end to end against a throwaway repo: ~10 commits
+in the GOOD..BAD range (not merely ~10 total — a one-step search only tests
+that git can compare two endpoints), one changes recorded behavior, record
+at the tip, assert the culprit. A commit that fails to import must be SKIP,
+not BAD, and the search must still find the culprit. HEAD restored after
+every test. Culprit detection is `refs/bisect/bad`, not git's human-readable
+output.
 ```
 
 ### M7. Surface it

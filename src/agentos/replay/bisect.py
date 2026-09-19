@@ -59,13 +59,29 @@ def run_git(
     timeout: float | None = 30,
     env: Mapping[str, str] | None = None,
     capture: bool = True,
+    merge_output: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    """Run git in `repo`. Raises GitError on failure when check=True."""
+    """Run git in `repo`. Raises GitError on failure when check=True.
+
+    `merge_output` sends stderr onto stdout so captured logs keep git's real
+    interleaving. `capture_output=True` splits the streams and bunches stderr
+    at the end, which is how a successful bisect can look like it printed
+    nothing useful.
+    """
+    stdout: int | None
+    stderr: int | None
+    if merge_output:
+        stdout, stderr = subprocess.PIPE, subprocess.STDOUT
+    elif capture:
+        stdout, stderr = subprocess.PIPE, subprocess.PIPE
+    else:
+        stdout, stderr = None, None
     try:
         done = subprocess.run(
             ["git", *argv],
             cwd=repo,
-            capture_output=capture,
+            stdout=stdout,
+            stderr=stderr,
             text=True,
             timeout=timeout,
             check=False,
@@ -169,36 +185,26 @@ def last_good_sha(repo: Path, first_bad: str, fallback: str) -> str:
     return best
 
 
-def parse_first_bad(stdout: str, stderr: str) -> str | None:
-    """Read the culprit out of `git bisect run` output, or None if unsolved.
-
-    Git prints `<sha> is the first bad commit` when it has an answer. HEAD
-    after the run is not proof: an all-skip session also leaves HEAD on some
-    checkout, and treating that as the culprit is a confident wrong answer.
-    """
-    text = f"{stdout}\n{stderr}"
-    lowered = text.lower()
-    if "only" in lowered and "skip" in lowered:
-        return None
-    if "cannot bisect" in lowered:
-        return None
-    marker = " is the first bad commit"
-    for line in text.splitlines():
-        stripped = line.strip()
-        if marker in stripped:
-            sha = stripped.split(marker, 1)[0].strip()
-            if sha:
-                return sha
-    return None
-
-
 def first_bad_ref(repo: Path) -> str | None:
-    """`refs/bisect/bad` while the session is still active."""
+    """Culprit sha from `refs/bisect/bad`, or None if git did not name one.
+
+    Call this after `git bisect run` returns 0 and *before* `git bisect reset`.
+    The ref exists from `bisect start` (the original --bad); a non-zero run
+    is not a verdict even though the ref is still populated. Git's
+    human-readable first-bad sentence is not a contract: wording (`bad` vs
+    `'bad'`) and stream (stdout vs stderr) both vary by version.
+    """
     done = run_git(
         repo, "rev-parse", "--verify", "--quiet", "refs/bisect/bad", check=False
     )
-    sha = done.stdout.strip()
+    sha = (done.stdout or "").strip()
     return sha or None
+
+
+def bisect_log(repo: Path) -> str:
+    """`git bisect log` while the session is still active. Empty if none."""
+    done = run_git(repo, "bisect", "log", check=False)
+    return (done.stdout or "").strip()
 
 
 @dataclass
@@ -243,7 +249,7 @@ class BisectSession:
         *,
         env: Mapping[str, str],
     ) -> subprocess.CompletedProcess[str]:
-        """`git bisect run argv`. Captures output so the caller can parse it."""
+        """`git bisect run argv`. Merges stderr onto stdout to keep ordering."""
         return run_git(
             self.repo,
             "bisect",
@@ -253,6 +259,7 @@ class BisectSession:
             timeout=None,
             env=env,
             capture=True,
+            merge_output=True,
         )
 
     def current_head(self) -> str:
