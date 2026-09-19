@@ -6,10 +6,10 @@ on:
   pull_request:
 
 jobs:
-  # Vercel "Ready" only means the upload succeeded. After v0.4.0, mocha served
-  # the docs/ self-redirect stub as / while dashboard/index.html still rendered
-  # locally. This job reads the HTML vercel.json says it deploys and fails if
-  # there is no visible text without JavaScript.
+  # A successful deploy only means the upload succeeded. After v0.4.0,
+  # production served the docs/ self-redirect stub as / while
+  # dashboard/index.html still rendered locally. This job reads the HTML
+  # files and fails if there is no visible text without JavaScript.
   landing:
     runs-on: ubuntu-latest
     steps:

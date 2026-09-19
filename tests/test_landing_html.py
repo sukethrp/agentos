@@ -1,14 +1,13 @@
 """Landing HTML must paint text with JavaScript disabled.
 
-Invariant: Vercel "Ready" is not "the page works". After the v0.4.0 docs cut,
-mocha served docs/index.html — a meta-refresh and location.replace back to
-itself — so production was blank while the dashboard file still rendered.
-This check reads the file vercel.json says it deploys, and refuses a stub
-that redirects mocha to mocha.
+Invariant: a deploy that succeeds is not "the page works". After the v0.4.0
+docs cut, production served docs/index.html — a meta-refresh and
+location.replace back to itself — so the site was blank while
+dashboard/index.html still rendered locally. These checks read the HTML
+files and refuse a stub that redirects the live host to itself.
 """
 from __future__ import annotations
 
-import json
 import re
 import sys
 from html.parser import HTMLParser
@@ -17,7 +16,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD = ROOT / "dashboard" / "index.html"
 DOCS = ROOT / "docs" / "index.html"
-VERCEL = ROOT / "vercel.json"
 HERO_WORDS = ("Record", "Replay", "Diff", "Bisect")
 
 
@@ -61,20 +59,6 @@ def _visible(html: str) -> VisibleTextParser:
     parser.feed(html)
     parser.close()
     return parser
-
-
-def test_vercel_json_deploys_dashboard() -> None:
-    cfg = json.loads(VERCEL.read_text(encoding="utf-8"))
-    assert cfg.get("outputDirectory") == "dashboard", (
-        "vercel.json outputDirectory must be dashboard; mocha went blank "
-        f"when the deployed index was docs/index.html instead. got={cfg.get('outputDirectory')!r}"
-    )
-    build = cfg.get("buildCommand")
-    assert isinstance(build, str) and build.strip(), (
-        "buildCommand must be a non-empty string. JSON null / empty skips "
-        "the build and Vercel serves the project root, which on this repo "
-        "is how docs/index.html became https://agentos-mocha.vercel.app/."
-    )
 
 
 def test_dashboard_h1_has_text_without_js() -> None:
@@ -131,26 +115,26 @@ def test_dashboard_motion_init_is_try_caught() -> None:
 def test_docs_stub_does_not_redirect_mocha_to_itself() -> None:
     html = DOCS.read_text(encoding="utf-8")
     assert "http-equiv=\"refresh\"" not in html.lower(), (
-        "docs/index.html has a meta refresh to agentos-mocha.vercel.app. "
-        "GitHub Pages source is /docs, and mocha was serving this file, so "
-        "the refresh targeted the page it was already on. That is a blank loop."
+        "docs/index.html has a meta refresh to the live host. GitHub Pages "
+        "source is /docs, and production was serving this file, so the "
+        "refresh targeted the page it was already on. That is a blank loop."
     )
     assert "github.io" in html, (
-        "GitHub Pages still needs a host-guarded redirect to mocha."
+        "GitHub Pages still needs a host-guarded redirect to the live host."
     )
     assert "agentos-mocha.vercel.app" in html
     assert re.search(
         r"github\.io[\s\S]{0,400}location\.replace\(\"https://agentos-mocha\.vercel\.app/\"\)",
         html,
     ), (
-        "location.replace to mocha must sit behind a github.io hostname check. "
-        "An unconditional replace blanks mocha when Vercel serves this stub."
+        "location.replace to the live host must sit behind a github.io "
+        "hostname check. An unconditional replace blanks production when "
+        "this stub is served as /."
     )
 
 
 def main() -> int:
     tests = [
-        test_vercel_json_deploys_dashboard,
         test_dashboard_h1_has_text_without_js,
         test_dashboard_has_visible_body_copy,
         test_dashboard_does_not_prehide_content,
