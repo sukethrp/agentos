@@ -8,6 +8,17 @@ only submodule here that imports `agentos.core`, and keeping it off the package
 surface is what lets `import agentos.replay` stay stdlib-only. See ADR-008.
 """
 
+from .diff import (
+    Change,
+    ChangeKind,
+    DiffReport,
+    Divergence,
+    IncomparableError,
+    compare_paths,
+    compare_readers,
+    diff_events,
+    render_human,
+)
 from .schema import (
     SCHEMA_VERSION,
     EventStatus,
@@ -36,9 +47,14 @@ from .store import BlobStore, TraceReader, TraceWriter
 __all__ = [
     "SCHEMA_VERSION",
     "BlobStore",
+    "Change",
+    "ChangeKind",
+    "DiffReport",
+    "Divergence",
     "DivergenceError",
     "DivergencePolicy",
     "EventStatus",
+    "IncomparableError",
     "Interceptor",
     "NullInterceptor",
     "Recorder",
@@ -51,9 +67,13 @@ __all__ = [
     "TraceReader",
     "TraceWriter",
     "call_site_id",
+    "compare_paths",
+    "compare_readers",
     "current_interceptor",
+    "diff_events",
     "digest_obj",
     "intercept",
+    "render_human",
     "trace_digest",
     "use_interceptor",
 ]

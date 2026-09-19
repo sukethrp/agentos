@@ -79,6 +79,16 @@ tmp-then-rename so a crashed record leaves no torn blob. Dedupe is load bearing:
 a hundred-run bisect corpus shares one copy of the system prompt, and trace diff
 compares 32 bytes instead of two megabytes.
 
+Both inputs and outputs *can* live in the blob store. `output_ref` always
+points at a stored output. Input payloads are written under `input_digest`
+only when `RunHeader.stores_input_blobs` is true: a non-identity redactor, or
+`--store-inputs-unredacted`. The default redactor is identity
+(`redactor_version` `"0"`), so the default is digest-only. Diff compares
+those 32-byte digests either way, and loads input blobs only at the first
+divergence, and only when the header says they were stored. A 0.3.0 trace
+loads with `stores_input_blobs=False`; that is reported as "predates input
+storage", not discovered via `KeyError`.
+
 ## 8. Redaction
 
 Redaction happens at record time, before hashing, via a pluggable redactor.
@@ -104,3 +114,70 @@ README; scoping loudly reads better than scoping quietly.
 `tests/test_replay_roundtrip.py` is the M0 gate. Record then replay must produce
 an identical `trace_digest` with zero live provider calls, and a deliberately
 perturbed input must raise `DivergenceError` that names the upstream step.
+
+## 12. Structural diff
+
+`agentos diff <good.jsonl> <bad.jsonl>` aligns two traces and reports the first
+divergence. This is not a text diff of the jsonl files.
+
+**Alignment.** Two passes.
+
+1. Group events by `agent_id`. Within an agent, order by `(lamport, seq)` —
+   lamport is a process-wide scalar clock, unique per event under the Recorder,
+   so the restriction to one agent is a total order. Align those sequences with
+   `difflib.SequenceMatcher` (`autojunk=False`). Equality is the identity key
+   `(seam, call_site, agent_id)` only. Not ordinal (one insertion at a site
+   would otherwise become N `input_changed`). Not `input_digest` (a changed
+   prompt would otherwise become delete-plus-insert instead of `input_changed`).
+   If the sets of `agent_id` differ, that is itself a divergence: the extra
+   agent's events are inserted or deleted, not dropped.
+2. Each aligned pair is classified from `equivalence_view`. `seq`, `ordinal`,
+   and `lamport` may shift because of insertions elsewhere; that is not a
+   semantic change. Priority: `input_changed`, then `output_changed`, then
+   `status_changed`. Unaligned left = `deleted`, unaligned right = `inserted`.
+
+The report is ordered by global seq (left seq if present, else right seq) so
+the earliest cause comes first.
+
+**JSON contract** (`agentos diff --json`). `DiffReport.to_dict()` / `from_dict()`
+is what `agentos bisect` will parse. Do not rename these fields:
+
+```
+identical: bool
+first_divergence: null | {
+  seq, kind, seam, call_site, agent_id, ordinal,
+  left_seq, right_seq, last_common_seq, message
+}
+changes: [{kind, seq, agent_id, seam, call_site, ordinal,
+           left_seq, right_seq, left, right}]
+n_unchanged, n_input_changed, n_output_changed,
+n_status_changed, n_inserted, n_deleted: int
+left_agent_ids, right_agent_ids: [str]
+agent_ids_differ: bool
+warnings: [str]
+```
+
+`left` / `right` on a change are `equivalence_view()` projections (digests),
+never payloads. `changes` lists only semantic differences; a self-diff is
+`identical: true` with an empty `changes` array.
+
+**Guards, exit 125 (incomparable):** seam_codecs fingerprints differ; either
+trace is tainted (LENIENT or a TAINTED event); schema majors differ; a trace
+file is missing or unreadable.
+
+**Warn but proceed:** differing `git_sha` (expected during bisect), differing
+schema minor, differing `target` argv (usually a mistake), a trace that does
+not store input blobs (`stores_input_blobs` is false, including every 0.3.0
+trace). The last of those is `"left trace predates input storage; comparing
+digests only"` (or the 0.4.0 wording, `"did not store input blobs"`). It is
+never exit 125: the DiffReport is still produced from digests.
+
+**Exit codes, same contract as replay:** 0 identical, 2 divergent, 125
+incomparable.
+
+The human renderer prints the first divergence with N events of context each
+side (default 3) and, when both traces stored input blobs, a unified diff of
+the two canonical-JSON inputs at that point. Otherwise it says it is comparing
+digests only. Having both traces, the message names the last common event
+exactly (`Last common event: seq=40`), not the replayer's weaker "at or before
+seq-1".

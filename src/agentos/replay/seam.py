@@ -206,11 +206,19 @@ class Recorder:
     """Runs the real thing and writes a trace."""
 
     def __init__(
-        self, writer: TraceWriter, redactor: Callable[[Any], Any] | None = None
+        self,
+        writer: TraceWriter,
+        redactor: Callable[[Any], Any] | None = None,
+        *,
+        store_inputs: bool = False,
     ) -> None:
         self.writer = writer
         self.blobs: BlobStore = writer.blobs
+        # Identity is the M0 default. Combined with store_inputs=True that
+        # writes unredacted prompts to disk, which is why the CLI refuses to
+        # enable storage unless `--store-inputs-unredacted` is passed.
         self.redactor = redactor or (lambda x: x)
+        self.store_inputs = store_inputs
         self._c = _Counters()
         self.events: list[TraceEvent] = []
 
@@ -226,6 +234,13 @@ class Recorder:
     ) -> T:
         safe_input = self.redactor(input_obj)
         ordinal = self._c.next_ordinal(seam, call_site)
+        # Digest always. Store the payload only when a redactor actually ran
+        # (or the caller opted into unredacted storage). The identity
+        # redactor plus put_obj is how prompts leak into a public corpus.
+        if self.store_inputs:
+            input_digest = self.blobs.put_obj(safe_input)
+        else:
+            input_digest = digest_obj(safe_input)
         ev = TraceEvent(
             event_id=uuid.uuid4().hex,
             run_id=self.writer_run_id,
@@ -233,7 +248,7 @@ class Recorder:
             seam=seam,
             call_site=call_site,
             ordinal=ordinal,
-            input_digest=digest_obj(safe_input),
+            input_digest=input_digest,
             name=name,
             agent_id=agent_id,
             lamport=self._c.tick(),

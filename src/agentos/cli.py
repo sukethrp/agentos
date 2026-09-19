@@ -13,12 +13,14 @@ Usage:
 Deterministic replay:
     agentos record -- script.py [args]   Run under the Recorder, write a trace
     agentos replay <trace>               Re-execute the trace offline
+    agentos diff <good> <bad>            Align two traces; report first divergence
     agentos trace ls | show | gc         Inspect traces, collect orphan blobs
 
 Exit codes are part of the contract, because `git bisect run` shells out to
-`agentos replay` and reads them:
+`agentos replay` (and later `agentos diff`) and reads them:
 
-    0    the run is equivalent to the recording
+    0    the run is equivalent to the recording (replay), or the two traces
+         align without a semantic difference (diff)
     2    divergence; the run took a different path
     125  untestable, and `git bisect` must SKIP rather than mark bad
 
@@ -28,11 +30,15 @@ target that would not import, and CLI usage errors. Usage errors are the
 subtle one: argparse exits 2 by default, which bisect would read as
 divergence and use to mark every commit bad. `_BisectSafeParser` moves them
 to 125 so a mistyped command cannot silently produce a confident wrong answer.
+
+`agentos diff` uses the same 0/2/125 codes. Git sha mismatch is a warning
+there, not 125: bisect is exactly when the shas are expected to differ.
 """
 
 import argparse
 import importlib
 import importlib.util
+import json
 import os
 import re
 import runpy
@@ -150,6 +156,15 @@ def main(argv: list[str] | None = None) -> int:
         help="Attach a label to the run header (repeatable)",
     )
     record_parser.add_argument(
+        "--store-inputs-unredacted",
+        action="store_true",
+        help=(
+            "Write input payloads to the blob store even though the default "
+            "redactor is identity. Digests are always recorded; this only "
+            "controls whether the bytes go to disk. Do not commit the result."
+        ),
+    )
+    record_parser.add_argument(
         "target",
         nargs=argparse.REMAINDER,
         help="-- script.py [args], -- python script.py, or -- -m package.module",
@@ -169,6 +184,28 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Replay even though the trace's git sha differs from HEAD",
     )
+
+    # agentos diff <good.jsonl> <bad.jsonl>
+    diff_parser = subparsers.add_parser(
+        "diff",
+        help="Align two traces and report the first divergence",
+    )
+    diff_parser.add_argument("good", help="Good (left) trace: run id or .jsonl path")
+    diff_parser.add_argument("bad", help="Bad (right) trace: run id or .jsonl path")
+    diff_parser.add_argument(
+        "--context",
+        type=int,
+        default=3,
+        metavar="N",
+        help="Events of context each side of the first divergence (default 3)",
+    )
+    diff_parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Emit DiffReport JSON (the M5 bisect contract)",
+    )
+    diff_parser.add_argument("--trace-dir", default=DEFAULT_TRACE_DIR)
 
     # agentos trace ls|show|gc
     trace_parser = subparsers.add_parser("trace", help="Inspect recorded traces")
@@ -285,6 +322,9 @@ def main(argv: list[str] | None = None) -> int:
 
     elif args.command == "replay":
         return _cmd_replay(args)
+
+    elif args.command == "diff":
+        return _cmd_diff(args)
 
     elif args.command == "trace":
         return {
@@ -510,18 +550,37 @@ def _cmd_record(args) -> int:
             file=sys.stderr,
         )
 
+    store_inputs = bool(args.store_inputs_unredacted)
     header = RunHeader.new(
         git_sha=git_sha,
         git_dirty=git_dirty,
         seam_codecs=provider_seam_codecs(),
         labels=labels,
         target=_redact_target(canonical),
+        stores_input_blobs=store_inputs,
     )
+    if store_inputs and header.redactor_version == "0":
+        print(
+            "agentos record: warning, storing unredacted input blobs "
+            "(--store-inputs-unredacted). Prompts will be on disk as they were "
+            "sent. Do not commit this trace.",
+            file=sys.stderr,
+        )
+    elif not store_inputs:
+        print(
+            "agentos record: not storing input blobs because redactor_version "
+            'is "0" (the identity function). Unredacted prompts would be '
+            "written to disk, and traces are artifacts people commit. Digests "
+            "are still recorded, so `agentos diff` will compare 32-byte hashes "
+            "and skip the unified input diff. Pass --store-inputs-unredacted "
+            "to write the payloads anyway.",
+            file=sys.stderr,
+        )
 
     outcome = EXIT_OK
     try:
         with TraceWriter(args.trace_dir, header) as writer:
-            recorder = Recorder(writer)
+            recorder = Recorder(writer, store_inputs=store_inputs)
             with use_interceptor(_InfraGuardedInterceptor(recorder)):
                 # Target exceptions stay inside this block. Blob-store and
                 # codec bugs surface as _ToolFailure (via the guard) → 125.
@@ -771,6 +830,49 @@ def _cmd_replay(args) -> int:
     return EXIT_OK
 
 
+def _cmd_diff(args) -> int:
+    from agentos.replay import TraceReader
+    from agentos.replay.diff import IncomparableError, compare_paths, render_human
+
+    if args.context < 0:
+        return _fail("agentos diff: --context must be >= 0", EXIT_UNTESTABLE)
+
+    left = _resolve_trace(args.good, args.trace_dir)
+    right = _resolve_trace(args.bad, args.trace_dir)
+    if left is None:
+        return _fail(f"agentos diff: no such trace: {args.good}", EXIT_UNTESTABLE)
+    if right is None:
+        return _fail(f"agentos diff: no such trace: {args.bad}", EXIT_UNTESTABLE)
+
+    try:
+        report = compare_paths(left, right)
+    except IncomparableError as exc:
+        return _fail(f"agentos diff: {exc}", EXIT_UNTESTABLE)
+
+    for warning in report.warnings:
+        print(f"agentos diff: warning, {warning}", file=sys.stderr)
+
+    if args.as_json:
+        print(json.dumps(report.to_dict(), indent=2, ensure_ascii=False))
+    else:
+        left_reader = TraceReader(left)
+        right_reader = TraceReader(right)
+        sys.stdout.write(
+            render_human(
+                report,
+                left_reader.events,
+                right_reader.events,
+                context=args.context,
+                left_blobs=left_reader.blobs,
+                right_blobs=right_reader.blobs,
+                left_stores_inputs=left_reader.header.stores_input_blobs,
+                right_stores_inputs=right_reader.header.stores_input_blobs,
+            )
+        )
+
+    return EXIT_OK if report.identical else EXIT_DIVERGENCE
+
+
 def _cmd_trace_ls(args) -> int:
     from agentos.replay import TraceReader
 
@@ -869,6 +971,11 @@ def _cmd_trace_gc(args) -> int:
         for event in reader.events:
             if event.output_ref:
                 referenced.add(event.output_ref.split(":", 1)[1])
+            # Inputs are stored under input_digest (content-addressed). A gc
+            # that only counted output_ref would delete the blobs `agentos diff`
+            # needs at the first divergence.
+            if event.input_digest and ":" in event.input_digest:
+                referenced.add(event.input_digest.split(":", 1)[1])
 
     orphans = [
         blob

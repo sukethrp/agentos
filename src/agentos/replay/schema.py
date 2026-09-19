@@ -23,6 +23,12 @@ Schema history:
   `labels`: labels are free-form metadata that any caller may set, and
   something replay depends on to re-execute a run must not be squatting in a
   namespace anyone can overwrite.
+- 0.4.0 adds `RunHeader.stores_input_blobs`. A 0.3.0 trace loads with
+  `False`, which `agentos diff` reports as "predates input storage; comparing
+  digests only" rather than discovering a missing blob via `KeyError`. Input
+  payloads are written only when a non-identity redactor is in use, or when
+  `--store-inputs-unredacted` is passed; the identity redactor (version "0")
+  would otherwise put unredacted prompts on disk.
 """
 
 from __future__ import annotations
@@ -38,7 +44,7 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
 
-SCHEMA_VERSION = "0.3.0"
+SCHEMA_VERSION = "0.4.0"
 DIGEST_ALGO = "b2b"  # blake2b-256; swap for "b3" once blake3 is a dependency
 _NULL_DIGEST = f"{DIGEST_ALGO}:" + "0" * 64
 
@@ -135,6 +141,12 @@ class RunHeader:
     # as flags and a trace is an artifact people commit and share. `None` means
     # the trace predates 0.3.0 and cannot be replayed.
     target: list[str] | None = None
+    # True when this run wrote input payloads under `input_digest`. Default
+    # False so a 0.3.0 trace (which hashed inputs but never stored them) loads
+    # as "not stored" rather than as "stored but the blobs vanished". Diff
+    # reads this instead of probing the blob store; a missing file is then a
+    # corrupt 0.4.0 trace, not a normal 0.3.0 one.
+    stores_input_blobs: bool = False
 
     @staticmethod
     def new(**kwargs: Any) -> RunHeader:

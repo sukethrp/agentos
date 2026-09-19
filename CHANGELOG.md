@@ -30,6 +30,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `agentos diff <good.jsonl> <bad.jsonl> [--context N] [--json]`. Aligns two
+  traces per `agent_id` on the identity key `(seam, call_site, agent_id)` and
+  reports the first divergence. Exit codes match replay: `0` identical, `2`
+  divergent, `125` incomparable (codec mismatch, tainted trace, schema major
+  mismatch, missing or unreadable file). `--json` emits `DiffReport`, which is
+  a contract for `agentos bisect`. Differing `git_sha`, schema minor, or target
+  argv warn on stderr and proceed.
+
+- The recorder stores input payloads under `input_digest` only when a
+  non-identity redactor is in use, or when `agentos record
+  --store-inputs-unredacted` is passed. The default redactor is identity
+  (`redactor_version` `"0"`); writing those blobs would put unredacted prompts
+  on disk. Digests are recorded either way. `agentos trace gc` treats stored
+  input digests as live references.
+
 - `agentos record`, `agentos replay`, and `agentos trace ls|show|gc`. `record`
   executes its target in-process via `runpy`, because the interceptor is a
   contextvar and does not cross a process boundary. `replay` refuses rather
@@ -63,9 +78,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Trace `SCHEMA_VERSION` is now `0.3.0`, arriving via `0.2.0`. The major version
-  stays `0` throughout, so older traces still load and new header fields take
-  their defaults.
+- Trace `SCHEMA_VERSION` is now `0.4.0`, arriving via `0.3.0` and `0.2.0`. The
+  major version stays `0` throughout, so older traces still load and new header
+  fields take their defaults.
 
   - `0.2.0` added `seam_codecs` and `replayed_from`. A pre-0.2.0 trace declares
     no seam codecs, which is treated as unknown rather than as a mismatch.
@@ -74,6 +89,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     free-form namespace that any caller can overwrite. A `0.2.0` trace loads
     with `target=None` and replay exits `125` saying it records no target,
     rather than guessing what to run.
+  - `0.4.0` adds `stores_input_blobs`. A `0.3.0` trace loads with `False`.
+    `agentos diff` then warns `"left trace predates input storage; comparing
+    digests only"` and still produces a DiffReport (exit 0 or 2), never 125.
+    Discovering the gap via `KeyError` at render time is how a 0.3.0 corpus
+    would have looked like a corrupt 0.4.0 one.
 
   `target` is written through a redactor that masks the values of secret-bearing
   flags (`--api-key`, `--token`, `--password`, and similar). Replay re-executes

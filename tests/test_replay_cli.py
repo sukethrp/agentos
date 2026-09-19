@@ -122,7 +122,8 @@ def test_record_writes_a_trace_with_provenance(recorded):
     trace_dir, run_id = recorded
     header = read_header(trace_dir, run_id)
     assert header["record_type"] == "header"
-    assert header["schema_version"] == "0.3.0"
+    assert header["schema_version"] == "0.4.0"
+    assert header["stores_input_blobs"] is False
     assert header["seam_codecs"], "record must stamp the seam codec fingerprint"
     # Execution identity is a typed field, not free-form metadata.
     assert header["target"], "replay needs to know what was run"
@@ -393,6 +394,10 @@ def test_no_invocation_can_exit_126_or_127(tmp_path, target, recorded):
         ("replay", "nope", "--trace-dir", str(tmp_path)),
         ("replay", run_id, "--trace-dir", str(trace_dir)),
         ("replay", run_id, "--trace-dir", str(trace_dir), "--policy", "bogus"),
+        ("diff",),
+        ("diff", "nope.jsonl", "nope.jsonl"),
+        ("diff", run_id, run_id, "--trace-dir", str(trace_dir)),
+        ("diff", run_id, run_id, "--trace-dir", str(trace_dir), "--json"),
     ]
     for argv in invocations:
         code = run_cli(*argv)
@@ -541,3 +546,262 @@ def test_record_honors_python_prefix_and_script_args(tmp_path, target):
     assert len(stored) == 2, f"expected [script, -x], got {stored}"
     assert os.path.basename(stored[0]) == "cli_target.py"
     assert stored[-1] == "-x", "script args must survive for sys.argv"
+
+
+# ── agentos diff ─────────────────────────────────────────────────────────────
+
+
+def test_diff_of_a_trace_against_itself_exits_zero(recorded, capsys):
+    trace_dir, run_id = recorded
+    path = str(trace_dir / "runs" / f"{run_id}.jsonl")
+    assert run_cli("diff", path, path) == cli.EXIT_OK
+    assert "identical" in capsys.readouterr().out
+
+
+def test_diff_json_round_trips_into_the_dataclass(recorded, capsys):
+    from agentos.replay.diff import DiffReport
+
+    trace_dir, run_id = recorded
+    path = str(trace_dir / "runs" / f"{run_id}.jsonl")
+    assert run_cli("diff", path, path, "--json") == cli.EXIT_OK
+    payload = json.loads(capsys.readouterr().out)
+    report = DiffReport.from_dict(payload)
+    assert report.identical
+    assert report.first_divergence is None
+    assert report.changes == [] or report.changes == ()
+
+
+def test_diff_localizes_an_input_change(tmp_path, target, monkeypatch, capsys):
+    good_dir = tmp_path / "good"
+    bad_dir = tmp_path / "bad"
+    assert run_cli("record", "--trace-dir", str(good_dir), "--", str(target)) == 0
+    monkeypatch.setenv("AGENTOS_CLI_TEST_PROMPT", "second")
+    assert run_cli("record", "--trace-dir", str(bad_dir), "--", str(target)) == 0
+    capsys.readouterr()
+
+    good = str(good_dir / "runs" / f"{only_run_id(good_dir)}.jsonl")
+    bad = str(bad_dir / "runs" / f"{only_run_id(bad_dir)}.jsonl")
+    assert run_cli("diff", good, bad, "--context", "1") == cli.EXIT_DIVERGENCE
+    captured = capsys.readouterr()
+    assert "First divergence at seq=" in captured.out
+    assert "input_changed" in captured.out
+    assert "at or before" not in captured.out
+    # Default record does not store input blobs (identity redactor).
+    assert "did not store input blobs" in captured.err
+    assert "input blobs are not in the store" in captured.out
+
+
+def test_diff_json_on_divergence_is_parseable(tmp_path, target, monkeypatch, capsys):
+    from agentos.replay.diff import ChangeKind, DiffReport
+
+    good_dir = tmp_path / "good"
+    bad_dir = tmp_path / "bad"
+    assert run_cli("record", "--trace-dir", str(good_dir), "--", str(target)) == 0
+    monkeypatch.setenv("AGENTOS_CLI_TEST_PROMPT", "second")
+    assert run_cli("record", "--trace-dir", str(bad_dir), "--", str(target)) == 0
+    good = str(good_dir / "runs" / f"{only_run_id(good_dir)}.jsonl")
+    bad = str(bad_dir / "runs" / f"{only_run_id(bad_dir)}.jsonl")
+    capsys.readouterr()
+    assert run_cli("diff", good, bad, "--json") == cli.EXIT_DIVERGENCE
+    report = DiffReport.from_dict(json.loads(capsys.readouterr().out))
+    assert not report.identical
+    assert report.first_divergence is not None
+    assert report.first_divergence.kind is ChangeKind.INPUT_CHANGED
+
+
+def test_diff_missing_trace_is_untestable():
+    assert (
+        run_cli("diff", "nope-a.jsonl", "nope-b.jsonl") == cli.EXIT_UNTESTABLE
+    )
+
+
+def test_diff_missing_right_trace_is_untestable(recorded, capsys):
+    trace_dir, run_id = recorded
+    path = str(trace_dir / "runs" / f"{run_id}.jsonl")
+    assert run_cli("diff", path, "nope-right.jsonl") == cli.EXIT_UNTESTABLE
+    assert "no such trace" in capsys.readouterr().err
+
+
+def test_diff_schema_major_mismatch_is_untestable(recorded, tmp_path):
+    trace_dir, run_id = recorded
+    good = trace_dir / "runs" / f"{run_id}.jsonl"
+    bad = tmp_path / "bad.jsonl"
+    bad.write_text(good.read_text(encoding="utf-8"), encoding="utf-8")
+    lines = bad.read_text(encoding="utf-8").splitlines()
+    header = json.loads(lines[0])
+    header["schema_version"] = "9.0.0"
+    lines[0] = json.dumps(header)
+    bad.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    assert run_cli("diff", str(good), str(bad)) == cli.EXIT_UNTESTABLE
+
+
+def test_diff_seam_codec_mismatch_is_untestable(recorded, capsys):
+    trace_dir, run_id = recorded
+    path = trace_dir / "runs" / f"{run_id}.jsonl"
+    other = trace_dir / "runs" / "other.jsonl"
+    other.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+    # Tamper the copy's codecs.
+    lines = other.read_text(encoding="utf-8").splitlines()
+    header = json.loads(lines[0])
+    header["seam_codecs"] = {"provider": "from-an-older-build"}
+    lines[0] = json.dumps(header)
+    other.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    assert run_cli("diff", str(path), str(other)) == cli.EXIT_UNTESTABLE
+    assert "codec" in capsys.readouterr().err
+
+
+def test_diff_tainted_trace_is_untestable(recorded, capsys):
+    trace_dir, run_id = recorded
+    path = str(trace_dir / "runs" / f"{run_id}.jsonl")
+    patch_header(trace_dir, run_id, policy="lenient")
+    assert run_cli("diff", path, path) == cli.EXIT_UNTESTABLE
+    assert "tainted" in capsys.readouterr().err
+
+
+def test_diff_unreadable_trace_is_untestable(recorded, tmp_path, capsys):
+    trace_dir, run_id = recorded
+    good = str(trace_dir / "runs" / f"{run_id}.jsonl")
+    garbage = tmp_path / "garbage.jsonl"
+    garbage.write_text("{not-json\n", encoding="utf-8")
+    assert run_cli("diff", good, str(garbage)) == cli.EXIT_UNTESTABLE
+    assert "unreadable" in capsys.readouterr().err
+
+
+def test_diff_negative_context_is_untestable(recorded):
+    trace_dir, run_id = recorded
+    path = str(trace_dir / "runs" / f"{run_id}.jsonl")
+    assert run_cli("diff", path, path, "--context", "-1") == cli.EXIT_UNTESTABLE
+
+
+def test_diff_warns_on_git_sha_mismatch_but_proceeds(recorded, capsys):
+    trace_dir, run_id = recorded
+    path = trace_dir / "runs" / f"{run_id}.jsonl"
+    other = trace_dir / "runs" / "other.jsonl"
+    other.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+    lines = other.read_text(encoding="utf-8").splitlines()
+    header = json.loads(lines[0])
+    header["git_sha"] = "0" * 40
+    lines[0] = json.dumps(header)
+    other.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    assert run_cli("diff", str(path), str(other)) == cli.EXIT_OK
+    err = capsys.readouterr().err
+    assert "git sha differs" in err
+    assert "warning" in err
+
+
+def test_diff_warns_on_target_argv_mismatch(recorded, capsys):
+    trace_dir, run_id = recorded
+    path = trace_dir / "runs" / f"{run_id}.jsonl"
+    other = trace_dir / "runs" / "other.jsonl"
+    other.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+    lines = other.read_text(encoding="utf-8").splitlines()
+    header = json.loads(lines[0])
+    header["target"] = ["other.py"]
+    lines[0] = json.dumps(header)
+    other.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    assert run_cli("diff", str(path), str(other)) == cli.EXIT_OK
+    err = capsys.readouterr().err
+    assert "target argv differs" in err
+    assert "usually a mistake" in err
+
+
+def test_diff_accepts_run_ids_with_trace_dir(recorded, capsys):
+    trace_dir, run_id = recorded
+    assert (
+        run_cli("diff", run_id, run_id, "--trace-dir", str(trace_dir)) == cli.EXIT_OK
+    )
+    assert "identical" in capsys.readouterr().out
+
+
+def test_record_refuses_input_blobs_under_identity_redactor(
+    tmp_path, target, capsys
+):
+    trace_dir = tmp_path / "traces"
+    assert run_cli("record", "--trace-dir", str(trace_dir), "--", str(target)) == 0
+    err = capsys.readouterr().err
+    assert "not storing input blobs" in err
+    assert 'redactor_version' in err
+    assert "identity" in err
+
+    header = read_header(trace_dir, only_run_id(trace_dir))
+    assert header["redactor_version"] == "0"
+    assert header["stores_input_blobs"] is False
+    assert header["schema_version"] == "0.4.0"
+
+    from agentos.replay import BlobStore, TraceReader
+
+    reader = TraceReader(trace_dir / "runs" / f"{header['run_id']}.jsonl")
+    store = BlobStore(trace_dir)
+    assert reader.events, "the run must have recorded at least one seam"
+    for event in reader.events:
+        assert event.input_digest, "digests are recorded either way"
+        assert not store.has(event.input_digest)
+
+
+def test_store_inputs_unredacted_writes_blobs_and_says_why(
+    tmp_path, target, capsys
+):
+    trace_dir = tmp_path / "traces"
+    assert (
+        run_cli(
+            "record",
+            "--trace-dir",
+            str(trace_dir),
+            "--store-inputs-unredacted",
+            "--",
+            str(target),
+        )
+        == 0
+    )
+    err = capsys.readouterr().err
+    assert "storing unredacted input blobs" in err
+    assert "Do not commit" in err
+
+    header = read_header(trace_dir, only_run_id(trace_dir))
+    assert header["stores_input_blobs"] is True
+
+    from agentos.replay import BlobStore, TraceReader
+
+    reader = TraceReader(trace_dir / "runs" / f"{header['run_id']}.jsonl")
+    store = BlobStore(trace_dir)
+    assert any(store.has(event.input_digest) for event in reader.events)
+
+
+def test_diff_legacy_0_3_0_exits_divergent_not_untestable(tmp_path, capsys):
+    """A 0.3.0 header must not become exit 125 just because input blobs are absent."""
+    from agentos.replay import RunHeader, TraceEvent, TraceWriter
+    from agentos.replay.diff import ChangeKind, DiffReport
+    from agentos.replay.schema import EventStatus, SeamKind
+
+    def write(root, digest: str):
+        header = RunHeader.new(schema_version="0.3.0")
+        event = TraceEvent(
+            event_id="e1",
+            run_id=header.run_id,
+            seq=1,
+            seam=SeamKind.PROVIDER,
+            call_site="site-p",
+            ordinal=0,
+            input_digest=digest,
+            output_ref="b2b:" + "c" * 64,
+            status=EventStatus.OK,
+        )
+        with TraceWriter(root, header) as writer:
+            writer.append(event)
+        path = root / "runs" / f"{header.run_id}.jsonl"
+        lines = path.read_text(encoding="utf-8").splitlines()
+        rec = json.loads(lines[0])
+        rec["schema_version"] = "0.3.0"
+        rec.pop("stores_input_blobs", None)
+        lines[0] = json.dumps(rec)
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+
+    left = write(tmp_path / "a", "b2b:" + "a" * 64)
+    right = write(tmp_path / "b", "b2b:" + "b" * 64)
+    assert run_cli("diff", str(left), str(right), "--json") == cli.EXIT_DIVERGENCE
+    captured = capsys.readouterr()
+    assert "predates input storage" in captured.err
+    report = DiffReport.from_dict(json.loads(captured.out))
+    assert report.first_divergence is not None
+    assert report.first_divergence.kind is ChangeKind.INPUT_CHANGED
