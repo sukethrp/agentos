@@ -177,13 +177,17 @@ once, replayed ten times, identical trace_digest every time.
 src/agentos/replay/diff.py: align two execution graphs, report the FIRST
 divergence.
 
-Align by (seam, call_site, ordinal), not by seq, so an inserted step does not
-shift everything downstream into false mismatches. Classify each difference:
-inserted, deleted, input changed, output changed, status changed.
+Align per agent_id by identity key (seam, call_site, agent_id) via
+difflib.SequenceMatcher, not by ordinal and not by seq, so an inserted first
+call at a site is one insertion rather than N input_changed. Classify aligned
+pairs: unchanged, input_changed, output_changed, status_changed; unaligned
+left is deleted, unaligned right is inserted.
 
 DiffReport dataclass plus a human renderer showing the first divergence with
-three events of context each side and a unified diff of the two inputs at that
-point. This is a tree diff. Do not reach for difflib on raw JSON.
+three events of context each side and a unified diff of the two input blobs at
+that point. Structured alignment on identity keys is correct, and difflib is
+the right tool for that alignment and for rendering those two blobs.
+difflib on the raw jsonl text is still wrong.
 ```
 
 ### M6. Bisect

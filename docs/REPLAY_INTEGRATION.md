@@ -100,7 +100,9 @@ src/agentos/replay/__init__.py
 src/agentos/replay/schema.py
 src/agentos/replay/store.py
 src/agentos/replay/seam.py
+src/agentos/replay/diff.py
 tests/test_replay_roundtrip.py
+tests/test_replay_diff.py
 docs/DETERMINISM.md
 docs/CURSOR_PLAYBOOK.md
 .cursor/rules/determinism.mdc
