@@ -54,6 +54,125 @@ jobs:
             test-results.xml
             coverage.xml
 
+  # tests/conftest.py prepends src/ to sys.path, so the test job only ever
+  # exercises the checkout. A wheel that omits a module, an entry point, or a
+  # documented subcommand is invisible to the whole suite — the same class of
+  # blind spot as pytest never having run in Actions. This job builds the
+  # wheel, installs it into a fresh venv, and runs from a directory that is
+  # not the checkout.
+  packaging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if (( ${#wheels[@]} != 1 )); then
+            echo "expected exactly one wheel in dist/, found: ${wheels[*]:-none}" >&2
+            exit 1
+          fi
+          echo "Built ${wheels[0]}"
+          python -m zipfile --list "${wheels[0]}"
+
+      - name: Install wheel into a clean venv and smoke-test
+        run: |
+          set -euo pipefail
+          unset PYTHONPATH
+          EXPECTED="$(python -c "import tomllib, pathlib; print(tomllib.load(pathlib.Path('pyproject.toml').open('rb'))['project']['version'])")"
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if (( ${#wheels[@]} != 1 )); then
+            echo "expected exactly one wheel in dist/, found: ${wheels[*]:-none}" >&2
+            exit 1
+          fi
+          WHEEL="$(cd "$(dirname "${wheels[0]}")" && pwd)/$(basename "${wheels[0]}")"
+
+          VENV="${RUNNER_TEMP}/packaging-venv"
+          python -m venv "$VENV"
+          "$VENV/bin/python" -m pip install --upgrade pip
+          "$VENV/bin/python" -m pip install "$WHEEL"
+
+          WORK="$(mktemp -d "${RUNNER_TEMP}/packaging-cwd.XXXXXX")"
+          cd "$WORK"
+
+          HELP="$("$VENV/bin/agentos" --help)"
+          printf '%s\n' "$HELP"
+          EXPECTED="$EXPECTED" CHECKOUT="$GITHUB_WORKSPACE" HELP="$HELP" \
+            "$VENV/bin/python" - <<'PY'
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          needed = (
+              "serve",
+              "mcp",
+              "version",
+              "init",
+              "record",
+              "replay",
+              "trace",
+              "diff",
+              "bisect",
+          )
+          help_text = os.environ["HELP"]
+          match = re.search(r"\{([^{}]+)\}", help_text)
+          if match is None:
+              raise SystemExit(
+                  "agentos --help did not list subcommands in {a,b,...} form"
+              )
+          listed = {
+              part.strip() for part in match.group(1).split(",") if part.strip()
+          }
+          missing = [cmd for cmd in needed if cmd not in listed]
+          if missing:
+              raise SystemExit(
+                  "agentos --help is missing documented subcommand(s): "
+                  + ", ".join(missing)
+                  + f"; listed={sorted(listed)}"
+              )
+
+          src_on_path = [p for p in sys.path if Path(p).resolve().name == "src"]
+          if src_on_path:
+              raise SystemExit(f"src/ is on sys.path: {src_on_path}")
+
+          import agentos
+
+          pkg = Path(agentos.__file__).resolve()
+          checkout = Path(os.environ["CHECKOUT"]).resolve()
+          print(f"agentos.__file__ = {pkg}")
+          if "site-packages" not in pkg.parts:
+              raise SystemExit(
+                  f"agentos was not loaded from site-packages: {pkg}"
+              )
+          if pkg.is_relative_to(checkout):
+              raise SystemExit(
+                  f"agentos was loaded from the checkout, not the wheel: {pkg}"
+              )
+          PY
+
+          "$VENV/bin/python" -c "import agentos.replay.bisect, agentos.replay.diff"
+
+          GOT="$("$VENV/bin/agentos" version)"
+          echo "agentos version: $GOT"
+          echo "pyproject.toml:  $EXPECTED"
+          if [[ "$GOT" != "AgentOS v${EXPECTED}" ]]; then
+            echo "version mismatch: agentos version printed '$GOT', expected 'AgentOS v${EXPECTED}'" >&2
+            exit 1
+          fi
+          echo "packaging smoke test passed"
+
   lint:
     runs-on: ubuntu-latest
     steps:
