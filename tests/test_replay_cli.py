@@ -229,6 +229,58 @@ def test_git_drift_is_untestable_unless_allowed(recorded, capsys, live_calls):
     assert live_calls["n"] == before
 
 
+def test_bisect_mode_inverts_equivalent_to_bad(recorded):
+    """Matching the recording is the bug; git bisect run must mark the commit bad."""
+    trace_dir, run_id = recorded
+    assert (
+        run_cli("replay", run_id, "--trace-dir", str(trace_dir), "--bisect") == 1
+    )
+
+
+def test_bisect_mode_inverts_divergence_to_good(recorded, monkeypatch):
+    trace_dir, run_id = recorded
+    monkeypatch.setenv("AGENTOS_CLI_TEST_PROMPT", "second")
+    assert (
+        run_cli("replay", run_id, "--trace-dir", str(trace_dir), "--bisect")
+        == cli.EXIT_OK
+    )
+
+
+def test_bisect_env_is_enough_without_the_flag(recorded, monkeypatch):
+    monkeypatch.setenv("AGENTOS_BISECT", "oracle")
+    trace_dir, run_id = recorded
+    assert run_cli("replay", run_id, "--trace-dir", str(trace_dir)) == 1
+
+
+def test_allow_drift_does_not_invert(recorded, live_calls):
+    """The human override stays honest 0/2/125. That is why bisect cannot reuse it."""
+    trace_dir, run_id = recorded
+    patch_header(trace_dir, run_id, git_sha="0" * 40)
+    before = live_calls["n"]
+    assert (
+        run_cli("replay", run_id, "--trace-dir", str(trace_dir), "--allow-drift")
+        == cli.EXIT_OK
+    )
+    assert live_calls["n"] == before
+
+
+def test_bisect_mode_allows_sha_mismatch_and_inverts(recorded):
+    trace_dir, run_id = recorded
+    patch_header(trace_dir, run_id, git_sha="0" * 40)
+    assert (
+        run_cli("replay", run_id, "--trace-dir", str(trace_dir), "--bisect") == 1
+    )
+
+
+def test_bisect_mode_does_not_invert_untestable(recorded):
+    trace_dir, run_id = recorded
+    patch_header(trace_dir, run_id, policy="lenient")
+    assert (
+        run_cli("replay", run_id, "--trace-dir", str(trace_dir), "--bisect")
+        == cli.EXIT_UNTESTABLE
+    )
+
+
 def test_tainted_trace_is_refused(recorded, capsys):
     """A tainted run is not valid input for any comparison (DETERMINISM.md 5)."""
     trace_dir, run_id = recorded
@@ -398,6 +450,9 @@ def test_no_invocation_can_exit_126_or_127(tmp_path, target, recorded):
         ("diff", "nope.jsonl", "nope.jsonl"),
         ("diff", run_id, run_id, "--trace-dir", str(trace_dir)),
         ("diff", run_id, run_id, "--trace-dir", str(trace_dir), "--json"),
+        ("bisect",),
+        ("bisect", "--trace", "nope.jsonl"),
+        ("replay", run_id, "--trace-dir", str(trace_dir), "--bisect"),
     ]
     for argv in invocations:
         code = run_cli(*argv)

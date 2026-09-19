@@ -1,7 +1,8 @@
 # AgentOS Determinism Contract (schema v0.1.0)
 
-Status: M0, normative. Everything in `src/agentos/replay/` must conform. If code and
-this document disagree, the document wins until it is amended in the same PR.
+Status: M0–M5, normative. Everything in `src/agentos/replay/` must conform. If
+code and this document disagree, the document wins until it is amended in the
+same PR.
 
 ## 1. Goal
 
@@ -181,3 +182,53 @@ the two canonical-JSON inputs at that point. Otherwise it says it is comparing
 digests only. Having both traces, the message names the last common event
 exactly (`Last common event: seq=40`), not the replayer's weaker "at or before
 seq-1".
+
+## 13. Bisect
+
+`agentos bisect --trace B.jsonl --good <sha> [--bad <sha>]`
+
+One command. `bisect steps` is not a thing: `agentos diff` already materializes
+`first_divergence` as `changes[0]`. Binary-searching that list finds the same
+event.
+
+**B is the bad recording** (typically taken at `--bad`, default HEAD). `--good`
+is a commit known *not* to reproduce it.
+
+**Up-front refusals, exit 125.** Dirty working tree, tainted trace, seam codec
+fingerprint mismatch against the current build, schema major mismatch. Bisecting
+on any of those produces a confident wrong answer. These run before
+`git bisect start`.
+
+**Oracle.** The command runs `git bisect run` with `agentos replay --bisect`.
+That flag is not `--allow-drift`:
+
+| Flag | Sha mismatch | Exit codes |
+|---|---|---|
+| (neither) | exit 125 | honest 0/2/125 |
+| `--allow-drift` | allowed | honest 0/2/125 (humans debugging one checkout) |
+| `--bisect` | expected | **inverted**: equivalent → 1 (git BAD, reproduces the recording), divergent → 0 (git GOOD), 125 stays SKIP |
+
+Without `--bisect`, every interior commit exits 125 (`git_sha` ≠ HEAD) and git
+skips them all. With `--allow-drift` as the run command, git would treat
+"matches the bug" as good and name the wrong commit. `AGENTOS_BISECT=oracle`
+is the env-var form of `--bisect`.
+
+**Culprit.** After `git bisect run` returns 0 and *before* `git bisect reset`,
+`git rev-parse refs/bisect/bad` is the first bad commit. The ref exists from
+`bisect start` (the original `--bad`), so a non-zero run — all-skip, abort —
+is not a verdict even though the ref is still populated. Git's human-readable
+"first bad commit" sentence is not a contract: wording (`bad` vs `'bad'`) and
+stream (stdout vs stderr) both vary by version. `git bisect log` is copied
+into the report before reset so the session is reproducible. `git bisect run`
+output is captured with stderr merged onto stdout so the report order matches
+what git actually printed.
+
+**On culprit found.** Check out last-good (the closest known-good ancestor, not
+`first_bad^`, which may have been skipped), re-record the target, diff that
+against B, print **one** report with the culprit commit and `first_divergence`.
+That re-record makes live provider calls (free under `AGENTOS_DEMO_MODE`, billed
+against a real provider). `--no-diff` stops at the culprit.
+
+**Restore.** Original HEAD and `git bisect reset` run on every exit path,
+including ctrl-C, a replay crash, and bisect failure. `try`/`finally`, not a
+happy path.

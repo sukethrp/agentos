@@ -14,10 +14,12 @@ Deterministic replay:
     agentos record -- script.py [args]   Run under the Recorder, write a trace
     agentos replay <trace>               Re-execute the trace offline
     agentos diff <good> <bad>            Align two traces; report first divergence
+    agentos bisect --trace B.jsonl --good <sha> [--bad <sha>]
+                                         Culprit commit + first_divergence
     agentos trace ls | show | gc         Inspect traces, collect orphan blobs
 
 Exit codes are part of the contract, because `git bisect run` shells out to
-`agentos replay` (and later `agentos diff`) and reads them:
+`agentos replay` (and `agentos bisect` wraps that) and reads them:
 
     0    the run is equivalent to the recording (replay), or the two traces
          align without a semantic difference (diff)
@@ -33,6 +35,12 @@ to 125 so a mistyped command cannot silently produce a confident wrong answer.
 
 `agentos diff` uses the same 0/2/125 codes. Git sha mismatch is a warning
 there, not 125: bisect is exactly when the shas are expected to differ.
+
+`agentos replay --bisect` is the git-bisect oracle and is NOT `--allow-drift`.
+`--allow-drift` lets a human replay at a different sha with honest 0/2/125.
+`--bisect` treats sha mismatch as expected *and* inverts 0/2 so that matching
+the recorded (bad) behavior is git-bad. Reusing `--allow-drift` as the run
+command would skip the inversion and name the wrong commit.
 """
 
 import argparse
@@ -44,6 +52,7 @@ import re
 import runpy
 import subprocess
 import sys
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -182,8 +191,60 @@ def main(argv: list[str] | None = None) -> int:
     replay_parser.add_argument(
         "--allow-drift",
         action="store_true",
-        help="Replay even though the trace's git sha differs from HEAD",
+        help=(
+            "Replay even though the trace's git sha differs from HEAD. "
+            "Exit codes stay 0/2/125. For git bisect run, use --bisect."
+        ),
     )
+    replay_parser.add_argument(
+        "--bisect",
+        action="store_true",
+        help=(
+            "git-bisect oracle: git_sha mismatch is expected; equivalent "
+            "becomes exit 1 (bad, reproduces the recording) and divergence "
+            "becomes exit 0 (good). Untestable stays 125. Do not use "
+            "--allow-drift for this."
+        ),
+    )
+
+    # agentos bisect --trace B.jsonl --good <sha> [--bad <sha>]
+    bisect_parser = subparsers.add_parser(
+        "bisect",
+        help="Find the commit that introduced the recorded (bad) behavior",
+    )
+    bisect_parser.add_argument(
+        "--trace",
+        required=True,
+        help="Bad recording: run id or path to a .jsonl trace",
+    )
+    bisect_parser.add_argument(
+        "--good",
+        required=True,
+        metavar="SHA",
+        help="A commit known not to reproduce the recording",
+    )
+    bisect_parser.add_argument(
+        "--bad",
+        default="HEAD",
+        metavar="SHA",
+        help="A commit that reproduces the recording (default HEAD)",
+    )
+    bisect_parser.add_argument(
+        "--no-diff",
+        action="store_true",
+        help=(
+            "Stop at the culprit commit; do not re-record at last-good. "
+            "The re-record makes live provider calls."
+        ),
+    )
+    bisect_parser.add_argument(
+        "--context",
+        type=int,
+        default=3,
+        metavar="N",
+        help="Events of context each side of first_divergence (default 3)",
+    )
+    bisect_parser.add_argument("--trace-dir", default=DEFAULT_TRACE_DIR)
 
     # agentos diff <good.jsonl> <bad.jsonl>
     diff_parser = subparsers.add_parser(
@@ -203,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
         "--json",
         action="store_true",
         dest="as_json",
-        help="Emit DiffReport JSON (the M5 bisect contract)",
+        help="Emit DiffReport JSON (the bisect contract)",
     )
     diff_parser.add_argument("--trace-dir", default=DEFAULT_TRACE_DIR)
 
@@ -325,6 +386,9 @@ def main(argv: list[str] | None = None) -> int:
 
     elif args.command == "diff":
         return _cmd_diff(args)
+
+    elif args.command == "bisect":
+        return _cmd_bisect(args)
 
     elif args.command == "trace":
         return {
@@ -664,6 +728,16 @@ def _print_divergence(exc, consumed: int) -> None:
 
 
 def _cmd_replay(args) -> int:
+    """Replay, then apply the git-bisect oracle if `--bisect` (or the env) is set."""
+    from agentos.replay.bisect import env_is_bisect_mode, oracle_exit
+
+    rc = _replay_run(args)
+    if bool(getattr(args, "bisect", False)) or env_is_bisect_mode():
+        return oracle_exit(rc)
+    return rc
+
+
+def _replay_run(args) -> int:
     from agentos.replay import (
         BlobStore,
         DivergenceError,
@@ -675,6 +749,7 @@ def _cmd_replay(args) -> int:
         trace_digest,
         use_interceptor,
     )
+    from agentos.replay.bisect import env_is_bisect_mode
     from agentos.replay.provider import provider_seam_codecs
 
     path = _resolve_trace(args.trace, args.trace_dir)
@@ -701,6 +776,7 @@ def _cmd_replay(args) -> int:
         )
 
     head_sha, head_dirty = _git_provenance(Path.cwd())
+    bisect_mode = bool(getattr(args, "bisect", False)) or env_is_bisect_mode()
     if header.git_sha is None or head_sha is None:
         # Unknown provenance is not drift. Refusing here would make the CLI
         # unusable outside a git checkout, and `git bisect` would skip every
@@ -710,13 +786,20 @@ def _cmd_replay(args) -> int:
             "(trace or working tree), so the drift check is skipped.",
             file=sys.stderr,
         )
-    elif header.git_sha != head_sha and not args.allow_drift:
+    elif header.git_sha != head_sha and not args.allow_drift and not bisect_mode:
         return _fail(
             f"agentos replay: trace was recorded at {header.git_sha[:12]} but "
             f"HEAD is {head_sha[:12]}. The code that produced this trace is "
             f"not the code that would replay it, so a divergence would not "
-            f"tell you anything. Pass --allow-drift to override.",
+            f"tell you anything. Pass --allow-drift to override (honest "
+            f"0/2/125), or --bisect if this is a git-bisect oracle.",
             EXIT_UNTESTABLE,
+        )
+    elif header.git_sha != head_sha and bisect_mode:
+        print(
+            f"agentos replay: git sha differs (trace {header.git_sha[:12]}, "
+            f"HEAD {head_sha[:12]}); expected under --bisect, proceeding.",
+            file=sys.stderr,
         )
     elif header.git_dirty or head_dirty:
         # The shas agree, which is exactly why this is worth saying: a matching
@@ -871,6 +954,300 @@ def _cmd_diff(args) -> int:
         )
 
     return EXIT_OK if report.identical else EXIT_DIVERGENCE
+
+
+def _pythonpath_for_agentos() -> str:
+    """Keep `python -m agentos.cli` able to import agentos in a bisect child."""
+    import agentos
+
+    src = str(Path(agentos.__file__).resolve().parent.parent)
+    existing = os.environ.get("PYTHONPATH", "")
+    if not existing:
+        return src
+    parts = existing.split(os.pathsep)
+    if src in parts:
+        return existing
+    return src + os.pathsep + existing
+
+
+def _cmd_bisect(args) -> int:
+    """Find the commit that introduced the recorded behavior, then pair it with diff."""
+    from agentos.replay.bisect import BisectSession, GitError
+
+    session = BisectSession(repo=Path.cwd())
+    try:
+        session.capture_head()
+    except GitError as exc:
+        return _fail(f"agentos bisect: {exc}", EXIT_UNTESTABLE)
+
+    try:
+        return _bisect_body(args, session)
+    except KeyboardInterrupt:
+        print(
+            "agentos bisect: interrupted; restoring original HEAD",
+            file=sys.stderr,
+        )
+        return EXIT_UNTESTABLE
+    except GitError as exc:
+        return _fail(f"agentos bisect: {exc}", EXIT_UNTESTABLE)
+    finally:
+        session.restore()
+
+
+def _echo_captured(stream, text: str) -> None:
+    if not text:
+        return
+    stream.write(text)
+    if not text.endswith("\n"):
+        stream.write("\n")
+
+
+def _bisect_body(args, session) -> int:
+    """Guards, git bisect run, optional last-good re-record. Restore is on the caller."""
+    from agentos.demo import is_demo_mode
+    from agentos.replay import (
+        BlobStore,
+        EventStatus,
+        Replayer,
+        SeamCodecMismatch,
+        TraceReader,
+    )
+    from agentos.replay.bisect import (
+        BISECT_ENV,
+        GitError,
+        bisect_log,
+        commit_subject,
+        first_bad_ref,
+        in_work_tree,
+        last_good_sha,
+        porcelain,
+    )
+    from agentos.replay.diff import IncomparableError, compare_paths, render_human
+    from agentos.replay.provider import provider_seam_codecs
+
+    repo = session.repo
+
+    if not in_work_tree(repo):
+        return _fail(
+            "agentos bisect: this directory is not a git work tree. "
+            "Bisect searches commit history; run it from the repository "
+            "that produced the trace.",
+            EXIT_UNTESTABLE,
+        )
+
+    dirty = porcelain(repo)
+    if dirty.strip():
+        return _fail(
+            "agentos bisect: the working tree is dirty. Bisecting would "
+            "check out other commits on top of uncommitted work and the "
+            "answer would not describe any commit. Commit, stash, or "
+            "discard local changes first.\n"
+            f"{dirty.rstrip()}",
+            EXIT_UNTESTABLE,
+        )
+
+    if args.context < 0:
+        return _fail("agentos bisect: --context must be >= 0", EXIT_UNTESTABLE)
+
+    path = _resolve_trace(args.trace, args.trace_dir)
+    if path is None:
+        return _fail(
+            f"agentos bisect: no such trace: {args.trace}", EXIT_UNTESTABLE
+        )
+    path = path.resolve()
+
+    try:
+        reader = TraceReader(path)
+    except ValueError as exc:
+        return _fail(f"agentos bisect: {exc}", EXIT_UNTESTABLE)
+    header = reader.header
+
+    tainted = header.policy == "lenient" or any(
+        e.status is EventStatus.TAINTED for e in reader.events
+    )
+    if tainted:
+        return _fail(
+            "agentos bisect: this trace is tainted, meaning at least one call "
+            "fell through to a live provider while it was produced. A tainted "
+            "run is not valid input for any comparison, so bisecting it would "
+            "name a commit with no evidence. Re-record it under STRICT.",
+            EXIT_UNTESTABLE,
+        )
+
+    try:
+        Replayer(
+            reader.events,
+            BlobStore(path.parent.parent),
+            header=header,
+            codecs=provider_seam_codecs(),
+        )
+    except SeamCodecMismatch as exc:
+        return _fail(
+            f"agentos bisect: {exc} Bisecting against a different codec "
+            "fingerprint would compare incomparable digests.",
+            EXIT_UNTESTABLE,
+        )
+
+    if not header.target:
+        return _fail(
+            "agentos bisect: this trace records no target, so there is "
+            "nothing to re-execute at each commit. Re-record it with the "
+            "current build.",
+            EXIT_UNTESTABLE,
+        )
+
+    try:
+        session.start(args.bad, args.good)
+    except GitError as exc:
+        return _fail(f"agentos bisect: {exc}", EXIT_UNTESTABLE)
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = _pythonpath_for_agentos()
+    env[BISECT_ENV] = "oracle"
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    run_argv = [
+        sys.executable,
+        "-m",
+        "agentos.cli",
+        "replay",
+        str(path),
+        "--bisect",
+        "--trace-dir",
+        str(Path(args.trace_dir).resolve()),
+        "--policy",
+        "strict",
+    ]
+    done = session.run(run_argv, env=env)
+    # Streams are merged (stderr→stdout) so this is git's real order.
+    _echo_captured(sys.stdout, done.stdout or "")
+    if done.stderr:
+        _echo_captured(sys.stderr, done.stderr)
+
+    log = bisect_log(session.repo)
+    if log:
+        print("agentos bisect: git bisect log:", file=sys.stderr)
+        print(log, file=sys.stderr)
+
+    # refs/bisect/bad exists from `bisect start` (the original --bad). A
+    # successful run (exit 0) updates it to the first bad commit. All-skip
+    # leaves the original --bad in place and exits non-zero; that is not a
+    # verdict.
+    culprit = first_bad_ref(session.repo) if done.returncode == 0 else None
+    if culprit is None:
+        extra = (log or done.stdout or "").strip()
+        hint = f"\n{extra}" if extra else ""
+        return _fail(
+            "agentos bisect: git bisect run did not name a first bad commit "
+            f"(exit {done.returncode}). Interior commits were likely skipped "
+            f"or the range never changed behavior.{hint}",
+            EXIT_UNTESTABLE,
+        )
+
+    try:
+        subject = commit_subject(session.repo, culprit)
+    except GitError:
+        subject = ""
+
+    last_good: str | None = None
+    try:
+        last_good = last_good_sha(session.repo, culprit, session.good_sha)
+    except GitError as exc:
+        if args.no_diff:
+            last_good = None
+        else:
+            return _fail(f"agentos bisect: {exc}", EXIT_UNTESTABLE)
+
+    print(f"culprit: {culprit}")
+    if subject:
+        print(f"subject: {subject}")
+    if last_good:
+        print(f"last_good: {last_good}")
+    else:
+        print("last_good: unknown")
+
+    if args.no_diff:
+        print(
+            "agentos bisect: --no-diff; not re-recording at last-good. "
+            "first_divergence is omitted."
+        )
+        return EXIT_OK
+
+    if last_good is None:
+        return _fail(
+            "agentos bisect: no last-good commit to re-record at",
+            EXIT_UNTESTABLE,
+        )
+
+    billed = (
+        "free under AGENTOS_DEMO_MODE"
+        if is_demo_mode()
+        else "billed against a real provider"
+    )
+    print(
+        f"agentos bisect: about to check out {last_good[:12]} and re-record "
+        "the target to diff against the original trace. That recording makes "
+        f"live provider calls ({billed}). Pass --no-diff to stop at the "
+        "culprit commit.",
+        file=sys.stderr,
+    )
+
+    session.checkout(last_good)
+    with tempfile.TemporaryDirectory(prefix="agentos-bisect-good-") as tmp:
+        good_dir = Path(tmp)
+        record_rc = _cmd_record(
+            argparse.Namespace(
+                trace_dir=str(good_dir),
+                label=[],
+                store_inputs_unredacted=False,
+                target=list(header.target),
+            )
+        )
+        if record_rc != EXIT_OK:
+            return _fail(
+                f"agentos bisect: re-recording at last-good {last_good[:12]} "
+                f"exited {record_rc}. The culprit is still {culprit[:12]}, "
+                "but first_divergence could not be produced.",
+                EXIT_UNTESTABLE,
+            )
+        goods = list((good_dir / "runs").glob("*.jsonl"))
+        if len(goods) != 1:
+            return _fail(
+                "agentos bisect: re-record at last-good did not produce "
+                f"exactly one trace (found {len(goods)})",
+                EXIT_UNTESTABLE,
+            )
+        try:
+            report = compare_paths(goods[0], path)
+        except IncomparableError as exc:
+            return _fail(
+                f"agentos bisect: last-good recording is incomparable to "
+                f"the original trace: {exc}",
+                EXIT_UNTESTABLE,
+            )
+        for warning in report.warnings:
+            print(f"agentos bisect: warning, {warning}", file=sys.stderr)
+        if report.first_divergence is not None:
+            print(f"first_divergence: {report.first_divergence.message}")
+        elif report.identical:
+            print(
+                "first_divergence: none "
+                "(last-good recording is equivalent to the original trace)"
+            )
+        good_reader = TraceReader(goods[0])
+        bad_reader = TraceReader(path)
+        sys.stdout.write(
+            render_human(
+                report,
+                good_reader.events,
+                bad_reader.events,
+                context=args.context,
+                left_blobs=good_reader.blobs,
+                right_blobs=bad_reader.blobs,
+                left_stores_inputs=good_reader.header.stores_input_blobs,
+                right_stores_inputs=bad_reader.header.stores_input_blobs,
+            )
+        )
+    return EXIT_OK
 
 
 def _cmd_trace_ls(args) -> int:
