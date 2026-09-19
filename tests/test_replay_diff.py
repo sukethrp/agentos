@@ -39,7 +39,6 @@ from agentos.replay.diff import (
 )
 from agentos.replay.schema import digest_obj
 
-
 CS_P = "site-provider"
 CS_T = "site-tool"
 _DEFAULT_OUTPUT = "b2b:" + "ab" * 32

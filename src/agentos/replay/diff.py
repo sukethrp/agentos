@@ -818,8 +818,7 @@ def render_human(
     div = report.first_divergence
     assert div is not None
     parts = [div.message]
-    if context < 0:
-        context = 0
+    context = max(context, 0)
 
     parts.append("")
     parts.append(f"good (context={context}):")
