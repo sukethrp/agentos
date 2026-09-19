@@ -6,6 +6,19 @@ on:
   pull_request:
 
 jobs:
+  # A successful deploy only means the upload succeeded. After v0.4.0,
+  # production served the docs/ self-redirect stub as / while
+  # dashboard/index.html still rendered locally. This job reads the HTML
+  # files and fails if there is no visible text without JavaScript.
+  landing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check landing HTML is visible without JS
+        run: python3 tests/test_landing_html.py
+
   # Lint and test are independent on purpose. A lint failure must never hide
   # whether the suite passes — that is how main stayed dark while pytest never
   # ran in Actions.

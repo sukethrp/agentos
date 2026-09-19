@@ -2,10 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; url=https://agentos-mocha.vercel.app/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
   <link rel="canonical" href="https://agentos-mocha.vercel.app/" />
   <title>AgentOS</title>
-  <script>location.replace("https://agentos-mocha.vercel.app/");</script>
+  <style>
+    body { margin: 2rem auto; max-width: 40rem; background: #F4F1EA; color: #16140F; font-family: sans-serif; line-height: 1.6; }
+    a { color: #C9482E; }
+  </style>
+  <script>
+    (function () {
+      var host = location.hostname;
+      if (host === "sukethrp.github.io" || host.endsWith(".github.io")) {
+        location.replace("https://agentos-mocha.vercel.app/");
+      }
+    })();
+  </script>
 </head>
 <body>
   <p>

@@ -214,7 +214,7 @@
     <section class="hero">
       <div class="container">
         <div class="badge">v0.4.0 · Open Source · Apache 2.0</div>
-        <h1 class="hero-tagline" id="heroTagline" aria-label="Record, Replay, Diff, Bisect"></h1>
+        <h1 class="hero-tagline" id="heroTagline">Record, Replay, Diff, Bisect</h1>
         <p class="hero-sub">An agent run breaks. You changed nine things, and you cannot reproduce the failure because the model returns something different every time.</p>
         <div class="actions">
           <a class="btn btn-primary" href="#debug">Get Started →</a>
@@ -574,8 +574,33 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
     const menuBtn = document.getElementById("menuBtn");
     const navLinks = document.getElementById("navLinks");
     const stats = document.getElementById("heroStats");
+    const heroWords = ["Record", "Replay", "Diff", "Bisect"];
+    const heroEl = document.getElementById("heroTagline");
+    const easeHero = "power3.out";
+    const revealSel = ".card, .feature-card, .stat, .install, .table-wrap, .pipe-box, .pipe-result, .terminal, .state-card, .code-block, .small-card, .arch-row";
 
-    menuBtn.addEventListener("click", () => navLinks.classList.toggle("show"));
+    function renderHeroStatic() {
+      if (heroEl) heroEl.textContent = heroWords.join(", ");
+    }
+
+    function bindNavScroll() {
+      if (!nav) return;
+      window.addEventListener("scroll", () => nav.classList.toggle("scrolled", window.scrollY > 50));
+    }
+
+    function leaveContentVisible() {
+      renderHeroStatic();
+      document.body.classList.remove("custom-cursor");
+      if (typeof gsap === "undefined") return;
+      try {
+        gsap.set(revealSel, { clearProps: "opacity,transform,visibility" });
+        gsap.set("h2 .line, .tagline-word", { clearProps: "transform" });
+      } catch (_) { /* already falling back to static copy */ }
+    }
+
+    if (menuBtn && navLinks) {
+      menuBtn.addEventListener("click", () => navLinks.classList.toggle("show"));
+    }
 
     const sections = links.map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
     const spy = new IntersectionObserver(es => es.forEach(e => {
@@ -588,6 +613,7 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
     sections.forEach(s => spy.observe(s));
 
     function setStatValues(animate) {
+      if (!stats) return;
       [...stats.querySelectorAll(".stat-num")].forEach(el => {
         const t = parseFloat(el.dataset.target || 0);
         const d = parseInt(el.dataset.decimals || 0, 10);
@@ -608,14 +634,16 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
       });
     }
 
-    const sObserver = new IntersectionObserver(es => {
-      es.forEach(e => {
-        if (!e.isIntersecting) return;
-        setStatValues(!reduceMotion);
-        sObserver.disconnect();
-      });
-    }, { threshold: 0.4 });
-    sObserver.observe(stats);
+    if (stats) {
+      const sObserver = new IntersectionObserver(es => {
+        es.forEach(e => {
+          if (!e.isIntersecting) return;
+          setStatValues(!reduceMotion);
+          sObserver.disconnect();
+        });
+      }, { threshold: 0.4 });
+      sObserver.observe(stats);
+    }
 
     document.querySelectorAll(".copy-btn,.code-copy").forEach(btn => btn.addEventListener("click", () => {
       const text = btn.dataset.copy || btn.parentElement.querySelector("pre").innerText;
@@ -630,51 +658,37 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
       document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
       document.querySelectorAll(".tab-panel").forEach(x => x.classList.remove("active"));
       t.classList.add("active");
-      document.getElementById("panel-" + t.dataset.tab).classList.add("active");
+      const panel = document.getElementById("panel-" + t.dataset.tab);
+      if (panel) panel.classList.add("active");
     }));
 
-    const heroWords = ["Record", "Replay", "Diff", "Bisect"];
-    const heroEl = document.getElementById("heroTagline");
-    const easeHero = "power3.out";
-
-    function renderHeroStatic() {
-      heroEl.textContent = heroWords.join(", ");
-    }
-
     function initHeroTagline() {
-      if (reduceMotion || typeof gsap === "undefined") {
-        renderHeroStatic();
-        return;
-      }
+      if (!heroEl) return;
+      if (reduceMotion || typeof gsap === "undefined") return;
       const display = document.createElement("span");
       display.className = "tagline-display";
-      heroEl.appendChild(display);
-      const tl = gsap.timeline({ delay: 0.4 });
+      const animated = [];
       heroWords.forEach((word, i) => {
-        tl.call(() => {
-          if (i > 0) {
-            const comma = document.createElement("span");
-            comma.className = "tagline-comma";
-            comma.textContent = ",";
-            display.appendChild(comma);
-          }
-          const mask = document.createElement("span");
-          mask.className = "word-mask";
-          const span = document.createElement("span");
-          span.className = "tagline-word";
-          span.textContent = (i === 0 ? "" : " ") + word;
-          mask.appendChild(span);
-          display.appendChild(mask);
-          gsap.fromTo(span, { yPercent: 110 }, { yPercent: 0, duration: 0.75, ease: easeHero });
-        }, null, i === 0 ? 0 : "+=0.55");
+        if (i > 0) {
+          const comma = document.createElement("span");
+          comma.className = "tagline-comma";
+          comma.textContent = ",";
+          display.appendChild(comma);
+        }
+        const mask = document.createElement("span");
+        mask.className = "word-mask";
+        const span = document.createElement("span");
+        span.className = "tagline-word";
+        span.textContent = (i === 0 ? "" : " ") + word;
+        mask.appendChild(span);
+        display.appendChild(mask);
+        animated.push(span);
       });
+      heroEl.replaceChildren(display);
+      gsap.from(animated, { yPercent: 110, duration: 0.75, ease: easeHero, stagger: 0.12 });
     }
 
-    initHeroTagline();
-
-    if (reduceMotion || typeof gsap === "undefined") {
-      window.addEventListener("scroll", () => nav.classList.toggle("scrolled", window.scrollY > 50));
-    } else {
+    function initMotion() {
       gsap.registerPlugin(ScrollTrigger);
 
       if (canHover && typeof MouseFollower !== "undefined") {
@@ -683,13 +697,17 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
         new MouseFollower({ speed: 0.4, skewing: 1.5 });
       }
 
-      const lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
-      lenis.on("scroll", e => {
-        ScrollTrigger.update();
-        nav.classList.toggle("scrolled", e.scroll > 50);
-      });
-      gsap.ticker.add(t => lenis.raf(t * 1000));
-      gsap.ticker.lagSmoothing(0);
+      const lenis = typeof Lenis === "undefined" ? null : new Lenis({ lerp: 0.1, smoothWheel: true });
+      if (lenis) {
+        lenis.on("scroll", e => {
+          ScrollTrigger.update();
+          if (nav) nav.classList.toggle("scrolled", e.scroll > 50);
+        });
+        gsap.ticker.add(t => lenis.raf(t * 1000));
+        gsap.ticker.lagSmoothing(0);
+      } else {
+        bindNavScroll();
+      }
 
       document.querySelectorAll('a[href^="#"]').forEach(a => {
         a.addEventListener("click", e => {
@@ -698,8 +716,9 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
           const target = document.querySelector(id);
           if (!target) return;
           e.preventDefault();
-          lenis.scrollTo(target);
-          navLinks.classList.remove("show");
+          if (lenis) lenis.scrollTo(target);
+          else target.scrollIntoView({ behavior: "smooth" });
+          if (navLinks) navLinks.classList.remove("show");
         });
       });
 
@@ -721,32 +740,42 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
 
       document.querySelectorAll("h2").forEach(heading => {
         if (typeof SplitType === "undefined") return;
-        const split = new SplitType(heading, { types: "lines" });
-        if (!split.lines) return;
-        split.lines.forEach(line => {
-          const wrap = document.createElement("div");
-          wrap.className = "line-mask";
-          line.parentNode.insertBefore(wrap, line);
-          wrap.appendChild(line);
-        });
-        gsap.set(split.lines, { yPercent: 110 });
         ScrollTrigger.create({
           trigger: heading,
           start: "top 85%",
           once: true,
           onEnter: () => {
-            gsap.to(split.lines, { yPercent: 0, duration: 0.9, ease: "power4.out", stagger: 0.1 });
+            try {
+              const rect = heading.getBoundingClientRect();
+              if (rect.top < window.innerHeight && rect.bottom > 0) return;
+              const split = new SplitType(heading, { types: "lines" });
+              if (!split.lines) return;
+              split.lines.forEach(line => {
+                const wrap = document.createElement("div");
+                wrap.className = "line-mask";
+                line.parentNode.insertBefore(wrap, line);
+                wrap.appendChild(line);
+              });
+              gsap.from(split.lines, { yPercent: 110, duration: 0.9, ease: "power4.out", stagger: 0.1 });
+            } catch (err) {
+              console.error("heading animation failed; leaving content visible", err);
+            }
           }
         });
       });
 
-      const revealSel = ".card, .feature-card, .stat, .install, .table-wrap, .pipe-box, .pipe-result, .terminal, .state-card, .code-block, .small-card, .arch-row";
-      gsap.set(revealSel, { opacity: 0, y: 40 });
       ScrollTrigger.batch(revealSel, {
         start: "top 88%",
         once: true,
         onEnter: batch => {
-          gsap.to(batch, { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", stagger: 0.08 });
+          try {
+            const vh = window.innerHeight;
+            const incoming = batch.filter(el => el.getBoundingClientRect().top > vh * 0.9);
+            if (!incoming.length) return;
+            gsap.from(incoming, { y: 40, duration: 0.7, ease: "power2.out", stagger: 0.08 });
+          } catch (err) {
+            console.error("reveal animation failed; leaving content visible", err);
+          }
         }
       });
 
@@ -776,6 +805,15 @@ INFO: Uvicorn running on http://0.0.0.0:8000</pre></div>
         marqueeSection.addEventListener("mouseenter", () => marqueeTween.pause());
         marqueeSection.addEventListener("mouseleave", () => marqueeTween.play());
       }
+    }
+
+    try {
+      initHeroTagline();
+      if (reduceMotion || typeof gsap === "undefined") bindNavScroll();
+      else initMotion();
+    } catch (err) {
+      console.error("Motion init failed; leaving content visible", err);
+      leaveContentVisible();
     }
   </script>
 </body>
