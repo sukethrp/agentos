@@ -1,7 +1,9 @@
 {
-  "buildCommand": null,
-  "outputDirectory": "dashboard",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "installCommand": "echo skip-install",
+  "buildCommand": "echo serving dashboard/",
+  "outputDirectory": "dashboard",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
