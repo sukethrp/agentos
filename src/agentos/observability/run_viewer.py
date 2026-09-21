@@ -82,7 +82,8 @@ class RunView:
 
         for f in self.frames:
             icon = (
-                "" if f.is_failure_point else ("" if f.severity == "warn" else "")
+                "✗" if f.is_failure_point or f.severity == "fail"
+                else ("⚠" if f.severity == "warn" else "✓")
             )
             pointer = " ← FAILURE POINT" if f.is_failure_point else ""
             lines.append(f"  {icon} Frame {f.frame_index}: {f.label}{pointer}")
@@ -95,7 +96,7 @@ class RunView:
             lines.append("  ─── Diagnosis ───")
             lines.append(f"  Root cause: {self.diagnosis.root_cause}")
             for c in self.diagnosis.checks:
-                sev_icon = {"pass": "", "warn": "", "fail": ""}.get(
+                sev_icon = {"pass": "✓", "warn": "⚠", "fail": "✗"}.get(
                     c.severity.value, "?"
                 )
                 lines.append(f"    {sev_icon} {c.check_name}: {c.title}")
